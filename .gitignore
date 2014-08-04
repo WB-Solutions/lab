@@ -34,3 +34,17 @@ Icon
 # Files that might appear on external disk
 .Spotlight-V100
 .Trashes
+
+
+# Python / Django.
+*.pyc
+
+# Wing IDE.
+*.wpr
+*.wpu
+
+# Tmp database.
+db.sqlite3
+
+# Vagrant.
+.vagrant

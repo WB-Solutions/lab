@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {% trans 'Medical Visits DEMO site admin' %}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">{% trans 'Medical Visits DEMO' %}</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block userlinks %}
+    <a style="font-size:larger;" href="/lab">Menu</a>
+    | <a href="{% url 'admin:logout' %}">{% trans 'Logout' %}</a>
+{% endblock %}

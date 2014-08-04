@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta name="description" content="Medical Visits DEMO">
+  <meta name="author" content="Carlos Galindo">
+  <!-- <link rel="shortcut icon" href=""> -->
+  <title> Medical Visits DEMO </title>
+
+  <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" />
+{% if schedule %}
+  <link href="//cdn.datatables.net/1.10.0-rc.1/css/jquery.dataTables.css" rel="stylesheet" />
+  <link href="//cdn.datatables.net/plug-ins/f3e99a6c02/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/fullcalendar/1.6.0/fullcalendar.min.css" rel="stylesheet" />
+{% endif %}
+  <script src="//cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
+  <link href="/static/lab.css" rel="stylesheet" />
+</head>
+
+<body>
+  <div class="container">
+
+	<h1 class="text-center">Medical Visits DEMO {% block goto %}{% endblock %} </h1>
+	<hr>
+
+{% block content %}{% endblock %}
+
+  </div>
+</body>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/underscore.string/2.3.3/underscore.string.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+{% if schedule %}
+  <script src="//cdn.datatables.net/1.10.0-rc.1/js/jquery.dataTables.js"></script>
+  <script src="//cdn.datatables.net/plug-ins/f3e99a6c02/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/fullcalendar/1.6.0/fullcalendar.min.js"></script>
+  <!-- <script src="//cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script> --> <!-- NO drag/drop for calendar events and form tabs. -->
+  <script src="/static/jsonform_bs3.js"></script> <!-- http://developer.joshfire.com/doc/dev/ref/jsonform -->
+  <script>
+	data = {{ data|safe }}
+  </script>
+  <script src="/static/lab.js"></script>
+{% endif %}
+
+</html>

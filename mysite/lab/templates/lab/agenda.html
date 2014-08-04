@@ -1,0 +1,59 @@
+{% extends "lab/base.html" %}
+
+{% block goto %}
+  Schedule &nbsp; &nbsp; <a class="btn btn-default btn-sm" href="/lab">Back to Menu</a>
+{% endblock %}
+
+{% block content %}
+
+  <div class="panel-group" id="accordion">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4 class="panel-title"> <a data-toggle="collapse" data-parent="#accordion" href="#help"> Instructions </a> </h4>
+      </div>
+      <div id="help" class="panel-collapse collapse in">
+        <div class="panel-body">
+          <ul>
+            <li> <b>Table</b> = Cars & Services, search & paginate. </li>
+            <li> Create Owner & Car & Service above Table. </li>
+            <li> Create Car & Service for Owner @ Table in Owner column. </li>
+            <li> Create Service for Car @ Table in Services column. </li>
+            <li> Edit Service (blue buttons) @ Table in Services column. </li>
+            <li> <b>Calendar</b> = Services. </li>
+            <li> Create Owner & Car & Service on click at cell empty space @ Calendar. </li>
+            <li> Edit Service on event click (blue boxes) @ Calendar. </li>
+          </ul>
+          <i>Modal window will open to create or edit Services.</i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="create-full"></div>
+  <table class="table table-striped" id="dt"></table>
+  <hr>
+  <div id="cal"></div>
+  <hr>
+  <p class="pull-right"> Footer @ Cars DEMO. </p>
+
+  <div class="modal fade" data-backdrop="static" id="service-modal" role="dialog" tabindex="-1">
+    <div class="modal-dialog modal-wide">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button class="close" data-dismiss="modal" type="button">&times;</button>
+          <h4 class="modal-title" id="bs-images-modal-title">
+            Car Service
+            &nbsp; &nbsp; <span id="service-label" class="small"></span>
+          </h4>
+        </div>
+        <div class="modal-body">
+          <form id="service-form"></form>
+        </div>
+        <div class="modal-footer">
+          <div><a class="btn btn-default" data-dismiss="modal" role="button">Close</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
