@@ -9,50 +9,53 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'id', 'email')
 
 class BrickSerializer(serializers.HyperlinkedModelSerializer):
+    zips_ = serializers.Field(source='zips_')
+
     class Meta:
         model = Brick
-        fields = ('url', 'id', 'name', 'zips1')
+        fields = ('url', 'id', 'name', 'zips_')
 
-"""
-class MakeSerializer(serializers.HyperlinkedModelSerializer):
+class DoctorCatSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Make
+        model = DoctorCat
         fields = ('url', 'id', 'name')
 
-class ModelSerializer(serializers.HyperlinkedModelSerializer):
+class DoctorSpecialtySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Model
-        fields = ('url', 'id', 'name', 'make', 'engine')
-
-class EngineSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Engine
+        model = DoctorSpecialty
         fields = ('url', 'id', 'name')
 
-class TaskSerializer(serializers.HyperlinkedModelSerializer):
+class DoctorSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Task
+        model = Doctor
+        fields = ('url', 'id', 'user', 'cats', 'specialties')
+
+class DoctorLocSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = DoctorLoc
+        fields = ('url', 'id', 'doctor', 'name', 'street', 'unit', 'zip')
+
+class ItemCatSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = ItemCat
         fields = ('url', 'id', 'name')
 
-class CarSerializer(serializers.HyperlinkedModelSerializer):
+class ItemSubcatSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Car
-        fields = ('url', 'id', 'owner', 'model', 'year', 'plate')
+        model = ItemSubcat
+        fields = ('url', 'id', 'name', 'cat')
 
-class ServiceSerializer(serializers.HyperlinkedModelSerializer):
+class ItemSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Service
-        fields = ('url', 'id', 'car', 'odometer', 'sched', 'enter', 'exit', 'total', 'observations')
+        model = Item
+        fields = ('url', 'id', 'name', 'subcat')
 
-class ServiceTaskSerializer(serializers.HyperlinkedModelSerializer):
+class MarketSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = ServiceTask
-        fields = ('url', 'id', 'service', 'task', 'start', 'end', 'observations')
+        model = Market
+        fields = ('url', 'id', 'name', 'items')
 
-    def validate(self, data):
-        # print 'validate @ ServiceTaskSerializer @ serializers.py', data
-        error = utils.validate_engine(data)
-        if error:
-            raise serializers.ValidationError(error)
-        return data
-"""
+class ForceSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Force
+        fields = ('url', 'id', 'name')

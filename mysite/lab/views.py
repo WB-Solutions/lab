@@ -10,6 +10,7 @@ import json
 
 import utils
 
+
 from rest_framework import viewsets
 from lab.serializers import *
 
@@ -20,6 +21,43 @@ class UserViewSet(viewsets.ModelViewSet):
 class BrickViewSet(viewsets.ModelViewSet):
     queryset = Brick.objects.all()
     serializer_class = BrickSerializer
+
+class DoctorCatViewSet(viewsets.ModelViewSet):
+    queryset = DoctorCat.objects.all()
+    serializer_class = DoctorCatSerializer
+
+class DoctorSpecialtyViewSet(viewsets.ModelViewSet):
+    queryset = DoctorSpecialty.objects.all()
+    serializer_class = DoctorSpecialtySerializer
+
+class DoctorViewSet(viewsets.ModelViewSet):
+    queryset = Doctor.objects.all()
+    serializer_class = DoctorSerializer
+
+class DoctorLocViewSet(viewsets.ModelViewSet):
+    queryset = DoctorLoc.objects.all()
+    serializer_class = DoctorLocSerializer
+
+class ItemCatViewSet(viewsets.ModelViewSet):
+    queryset = ItemCat.objects.all()
+    serializer_class = ItemCatSerializer
+
+class ItemSubcatViewSet(viewsets.ModelViewSet):
+    queryset = ItemSubcat.objects.all()
+    serializer_class = ItemSubcatSerializer
+
+class ItemViewSet(viewsets.ModelViewSet):
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer
+
+class MarketViewSet(viewsets.ModelViewSet):
+    queryset = Market.objects.all()
+    serializer_class = MarketSerializer
+
+class ForceViewSet(viewsets.ModelViewSet):
+    queryset = Force.objects.all()
+    serializer_class = ForceSerializer
+
 
 def index(request):
     return render(request, 'lab/index.html', dict())

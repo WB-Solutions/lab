@@ -7,44 +7,60 @@ import utils
 # dbmodels = utils.db_models()
 
 class BrickAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'zips1')
+    list_display = ('id', 'name', 'zips_')
+    search_fields = ('name', 'zips1')
 
-"""
-class ModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'make', 'engine')
+class DoctorCatAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('name',)
 
-class TaskAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'engines_')
+class DoctorSpecialtyAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('name',)
 
-class CarAdmin(admin.ModelAdmin):
-    list_display = ('id', 'owner', 'make_', 'model_', 'engine_', 'year', 'plate')
+class DoctorAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'cats_', 'specialties_')
+    filter_vertical = ('cats', 'specialties')
+    list_filter = ('cats__name', 'specialties__name')
 
-class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'owner_', 'make_', 'model_', 'engine_', 'year_', 'plate_', 'odometer', 'sched_', 'enter_', 'exit_', 'tasks_', 'total', 'observations')
+class DoctorLocAdmin(admin.ModelAdmin):
+    list_display = ('id', 'doctor', 'name', 'street', 'unit', 'zip')
+    search_fields = ('name', 'street', 'unit', 'zip')
 
-class ServiceTaskAdminForm(forms.ModelForm):
-    class Meta:
-        model = ServiceTask
+class ItemCatAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('name',)
 
-    def clean(self):
-        data = self.cleaned_data
-        # print 'clean @ ServiceTaskAdminForm @ admin.py', data
-        error = utils.validate_engine(data)
-        if error:
-            raise forms.ValidationError(error)
-        return data
+class ItemSubcatAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'cat')
+    search_fields = ('name',)
+    list_filter = ('cat__name',)
 
-class ServiceTaskAdmin(admin.ModelAdmin):
-    form = ServiceTaskAdminForm
-    list_display = ('id', 'owner_', 'make_', 'model_', 'year_', 'engine_', 'start_', 'end_', 'observations')
-"""
+class ItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'subcat')
+    search_fields = ('name',)
+    list_filter = ('subcat__name', 'market__name')
+
+class MarketAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'items_')
+    filter_vertical = ('items',)
+    search_fields = ('name',)
+
+class ForceAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('name',)
 
 dbadmins = [
     (Brick, BrickAdmin),
-    # (Task, TaskAdmin),
-    # (Car, CarAdmin),
-    # (Service, ServiceAdmin),
-    # (ServiceTask, ServiceTaskAdmin),
+    (DoctorCat, DoctorCatAdmin),
+    (DoctorSpecialty, DoctorSpecialtyAdmin),
+    (Doctor, DoctorAdmin),
+    (DoctorLoc, DoctorLocAdmin),
+    (ItemCat, ItemCatAdmin),
+    (ItemSubcat, ItemSubcatAdmin),
+    (Item, ItemAdmin),
+    (Market, MarketAdmin),
+    (Force, ForceAdmin),
 ]
 
 for dbmodel, dbadmin in dbadmins:
@@ -60,26 +76,29 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 
 class UserCreationForm(forms.ModelForm):
+    """
     password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
     password2 = forms.CharField(label='Password confirmation', widget=forms.PasswordInput)
+    """
 
     class Meta:
         model = User
         fields = ('email',)
 
+    """
     def clean_password2(self):
         password1 = self.cleaned_data.get("password1")
         password2 = self.cleaned_data.get("password2")
         if password1 and password2 and password1 != password2:
             raise forms.ValidationError("Passwords don't match")
         return password2
-
     def save(self, commit=True):
         user = super(UserCreationForm, self).save(commit=False)
         user.set_password(self.cleaned_data["password1"])
         if commit:
             user.save()
         return user
+    """
 
 
 class UserChangeForm(forms.ModelForm):
@@ -100,15 +119,15 @@ class UserAdmin(UserAdmin):
     list_display = ('email', 'is_admin')
     list_filter = ('is_admin',)
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        # ('Personal info', {'fields': ('date_of_birth',)}),
-        ('Permissions', {'fields': ('is_admin',)}),
+        (None, dict(fields=('email', 'password'))),
+        ('Personal info', dict(fields=('first_name', 'last_name'))),
+        ('Permissions', dict(fields=('is_admin',))),
     )
     add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2')}
-        ),
+        (None, dict(
+            classes = ('wide',),
+            fields = ('email', 'first_name', 'last_name'), # 'password1', 'password2'
+        )),
     )
     search_fields = ('email',)
     ordering = ('email',)
