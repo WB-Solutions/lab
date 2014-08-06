@@ -13,7 +13,7 @@ class BrickSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Brick
-        fields = ('url', 'id', 'name', 'zips_')
+        fields = ('url', 'id', 'name', 'zips1', 'zips_')
 
 class DoctorCatSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -58,4 +58,26 @@ class MarketSerializer(serializers.HyperlinkedModelSerializer):
 class ForceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Force
-        fields = ('url', 'id', 'name')
+        fields = ('url', 'id', 'name', 'markets', 'bricks')
+
+class ForceMgrSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = ForceMgr
+        fields = ('url', 'id', 'user', 'force')
+
+class ForceRepSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = ForceRep
+        fields = ('url', 'id', 'user', 'mgr', 'locs')
+
+class FormSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Form
+        fields = ('url', 'id', 'name', 'forces', 'markets', 'itemcats', 'itemsubcats')
+
+class FormFieldSerializer(serializers.HyperlinkedModelSerializer):
+    opts_ = serializers.Field(source='opts_')
+
+    class Meta:
+        model = FormField
+        fields = ('url', 'id', 'name', 'form', 'default', 'required', 'opts', 'opts_')

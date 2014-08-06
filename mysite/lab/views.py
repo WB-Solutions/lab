@@ -58,6 +58,22 @@ class ForceViewSet(viewsets.ModelViewSet):
     queryset = Force.objects.all()
     serializer_class = ForceSerializer
 
+class ForceMgrViewSet(viewsets.ModelViewSet):
+    queryset = ForceMgr.objects.all()
+    serializer_class = ForceMgrSerializer
+
+class ForceRepViewSet(viewsets.ModelViewSet):
+    queryset = ForceRep.objects.all()
+    serializer_class = ForceRepSerializer
+
+class FormViewSet(viewsets.ModelViewSet):
+    queryset = Form.objects.all()
+    serializer_class = FormSerializer
+
+class FormFieldViewSet(viewsets.ModelViewSet):
+    queryset = FormField.objects.all()
+    serializer_class = FormFieldSerializer
+
 
 def index(request):
     return render(request, 'lab/index.html', dict())

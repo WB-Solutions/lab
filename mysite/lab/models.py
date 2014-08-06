@@ -13,6 +13,13 @@ def _text(**kwargs):
 def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
 
+def _str(row, tmpl, values):
+    # parenthesis to separate nested row ids in values.
+    # e.g. items: ids for item / cat / subcat.
+    v = '(%s. %s)' % (row.id, (tmpl % values) if tmpl else values)
+    # print '_str', v
+    return unicode(v)
+
 
 
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
@@ -53,7 +60,7 @@ class User(AbstractBaseUser):
     REQUIRED_FIELDS = [ 'first_name', 'last_name' ]
 
     def __unicode__(self):
-        return '%s %s : %s' % (self.first_name, self.last_name, self.email)
+        return _str(self, '%s %s : %s', (self.first_name, self.last_name, self.email))
 
     def get_full_name(self):
         return self.email
@@ -78,7 +85,7 @@ class Brick(models.Model):
     zips1 = models.TextField(blank=True) # linear, simple space separated list for now ... https://gist.github.com/jonashaag/1200165
 
     def __unicode__(self):
-        return '%s : %s' % (self.name, self.zips_())
+        return _str(self, '%s [ %s ]', (self.name, self.zips_()))
 
     def zips_(self):
         return ', '.join(self.zips1.split())
@@ -87,13 +94,13 @@ class DoctorCat(models.Model):
     name = _name()
 
     def __unicode__(self):
-        return self.name
+        return _str(self, None, self.name)
 
 class DoctorSpecialty(models.Model):
     name = _name()
 
     def __unicode__(self):
-        return self.name
+        return _str(self, None, self.name)
 
 class Doctor(models.Model):
     user = models.OneToOneField(User)
@@ -101,8 +108,7 @@ class Doctor(models.Model):
     specialties = models.ManyToManyField(DoctorSpecialty, blank=True)
 
     def __unicode__(self):
-        # use unicode, otherwise "expected a character buffer object" error in Doctor add popup from DoctorLoc @ admin.
-        return unicode('%s [ %s ] [ %s ]' % (self.user, self.cats_(), self.specialties_()))
+        return _str(self, '%s [ %s ] [ %s ]', (self.user, self.cats_(), self.specialties_()))
 
     def cats_(self):
         return multiple_(self, 'cats')
@@ -118,40 +124,112 @@ class DoctorLoc(models.Model):
     zip = models.CharField(max_length=10)
 
     def __unicode__(self):
-        return '%s, %s # %s, %s' % (self.name, self.street, self.unit, self.zip)
+        return _str(self, '%s, %s # %s, %s', (self.name, self.street, self.unit, self.zip))
+
+    def bricks(self):
+        return Brick.objects.filter(zips1__icontains=self.zip)
 
 class ItemCat(models.Model):
     name = _name()
 
     def __unicode__(self):
-        return self.name
+        return _str(self, None, self.name)
 
 class ItemSubcat(models.Model):
     name = _name()
     cat = models.ForeignKey(ItemCat)
 
     def __unicode__(self):
-        return '%s > %s' % (self.cat, self.name)
+        return _str(self, '%s > %s', (self.cat, self.name))
 
 class Item(models.Model):
     name = _name()
     subcat = models.ForeignKey(ItemSubcat)
 
     def __unicode__(self):
-        return '%s @ %s' % (self.name, self.subcat)
+        return _str(self, '%s @ %s', (self.name, self.subcat))
 
 class Market(models.Model):
     name = _name()
     items = models.ManyToManyField(Item, blank=True)
 
     def __unicode__(self):
-        return '%s [ %s ]' % (self.name, self.items_())
+        return _str(self, '%s [ %s ]', (self.name, self.items_()))
 
     def items_(self):
         return multiple_(self, 'items')
 
 class Force(models.Model):
     name = _name()
+    markets = models.ManyToManyField(Market, blank=True)
+    bricks = models.ManyToManyField(Brick, blank=True)
 
     def __unicode__(self):
-        return 'PENDING FORCE'
+        return _str(self, None, self.name)
+
+    def markets_(self):
+        return multiple_(self, 'markets')
+
+    def bricks_(self):
+        return multiple_(self, 'bricks')
+
+class ForceMgr(models.Model):
+    user = models.ForeignKey(User)
+    force = models.ForeignKey(Force)
+
+    def __unicode__(self):
+        return _str(self, 'Force Mgr : %s @ %s', (self.user, self.force))
+
+class ForceRep(models.Model):
+    user = models.ForeignKey(User)
+    mgr = models.ForeignKey(ForceMgr)
+    locs = models.ManyToManyField(DoctorLoc, blank=True, through='ForceVisit')
+
+    def __unicode__(self):
+        return _str(self, 'Force Rep : %s @ %s', (self.user, self.mgr))
+
+    def locs_(self):
+        return multiple_(self, 'locs')
+
+    def visits(self):
+        return self.forcevisit_set.all()
+
+class ForceVisit(models.Model):
+    rep = models.ForeignKey(ForceRep)
+    loc = models.ForeignKey(DoctorLoc)
+    datetime = models.DateTimeField()
+
+class Form(models.Model):
+    name = _name()
+    forces = models.ManyToManyField(Force, blank=True)
+    markets = models.ManyToManyField(Market, blank=True)
+    itemcats = models.ManyToManyField(ItemCat, blank=True)
+    itemsubcats = models.ManyToManyField(ItemSubcat, blank=True)
+
+    def __unicode__(self):
+        return _str(self, None, self.name)
+
+    def forces_(self):
+        return multiple_(self, 'forces')
+
+    def markets_(self):
+        return multiple_(self, 'markets')
+
+    def itemcats_(self):
+        return multiple_(self, 'itemcats')
+
+    def itemsubcats_(self):
+        return multiple_(self, 'itemsubcats')
+
+class FormField(models.Model):
+    name = _name()
+    form = models.ForeignKey(Form)
+    default = models.CharField(max_length=200)
+    required = models.BooleanField(default=False)
+    opts = models.TextField(blank=True)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.form))
+
+    def opts_(self):
+        return ', '.join(self.opts.splitlines())

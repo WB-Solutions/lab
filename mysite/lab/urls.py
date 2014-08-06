@@ -18,6 +18,10 @@ for er, eset in [
     (r'items', views.ItemViewSet),
     (r'markets', views.MarketViewSet),
     (r'forces', views.ForceViewSet),
+    (r'force_mgrs', views.ForceMgrViewSet),
+    (r'force_reps', views.ForceRepViewSet),
+    (r'forms', views.FormViewSet),
+    (r'form_fields', views.FormFieldViewSet),
 ]:
     router.register(er, eset)
 

@@ -6,49 +6,73 @@ from lab.models import *
 import utils
 # dbmodels = utils.db_models()
 
-class BrickAdmin(admin.ModelAdmin):
+class AbstractAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    list_display_links = ('id', 'name')
+    search_fields = ('name',)
+
+class BrickAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'zips_')
     search_fields = ('name', 'zips1')
 
-class DoctorCatAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
-    search_fields = ('name',)
+class DoctorCatAdmin(AbstractAdmin):
+    pass
 
-class DoctorSpecialtyAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
-    search_fields = ('name',)
+class DoctorSpecialtyAdmin(AbstractAdmin):
+    pass
 
-class DoctorAdmin(admin.ModelAdmin):
+class DoctorAdmin(AbstractAdmin):
     list_display = ('id', 'user', 'cats_', 'specialties_')
-    filter_vertical = ('cats', 'specialties')
+    list_display_links = ('id',)
     list_filter = ('cats__name', 'specialties__name')
+    filter_vertical = ('cats', 'specialties')
 
-class DoctorLocAdmin(admin.ModelAdmin):
-    list_display = ('id', 'doctor', 'name', 'street', 'unit', 'zip')
+class DoctorLocAdmin(AbstractAdmin):
+    def _bricks(self, row):
+        return ', '.join(map(str, row.bricks()))
+    list_display = ('id', 'doctor', 'name', 'street', 'unit', 'zip', '_bricks')
     search_fields = ('name', 'street', 'unit', 'zip')
 
-class ItemCatAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
-    search_fields = ('name',)
+class ItemCatAdmin(AbstractAdmin):
+    pass
 
-class ItemSubcatAdmin(admin.ModelAdmin):
+class ItemSubcatAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'cat')
-    search_fields = ('name',)
     list_filter = ('cat__name',)
 
-class ItemAdmin(admin.ModelAdmin):
+class ItemAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'subcat')
-    search_fields = ('name',)
     list_filter = ('subcat__name', 'market__name')
 
-class MarketAdmin(admin.ModelAdmin):
+class MarketAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'items_')
     filter_vertical = ('items',)
-    search_fields = ('name',)
 
-class ForceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
-    search_fields = ('name',)
+class ForceAdmin(AbstractAdmin):
+    list_display = ('id', 'name', 'markets_', 'bricks_')
+    list_filter = ('markets__name', 'bricks__name')
+    filter_vertical = ('markets', 'bricks')
+
+class ForceMgrAdmin(AbstractAdmin):
+    list_display = ('id', 'user', 'force')
+    list_display_links = ('id',)
+
+# https://docs.djangoproject.com/en/1.6/ref/contrib/admin/#working-with-many-to-many-intermediary-models
+class ForceVisitInline(admin.TabularInline):
+    model = ForceVisit
+    extra = 1
+
+class ForceRepAdmin(AbstractAdmin):
+    list_display = ('id', 'user', 'mgr', 'locs_')
+    list_display_links = ('id',)
+    inlines = (ForceVisitInline,)
+
+class FormAdmin(AbstractAdmin):
+    list_display = ('id', 'name', 'forces_', 'markets_', 'itemcats_', 'itemsubcats_')
+    filter_vertical = ('forces', 'markets', 'itemcats', 'itemsubcats')
+
+class FormFieldAdmin(AbstractAdmin):
+    list_display = ('id', 'name', 'form', 'default', 'required', 'opts_')
 
 dbadmins = [
     (Brick, BrickAdmin),
@@ -61,6 +85,10 @@ dbadmins = [
     (Item, ItemAdmin),
     (Market, MarketAdmin),
     (Force, ForceAdmin),
+    (ForceMgr, ForceMgrAdmin),
+    (ForceRep, ForceRepAdmin),
+    (Form, FormAdmin),
+    (FormField, FormFieldAdmin),
 ]
 
 for dbmodel, dbadmin in dbadmins:
