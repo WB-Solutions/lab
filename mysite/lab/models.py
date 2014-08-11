@@ -8,7 +8,7 @@ def _datetime(*args, **kwargs):
     return models.DateTimeField(blank=True, null=True, *args, **kwargs)
 
 def _text(**kwargs):
-    return models.TextField('Observations', blank=True, **kwargs)
+    return models.TextField(blank=True, **kwargs)
 
 def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
@@ -77,6 +77,9 @@ class User(AbstractBaseUser):
     @property
     def is_staff(self): # is the user a member of staff?.
         return self.is_admin
+
+    def fullname(self):
+        return '%s %s' % (self.first_name, self.last_name)
 
 
 
@@ -198,6 +201,10 @@ class ForceVisit(models.Model):
     rep = models.ForeignKey(ForceRep)
     loc = models.ForeignKey(DoctorLoc)
     datetime = models.DateTimeField()
+    observations = _text()
+
+    def __unicode__(self):
+        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.rep, self.loc))
 
 class Form(models.Model):
     name = _name()

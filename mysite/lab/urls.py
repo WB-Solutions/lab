@@ -20,6 +20,7 @@ for er, eset in [
     (r'forces', views.ForceViewSet),
     (r'force_mgrs', views.ForceMgrViewSet),
     (r'force_reps', views.ForceRepViewSet),
+    (r'force_visits', views.ForceVisitViewSet),
     (r'forms', views.FormViewSet),
     (r'form_fields', views.FormFieldViewSet),
 ]:

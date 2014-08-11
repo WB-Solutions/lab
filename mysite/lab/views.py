@@ -66,6 +66,10 @@ class ForceRepViewSet(viewsets.ModelViewSet):
     queryset = ForceRep.objects.all()
     serializer_class = ForceRepSerializer
 
+class ForceVisitViewSet(viewsets.ModelViewSet):
+    queryset = ForceVisit.objects.all()
+    serializer_class = ForceVisitSerializer
+
 class FormViewSet(viewsets.ModelViewSet):
     queryset = Form.objects.all()
     serializer_class = FormSerializer
@@ -93,41 +97,39 @@ def _data(config=None):
     def _dict(data, fn):
         return dict([ (each.id, dict(id=each.id, full=str(each), **fn(each)))
             for each in data ])
+    """
     data = dict(
-        owners = _dict(_list(Owner), lambda owner: dict(
-            name = owner.name,
-        )),
-        cars = _dict(_list(Car), lambda car: dict(
-            owner = car.owner.id,
-            owner_name = car.owner.name,
-            make = car.model.make.id,
-            make_name = car.model.make.name,
-            model = car.model.id,
-            model_name = car.model.name,
-            engine = car.model.engine.id,
-            engine_name = car.model.engine.name,
-            year = car.year,
-            plate = car.plate,
-            services = [ each.id for each in car.service_set.all() ],
-        )),
-        services = _dict(_list(Service), lambda service: dict(
-            car = service.car.id,
-            car_name = str(service.car),
-            odometer = service.odometer,
-            sched = _datetime(service.sched),
-            enter = _datetime(service.enter),
-            exit = _datetime(service.exit),
-            total = str(service.total),
-            observations = service.observations,
-            servicetasks = _dict(service.servicetask_set.all(), lambda servicetask: dict(
-                task = servicetask.task.id,
-                task_name = servicetask.task.name,
-                start = _datetime(servicetask.start),
-                end = _datetime(servicetask.end),
-                observations = servicetask.observations,
+        forces = _dict(_list(Force), lambda force: dict(
+            name = force.name,
+            mgrs = _dict(force.forcemgr_set.all(), lambda mgr: dict(
+                reps = _dict(mgr.forcerep_set.all(), lambda rep: dict(
+                )),
             )),
         )),
     )
+    """
+    rep = config.get('rep')
+    def _names(rel):
+        return ', '.join([ each.name for each in rel.all() ])
+    def _visit(visit):
+        loc = visit.loc
+        doc = loc.doctor
+        user = doc.user
+
+        return dict(
+            datetime = _datetime(visit.datetime),
+            observations = visit.observations,
+            doc_name = user.fullname(),
+            doc_email = user.email,
+            doc_cats = _names(doc.cats),
+            doc_specialties = _names(doc.specialties),
+            loc_name = loc.name,
+            loc_address = '%s # %s, %s' % (loc.street, loc.unit, loc.zip),
+        )
+    data = dict(
+        visits = _dict(rep.visits(), _visit),
+    )
+    """
     if not config:
         data.update(
             tasks = _dict(_all(Task), lambda task: dict(
@@ -140,15 +142,21 @@ def _data(config=None):
                 engine_name = model.engine.name,
             )),
         )
-    # print '_data', data
+    """
+    print '_data', config, data
     return data
 
 def agenda(request):
-
-    return HttpResponse('PENDING AGENDA')
-
-    data = _data()
-    return render(request, 'cars/schedule.html', dict(schedule=True, data=json.dumps(data)))
+    data = None
+    def _dbget(dbmodel, dbid):
+        return dbmodel.objects.get(pk=dbid)
+    scope = request.GET.get('rep')
+    if scope: # only rep scope supported for now.
+        print 'agenda > rep scope', scope
+        rep = _dbget(ForceRep, scope)
+        if rep:
+            data = _data(dict(rep=rep))
+    return render(request, 'lab/agenda.html', dict(agenda=True, data=json.dumps(data or dict())))
 
 def ajax(request):
 

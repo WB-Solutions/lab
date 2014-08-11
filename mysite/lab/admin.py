@@ -54,7 +54,11 @@ class ForceAdmin(AbstractAdmin):
     filter_vertical = ('markets', 'bricks')
 
 class ForceMgrAdmin(AbstractAdmin):
-    list_display = ('id', 'user', 'force')
+    def _agenda(self, row):
+        return utils._agenda('mgr', row)
+    _agenda.allow_tags = True
+
+    list_display = ('id', 'user', 'force') # '_agenda'
     list_display_links = ('id',)
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/#working-with-many-to-many-intermediary-models
@@ -63,9 +67,17 @@ class ForceVisitInline(admin.TabularInline):
     extra = 1
 
 class ForceRepAdmin(AbstractAdmin):
-    list_display = ('id', 'user', 'mgr', 'locs_')
+    def _agenda(self, row):
+        return utils._agenda('rep', row)
+    _agenda.allow_tags = True
+
+    list_display = ('id', 'user', 'mgr', 'locs_', '_agenda')
     list_display_links = ('id',)
     inlines = (ForceVisitInline,)
+
+class ForceVisitAdmin(AbstractAdmin):
+    list_display = ('id', 'rep', 'loc', 'datetime', 'observations')
+    list_display_links = ('id',)
 
 class FormAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'forces_', 'markets_', 'itemcats_', 'itemsubcats_')
@@ -87,6 +99,7 @@ dbadmins = [
     (Force, ForceAdmin),
     (ForceMgr, ForceMgrAdmin),
     (ForceRep, ForceRepAdmin),
+    (ForceVisit, ForceVisitAdmin),
     (Form, FormAdmin),
     (FormField, FormFieldAdmin),
 ]
@@ -128,7 +141,6 @@ class UserCreationForm(forms.ModelForm):
         return user
     """
 
-
 class UserChangeForm(forms.ModelForm):
     password = ReadOnlyPasswordHashField()
 
@@ -139,13 +151,18 @@ class UserChangeForm(forms.ModelForm):
     def clean_password(self):
         return self.initial["password"]
 
-
 class UserAdmin(UserAdmin):
     form = UserChangeForm
     add_form = UserCreationForm
 
-    list_display = ('email', 'is_admin')
+    def _agenda(self, row):
+        return utils._agenda('user', row)
+    _agenda.allow_tags = True
+
+    list_display = ('id', 'email', 'is_admin') # '_agenda'
+    list_display_links = ('id', 'email')
     list_filter = ('is_admin',)
+
     fieldsets = (
         (None, dict(fields=('email', 'password'))),
         ('Personal info', dict(fields=('first_name', 'last_name'))),

@@ -70,6 +70,11 @@ class ForceRepSerializer(serializers.HyperlinkedModelSerializer):
         model = ForceRep
         fields = ('url', 'id', 'user', 'mgr', 'locs')
 
+class ForceVisitSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = ForceVisit
+        fields = ('url', 'id', 'rep', 'loc', 'datetime', 'observations')
+
 class FormSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Form

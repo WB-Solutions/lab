@@ -6,6 +6,10 @@ def db_models():
     # print 'utils.models', app, models
     return models
 
+def _agenda(scope, row):
+    from django.utils.html import format_html
+    return format_html('<a href="/lab/agenda?%s=%s" target="_blank"> Agenda </a>' % (scope, row.id))
+
 def validate_X(data):
     isvalid = False
     service = data.get('service')
