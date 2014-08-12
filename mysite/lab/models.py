@@ -209,8 +209,8 @@ class ForceVisit(models.Model):
     def __unicode__(self):
         return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.rep, self.loc))
 
-    def rec_json(self):
-        return json.loads(self.rec or dict(), parse_float=Decimal)
+    def rec_dict(self):
+        return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()
 
 class Form(models.Model):
     name = _name()
