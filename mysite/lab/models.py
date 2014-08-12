@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from decimal import Decimal
+import json
 
 def _name(**kwargs):
     return models.CharField('Name', max_length=200, unique=True, **kwargs)
@@ -206,6 +208,9 @@ class ForceVisit(models.Model):
 
     def __unicode__(self):
         return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.rep, self.loc))
+
+    def rec_json(self):
+        return json.loads(self.rec or dict(), parse_float=Decimal)
 
 class Form(models.Model):
     name = _name()

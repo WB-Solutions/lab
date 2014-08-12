@@ -4,9 +4,9 @@ from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError
 
 from decimal import Decimal
+import json
 
 from lab.models import *
-import json
 
 import utils
 
@@ -133,7 +133,7 @@ def _data(config=None):
                       or any( [ market for market in markets if market in form.markets.all() ] )
                       or any( [ brick for brick in bricks if brick in form.bricks.all() ] )
                       ],
-            rec = json.loads(visit.rec) or dict(),
+            rec = visit.rec_json(),
         )
     data = dict(
         visits = _dict(rep.visits(), _visit),
@@ -212,7 +212,7 @@ def ajax(request):
                 for dbk, dbv in _dbvars.items():
                     setattr(_obj, dbk, dbv)
                 _obj.save()
-            rec = json.loads(visit.rec) or dict()
+            rec = visit.rec_json()
             rec2 = pvars.get('rec')
             # print 'recs', rec, rec2
             rec.update(rec2)
