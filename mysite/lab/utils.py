@@ -6,6 +6,16 @@ def db_models():
     # print 'utils.models', app, models
     return models
 
+def db_get(dbmodel, dbid=None, **kwargs):
+    if dbid:
+        kwargs.update(pk=dbid)
+    try:
+        v = dbmodel.objects.get(**kwargs)
+    except dbmodel.DoesNotExist:
+        v = None
+    # print 'db_get', dbmodel, v
+    return v
+
 def _agenda(scope, row):
     from django.utils.html import format_html
     return format_html('<a href="/lab/agenda?%s=%s" target="_blank"> Agenda </a>' % (scope, row.id))

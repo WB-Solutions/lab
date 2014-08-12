@@ -231,12 +231,18 @@ class Form(models.Model):
 class FormField(models.Model):
     name = _name()
     form = models.ForeignKey(Form)
-    default = models.CharField(max_length=200)
+    default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)
-    opts = models.TextField(blank=True)
+    opts1 = models.TextField(blank=True)
 
     def __unicode__(self):
         return _str(self, '%s @ %s', (self.name, self.form))
 
+    def _opts(self):
+        return self.opts1.splitlines()
+
     def opts_(self):
-        return ', '.join(self.opts.splitlines())
+        return ', '.join(self._opts())
+
+    def opts(self):
+        return [ opt.split(':', 1) for opt in self._opts() ]

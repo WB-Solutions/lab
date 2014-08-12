@@ -85,4 +85,4 @@ class FormFieldSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = FormField
-        fields = ('url', 'id', 'name', 'form', 'default', 'required', 'opts', 'opts_')
+        fields = ('url', 'id', 'name', 'form', 'default', 'required', 'opts1', 'opts_')

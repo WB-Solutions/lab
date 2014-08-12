@@ -33,8 +33,23 @@ $(function(){
 	var refvars = {}
 	var forms = data.forms
 	_log('modal', z, vjson)
+	var schema2 = {}
+	var fieldsets = _(visit.forms).collect(function(form_id){
+	  var form = data.forms[form_id]
+	  return {
+		type: 'fieldset',
+		title: form.name,
+		// expandable: true,
+		items: _(form.fields).collect(function(field){
+		  var key = _('field_%s').sprintf(field.id)
+		  schema2[key] = { type: 'string' }
+		  return { key: key, prepend: field.name, notitle: true }
+		}),
+	  }
+	})
+	_log('modal forms', schema2, fieldsets)
 	w_form.empty().jsonForm({
-	  schema: {
+	  schema: _({
 		datetime: { type: 'string' },
 		doc_name: { type: 'string' },
 		doc_email: { type: 'string' },
@@ -43,19 +58,26 @@ $(function(){
 		loc_name: { type: 'string' },
 		loc_address: { type: 'string' },
 		observations: { type: 'string' },
-	  },
+	  }).extend(schema2),
 	  form: [
-		{ key: 'datetime', prepend: 'Date/Time', notitle: true },
-		{ key: 'doc_name', prepend: 'Doctor', notitle: true },
-		{ key: 'doc_email', prepend: 'Email', notitle: true },
-		{ key: 'doc_cats', prepend: 'Categories', notitle: true },
-		{ key: 'doc_specialties', prepend: 'Specialties', notitle: true },
-		{ key: 'loc_name', prepend: 'Location', notitle: true },
-		{ key: 'loc_address', prepend: 'Address', notitle: true },
-		{ key: 'observations', prepend: 'Observations', notitle: true },
+		{
+		  type: 'fieldset',
+		  title: 'Visit',
+		  items: [
+			{ key: 'datetime', prepend: 'Date/Time', notitle: true },
+			{ key: 'doc_name', prepend: 'Doctor', notitle: true },
+			{ key: 'doc_email', prepend: 'Email', notitle: true },
+			{ key: 'doc_cats', prepend: 'Categories', notitle: true },
+			{ key: 'doc_specialties', prepend: 'Specialties', notitle: true },
+			{ key: 'loc_name', prepend: 'Location', notitle: true },
+			{ key: 'loc_address', prepend: 'Address', notitle: true },
+			{ key: 'observations', prepend: 'Observations', notitle: true },
+		  ],
+		},
+	  ].concat(fieldsets).concat([
 		{ type: 'submit', title: 'Save Visit', htmlClass: 'btn-success center-block' },
 		// isnew ? '' : { type: 'button', title: 'Delete', id: 'X-delete', htmlClass: 'btn-danger btn-xs pull-right' }
-	  ],
+	  ]),
 	  value: vjson,
 	  onSubmitValid: function(vals){ // https://github.com/joshfire/jsonform/wiki#wiki-submission-values
 		var postvars = _({}).extend(refvars, vals)
@@ -83,8 +105,8 @@ $(function(){
 		})
 	  },
 	})
-	w_form.find('.tabbable:last').before('<label class="control-label">Forms</label>')
-	w_modal.find('#modal-label').text('Medical Visit')
+	// w_form.find('.tabbable:last').before('<label class="control-label">Forms</label>')
+	// w_modal.find('#modal-label').text('Medical Visit')
 	w_modal.modal('show')
   }
 
@@ -175,5 +197,5 @@ $(function(){
 	  .fullCalendar('refetchEvents')
   }
 
-  data_set()
+  if (data) { data_set() }
 })

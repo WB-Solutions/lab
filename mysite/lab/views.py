@@ -10,7 +10,6 @@ import json
 
 import utils
 
-
 from rest_framework import viewsets
 from lab.serializers import *
 
@@ -78,7 +77,6 @@ class FormFieldViewSet(viewsets.ModelViewSet):
     queryset = FormField.objects.all()
     serializer_class = FormFieldSerializer
 
-
 def index(request):
     return render(request, 'lab/index.html', dict())
 
@@ -109,6 +107,10 @@ def _data(config=None):
     )
     """
     rep = config.get('rep')
+    force = rep.mgr.force
+    markets = force.markets.all()
+    # items = [ market.items.all() for market in markets ]
+    print '_data', rep, force, markets # , items # item_cats, item_subcats
     def _names(rel):
         return ', '.join([ each.name for each in rel.all() ])
     def _visit(visit):
@@ -125,9 +127,19 @@ def _data(config=None):
             doc_specialties = _names(doc.specialties),
             loc_name = loc.name,
             loc_address = '%s # %s, %s' % (loc.street, loc.unit, loc.zip),
+            forms = [2],
         )
     data = dict(
         visits = _dict(rep.visits(), _visit),
+        forms = _dict(_all(Form), lambda form: dict(
+            name = form.name,
+            fields = _dict(form.formfield_set.all(), lambda field: dict(
+                name = field.name,
+                required = field.required,
+                default = field.default,
+                opts = field.opts(),
+            )),
+        )),
     )
     """
     if not config:
@@ -143,20 +155,20 @@ def _data(config=None):
             )),
         )
     """
-    print '_data', config, data
+    # print '_data', config, data
     return data
 
 def agenda(request):
     data = None
     def _dbget(dbmodel, dbid):
-        return dbmodel.objects.get(pk=dbid)
+        return utils.db_get(dbmodel, dbid)
     scope = request.GET.get('rep')
     if scope: # only rep scope supported for now.
         print 'agenda > rep scope', scope
         rep = _dbget(ForceRep, scope)
         if rep:
             data = _data(dict(rep=rep))
-    return render(request, 'lab/agenda.html', dict(agenda=True, data=json.dumps(data or dict())))
+    return render(request, 'lab/agenda.html', dict(agenda=True, data=json.dumps(data) or 'null'))
 
 def ajax(request):
 
