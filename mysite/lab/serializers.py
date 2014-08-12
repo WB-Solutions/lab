@@ -78,7 +78,7 @@ class ForceVisitSerializer(serializers.HyperlinkedModelSerializer):
 class FormSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Form
-        fields = ('url', 'id', 'name', 'forces', 'markets', 'itemcats', 'itemsubcats')
+        fields = ('url', 'id', 'name', 'forces', 'markets', 'bricks') # 'itemcats', 'itemsubcats'
 
 class FormFieldSerializer(serializers.HyperlinkedModelSerializer):
     opts_ = serializers.Field(source='opts_')

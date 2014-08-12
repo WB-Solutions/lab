@@ -80,8 +80,8 @@ class ForceVisitAdmin(AbstractAdmin):
     list_display_links = ('id',)
 
 class FormAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'forces_', 'markets_', 'itemcats_', 'itemsubcats_')
-    filter_vertical = ('forces', 'markets', 'itemcats', 'itemsubcats')
+    list_display = ('id', 'name', 'forces_', 'markets_', 'bricks_') # 'itemcats_', 'itemsubcats_'
+    filter_vertical = ('forces', 'markets', 'bricks') # 'itemcats', 'itemsubcats'
 
 class FormFieldAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'form', 'default', 'required', 'opts_')

@@ -11,7 +11,7 @@ $(function(){
   var w_cal = $('#cal')
   var w_modal = $('#modal')
   var w_form = $('#modal-form')
-  _log('w_*', w_dt, w_cal, w_modal, w_form)
+  // _log('w_*', w_dt, w_cal, w_modal, w_form)
 
   function modal(z) {
 	if (!z) { z = {} }
@@ -32,7 +32,7 @@ $(function(){
 	var vjson = _({}).extend(visit)
 	var refvars = {}
 	var forms = data.forms
-	_log('modal', z, vjson)
+	// _log('modal', z, vjson)
 	var schema2 = {}
 	var fieldsets = _(visit.forms).collect(function(form_id){
 	  var form = data.forms[form_id]
@@ -42,12 +42,27 @@ $(function(){
 		// expandable: true,
 		items: _(form.fields).collect(function(field){
 		  var key = _('field_%s').sprintf(field.id)
-		  schema2[key] = { type: 'string' }
-		  return { key: key, prepend: field.name, notitle: true }
+		  if (!(key in vjson)) { vjson[key] = field.default }
+		  var f_schema = { type: 'string', required: field.required }
+		  var f_form = { key: key, prepend: field.name, notitle: true }
+		  if (field.opts.length) {
+			var enums = [] // respect order.
+			var opts = _(field.opts).collect(function(opt){
+			  var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
+			  enums.push(opt2[0])
+			  return opt2
+			})
+			// _log('modal > each opts', opts)
+			f_form['titleMap'] = _(opts).object()
+			f_schema['enum'] = enums
+		  }
+		  schema2[key] = f_schema
+		  return f_form
 		}),
 	  }
 	})
-	_log('modal forms', schema2, fieldsets)
+	// _log('modal > vjson', vjson)
+	// _log('modal > schema2 / fieldsets', schema2, fieldsets)
 	w_form.empty().jsonForm({
 	  schema: _({
 		datetime: { type: 'string' },
@@ -112,14 +127,14 @@ $(function(){
 
   function visit_edit(visit_id) {
 	var visit = data.visits[visit_id]
-	_log('visit_edit', visit_id, visit)
+	// _log('visit_edit', visit_id, visit)
 	modal({ visit: visit })
   }
 
   w_doc.on('click', '.visit-edit', function(){
 	var w_act = $(this)
 	var visit_id = w_act.data('ref')
-	_log('click @ visit-edit', w_act, visit_id)
+	// _log('click @ visit-edit', w_act, visit_id)
 	visit_edit(visit_id)
   })
 

@@ -210,8 +210,9 @@ class Form(models.Model):
     name = _name()
     forces = models.ManyToManyField(Force, blank=True)
     markets = models.ManyToManyField(Market, blank=True)
-    itemcats = models.ManyToManyField(ItemCat, blank=True)
-    itemsubcats = models.ManyToManyField(ItemSubcat, blank=True)
+    bricks = models.ManyToManyField(Brick, blank=True)
+    # itemcats = models.ManyToManyField(ItemCat, blank=True)
+    # itemsubcats = models.ManyToManyField(ItemSubcat, blank=True)
 
     def __unicode__(self):
         return _str(self, None, self.name)
@@ -221,6 +222,9 @@ class Form(models.Model):
 
     def markets_(self):
         return multiple_(self, 'markets')
+
+    def bricks_(self):
+        return multiple_(self, 'bricks')
 
     def itemcats_(self):
         return multiple_(self, 'itemcats')
@@ -245,4 +249,4 @@ class FormField(models.Model):
         return ', '.join(self._opts())
 
     def opts(self):
-        return [ opt.split(':', 1) for opt in self._opts() ]
+        return [ [ each.strip() for each in opt.split(':', 1) ] for opt in self._opts() ]

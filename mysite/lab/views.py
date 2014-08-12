@@ -108,16 +108,17 @@ def _data(config=None):
     """
     rep = config.get('rep')
     force = rep.mgr.force
+    # def _db_ids(q): return [ each.id for each in q.all() ]
     markets = force.markets.all()
-    # items = [ market.items.all() for market in markets ]
-    print '_data', rep, force, markets # , items # item_cats, item_subcats
+    bricks = force.bricks.all()
+    print '_data', markets, bricks
+    forms = _all(Form)
     def _names(rel):
         return ', '.join([ each.name for each in rel.all() ])
     def _visit(visit):
         loc = visit.loc
         doc = loc.doctor
         user = doc.user
-
         return dict(
             datetime = _datetime(visit.datetime),
             observations = visit.observations,
@@ -127,11 +128,15 @@ def _data(config=None):
             doc_specialties = _names(doc.specialties),
             loc_name = loc.name,
             loc_address = '%s # %s, %s' % (loc.street, loc.unit, loc.zip),
-            forms = [2],
+            forms = [ form.id for form in forms
+                      if force in form.forces.all()
+                      or any( [ market for market in markets if market in form.markets.all() ] )
+                      or any( [ brick for brick in bricks if brick in form.bricks.all() ] )
+                      ],
         )
     data = dict(
         visits = _dict(rep.visits(), _visit),
-        forms = _dict(_all(Form), lambda form: dict(
+        forms = _dict(forms, lambda form: dict(
             name = form.name,
             fields = _dict(form.formfield_set.all(), lambda field: dict(
                 name = field.name,
