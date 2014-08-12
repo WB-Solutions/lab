@@ -111,7 +111,7 @@ def _data(config=None):
     # def _db_ids(q): return [ each.id for each in q.all() ]
     markets = force.markets.all()
     bricks = force.bricks.all()
-    print '_data', markets, bricks
+    # print '_data', markets, bricks
     forms = _all(Form)
     def _names(rel):
         return ', '.join([ each.name for each in rel.all() ])
@@ -133,6 +133,7 @@ def _data(config=None):
                       or any( [ market for market in markets if market in form.markets.all() ] )
                       or any( [ brick for brick in bricks if brick in form.bricks.all() ] )
                       ],
+            rec = json.loads(visit.rec) or dict(),
         )
     data = dict(
         visits = _dict(rep.visits(), _visit),
@@ -169,16 +170,13 @@ def agenda(request):
         return utils.db_get(dbmodel, dbid)
     scope = request.GET.get('rep')
     if scope: # only rep scope supported for now.
-        print 'agenda > rep scope', scope
+        # print 'agenda > rep scope', scope
         rep = _dbget(ForceRep, scope)
         if rep:
             data = _data(dict(rep=rep))
     return render(request, 'lab/agenda.html', dict(agenda=True, data=json.dumps(data) or 'null'))
 
 def ajax(request):
-
-    return HttpResponse('PENDING AJAX')
-
     pvars = json.loads(request.POST.get('data'), parse_float=Decimal)
     # print 'ajax', pvars
     def _get(key, default=None):
@@ -186,7 +184,7 @@ def ajax(request):
         # print '_get', key, pv
         return pv or ('' if default is None else default)
     def _dbget(dbmodel, dbid):
-        return dbmodel.objects.get(pk=dbid)
+        return utils.db_get(dbmodel, dbid)
     def _ref(key, dbmodel):
         pv = _get(key)
         pv = _dbget(dbmodel, pv) if pv else None
@@ -204,10 +202,8 @@ def ajax(request):
         try: v = Decimal(string)
         except: v = None
         return v
-    service = _ref('ref_service', Service)
-    car = _ref('ref_car', Car)
-    owner = _ref('ref_owner', Owner)
-    # print 'ajax > refs', [ service, car, owner ]
+    visit = _ref('ref_visit', ForceVisit)
+    # print 'ajax', visit
     errors = []
     try:
         with transaction.atomic():
@@ -216,65 +212,17 @@ def ajax(request):
                 for dbk, dbv in _dbvars.items():
                     setattr(_obj, dbk, dbv)
                 _obj.save()
-            if service:
-                car = service.car
-            if car:
-                owner = car.owner
-            else:
-                if not owner:
-                    owner = _new(Owner, name=_get('car_owner_name'))
-                model = _ref('car_model', Model)
-                car = _new(Car,
-                    owner = owner,
-                    model = model,
-                    year = _int(_get('car_year')) or 2000,
-                    plate = _get('car_plate'),
-                )
+            rec = json.loads(visit.rec) or dict()
+            rec2 = pvars.get('rec')
+            # print 'recs', rec, rec2
+            rec.update(rec2)
             dbvars = dict(
-                car = car,
-                odometer = _int(_get('odometer')) or 0,
-                sched = _get_datetime('sched'),
-                enter = _get_datetime('enter'),
-                exit = _get_datetime('exit'),
-                total = _decimal(_get('total')) or 0,
+                # sched = _get_datetime('sched'),
                 observations = _get('observations'),
+                rec = json.dumps(rec),
             )
-            # print 'service dbvars', dbvars
-            if service:
-                _update(service, dbvars)
-            else:
-                service = _new(Service, **dbvars)
-            # print 'car', car
-            # print 'service', service
-            webtasks = pvars.get('servicetasks') or []
-            # print 'webtasks', webtasks
-            for webtask in webtasks:
-                pvars = webtask # reset to reuse _get methods above.
-                servicetask_id = _int(webtask.get('id'))
-                # print 'servicetask_id', servicetask_id
-                task_id = _int(webtask.get('task'))
-                task = _dbget(Task, task_id) if task_id else None
-                # print 'task', task
-                if task:
-                    dbvars = dict(
-                        start = _get_datetime('start'),
-                        end = _get_datetime('end'),
-                        observations = _get('observations'),
-                    )
-                    # print 'servicetask dbvars', dbvars
-                    if servicetask_id: # update.
-                        servicetask = _dbget(ServiceTask, servicetask_id)
-                        _update(servicetask, dbvars)
-                    else: # create.
-                        dbvars.update(
-                            service = service,
-                            task = task,
-                        )
-                        err = utils.validate_engine(dbvars)
-                        if err:
-                            raise ValidationError(err)
-                        _new(ServiceTask, **dbvars)
-            # NO deletes for now.
+            # print 'dbvars', dbvars
+            _update(visit, dbvars)
     except IntegrityError as e:
         errors.append('Not unique, invalid.')
         # raise(e)
@@ -284,7 +232,7 @@ def ajax(request):
         # raise(e)
     data = dict(
         error = ', '.join(errors),
-        data = dict() if errors else _data({ Owner: owner, Car: car, Service: service }),
+        data = None, # dict() if errors else _data({ Owner: owner, Car: car, Service: service }),
     )
     # print 'ajax > data', data
     return HttpResponse(json.dumps(data))

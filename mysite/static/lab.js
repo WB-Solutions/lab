@@ -30,9 +30,10 @@ $(function(){
 	  return _v
 	}
 	var vjson = _({}).extend(visit)
-	var refvars = {}
+	var refvars = { ref_visit: visit.id }
 	var forms = data.forms
 	// _log('modal', z, vjson)
+	var rec = visit.rec
 	var schema2 = {}
 	var fieldsets = _(visit.forms).collect(function(form_id){
 	  var form = data.forms[form_id]
@@ -41,10 +42,10 @@ $(function(){
 		title: form.name,
 		// expandable: true,
 		items: _(form.fields).collect(function(field){
-		  var key = _('field_%s').sprintf(field.id)
-		  if (!(key in vjson)) { vjson[key] = field.default }
+		  var key = field.id // _('field_%s').sprintf(k)
+		  if (!(key in rec)) { rec[key] = field.default }
 		  var f_schema = { type: 'string', required: field.required }
-		  var f_form = { key: key, prepend: field.name, notitle: true }
+		  var f_form = { key: _('rec.%s').sprintf(key), prepend: field.name, notitle: true }
 		  if (field.opts.length) {
 			var enums = [] // respect order.
 			var opts = _(field.opts).collect(function(opt){
@@ -64,7 +65,7 @@ $(function(){
 	// _log('modal > vjson', vjson)
 	// _log('modal > schema2 / fieldsets', schema2, fieldsets)
 	w_form.empty().jsonForm({
-	  schema: _({
+	  schema: {
 		datetime: { type: 'string' },
 		doc_name: { type: 'string' },
 		doc_email: { type: 'string' },
@@ -73,23 +74,36 @@ $(function(){
 		loc_name: { type: 'string' },
 		loc_address: { type: 'string' },
 		observations: { type: 'string' },
-	  }).extend(schema2),
+
+		rec: {
+		  type: 'object',
+		  title: 'Forms',
+		  properties: schema2,
+		},
+
+	  },
 	  form: [
 		{
 		  type: 'fieldset',
 		  title: 'Visit',
 		  items: [
-			{ key: 'datetime', prepend: 'Date/Time', notitle: true },
-			{ key: 'doc_name', prepend: 'Doctor', notitle: true },
-			{ key: 'doc_email', prepend: 'Email', notitle: true },
-			{ key: 'doc_cats', prepend: 'Categories', notitle: true },
-			{ key: 'doc_specialties', prepend: 'Specialties', notitle: true },
-			{ key: 'loc_name', prepend: 'Location', notitle: true },
-			{ key: 'loc_address', prepend: 'Address', notitle: true },
-			{ key: 'observations', prepend: 'Observations', notitle: true },
+			{ key: 'datetime', prepend: 'Date/Time', notitle: true, disabled: true },
+			{ key: 'doc_name', prepend: 'Doctor', notitle: true, disabled: true },
+			{ key: 'doc_email', prepend: 'Email', notitle: true, disabled: true },
+			{ key: 'doc_cats', prepend: 'Categories', notitle: true, disabled: true },
+			{ key: 'doc_specialties', prepend: 'Specialties', notitle: true, disabled: true },
+			{ key: 'loc_name', prepend: 'Location', notitle: true, disabled: true },
+			{ key: 'loc_address', prepend: 'Address', notitle: true, disabled: true },
 		  ],
 		},
 	  ].concat(fieldsets).concat([
+		{
+		  type: 'fieldset',
+		  title: 'Observations',
+		  items: [
+			{ key: 'observations', type: 'textarea' },
+		  ],
+		},
 		{ type: 'submit', title: 'Save Visit', htmlClass: 'btn-success center-block' },
 		// isnew ? '' : { type: 'button', title: 'Delete', id: 'X-delete', htmlClass: 'btn-danger btn-xs pull-right' }
 	  ]),

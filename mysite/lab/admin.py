@@ -76,7 +76,7 @@ class ForceRepAdmin(AbstractAdmin):
     inlines = (ForceVisitInline,)
 
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = ('id', 'rep', 'loc', 'datetime', 'observations')
+    list_display = ('id', 'rep', 'loc', 'datetime') # 'observations', 'rec'
     list_display_links = ('id',)
 
 class FormAdmin(AbstractAdmin):

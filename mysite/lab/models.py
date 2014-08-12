@@ -202,6 +202,7 @@ class ForceVisit(models.Model):
     loc = models.ForeignKey(DoctorLoc)
     datetime = models.DateTimeField()
     observations = _text()
+    rec = models.TextField(blank=True)
 
     def __unicode__(self):
         return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.rep, self.loc))
