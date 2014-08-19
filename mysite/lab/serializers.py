@@ -6,7 +6,7 @@ import utils
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
-        fields = ('url', 'id', 'email')
+        fields = ('url', 'id', 'email', 'first_name', 'last_name')
 
 class BrickSerializer(serializers.HyperlinkedModelSerializer):
     zips_ = serializers.Field(source='zips_')
@@ -73,7 +73,7 @@ class ForceRepSerializer(serializers.HyperlinkedModelSerializer):
 class ForceVisitSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = ForceVisit
-        fields = ('url', 'id', 'rep', 'loc', 'datetime', 'observations', 'rec')
+        fields = ('url', 'id', 'rep', 'loc', 'datetime', 'status', 'observations', 'rec')
 
 class FormSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

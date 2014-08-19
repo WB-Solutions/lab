@@ -76,7 +76,7 @@ class ForceRepAdmin(AbstractAdmin):
     inlines = (ForceVisitInline,)
 
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = ('id', 'rep', 'loc', 'datetime') # 'observations', 'rec'
+    list_display = ('id', 'rep', 'loc', 'datetime', 'status') # 'observations', 'rec'
     list_display_links = ('id',)
 
 class FormAdmin(AbstractAdmin):
@@ -159,7 +159,7 @@ class UserAdmin(UserAdmin):
         return utils._agenda('user', row)
     _agenda.allow_tags = True
 
-    list_display = ('id', 'email', 'is_admin') # '_agenda'
+    list_display = ('id', 'email', 'first_name', 'last_name', 'is_admin') # '_agenda'
     list_display_links = ('id', 'email')
     list_filter = ('is_admin',)
 

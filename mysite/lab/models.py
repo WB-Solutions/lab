@@ -203,6 +203,7 @@ class ForceVisit(models.Model):
     rep = models.ForeignKey(ForceRep)
     loc = models.ForeignKey(DoctorLoc)
     datetime = models.DateTimeField()
+    status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
     observations = _text()
     rec = models.TextField(blank=True)
 
