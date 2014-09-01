@@ -122,28 +122,32 @@ def _data(config=None):
         def _visit(visit, ext=False):
             loc = visit.loc
             doc = loc.doctor
-            user = doc.user
             v = dict(
                 datetime = _datetime(visit.datetime),
                 status = visit.status or '',
                 observations = visit.observations,
-                doc_name = user.fullname(),
-                doc_email = user.email,
+                doc_name = doc.user.fullname(),
+                doc_email = doc.user.email,
                 doc_cats = _names(doc.cats),
                 doc_specialties = _names(doc.specialties),
                 loc_name = loc.name,
                 loc_address = '%s # %s, %s' % (loc.street, loc.unit, loc.zip),
                 forms = [ form.id for form in forms
                           if force in form.forces.all()
-                          or any( [ market for market in markets if market in form.markets.all() ] )
-                          or any( [ brick for brick in bricks if brick in form.bricks.all() ] )
+                          or any( [ each for each in markets if each in form.markets.all() ] )
+                          or any( [ each for each in [ e.cat for e in markets ] if each in form.marketcats.all() ] )
+                          or loc.zip.brick in form.bricks.all()
+                          or (loc.loc and loc.loc in form.locs.all())
+                          or (loc.loc and loc.loc.cat in form.loccats.all())
+                          or any( [ each for each in doc.cats.all() if each in form.doctorcats.all() ] )
+                          or any( [ each for each in doc.specialties.all() if each in form.doctorspecialties.all() ] )
                           ],
                 rec = visit.rec_dict(),
             )
             if ext:
                 _ext(visit, v)
             return v
-        bricks = rep.bricks.all()
+        # bricks = rep.bricks.all()
         force = rep.mgr.force
         # def _db_ids(q): return [ each.id for each in q.all() ]
         markets = force.markets.all()
