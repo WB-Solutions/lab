@@ -1,24 +1,31 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+
 from decimal import Decimal
 import json
 
+from mptt.fields import TreeForeignKey
+from mptt.models import MPTTModel
+
+
+def _kw_merge(kwmain, **kwdef):
+    return dict(kwdef, **kwmain)
+
 def _name(**kwargs):
-    return models.CharField('Name', max_length=200, unique=True, **kwargs)
+    return models.CharField('Name', **_kw_merge(kwargs, max_length=200, unique=True))
 
 def _datetime(*args, **kwargs):
-    return models.DateTimeField(blank=True, null=True, *args, **kwargs)
+    return models.DateTimeField(*args, **_kw_merge(kwargs, blank=True, null=True))
 
 def _text(**kwargs):
-    return models.TextField(blank=True, **kwargs)
+    return models.TextField(**_kw_merge(kwargs, blank=True))
 
 def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
 
 def _str(row, tmpl, values):
-    # parenthesis to separate nested row ids in values.
-    # e.g. items: ids for item / cat / subcat.
-    v = '(%s. %s)' % (row.id, (tmpl % values) if tmpl else values)
+    v = (tmpl % values) if tmpl else values
+    # v = '(%s. %s)' % (row.id, v) # parenthesis to separate nested row ids in values, e.g. items: ids for item / cat / subcat.
     # print '_str', v
     return unicode(v)
 
@@ -85,24 +92,72 @@ class User(AbstractBaseUser):
 
 
 
-class Brick(models.Model):
+class Country(models.Model):
     name = _name()
-    zips1 = models.TextField(blank=True) # linear, simple space separated list for now ... https://gist.github.com/jonashaag/1200165
+
+    class Meta:
+        ordering = ('name',)
 
     def __unicode__(self):
-        return _str(self, '%s [ %s ]', (self.name, self.zips_()))
+        return _str(self, None, self.name)
 
-    def zips_(self):
-        return ', '.join(self.zips1.split())
+class State(models.Model):
+    name = _name()
+    country = models.ForeignKey(Country)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.country))
+
+class City(models.Model):
+    name = _name()
+    state = models.ForeignKey(State)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.state))
+
+
+
+class Brick(models.Model):
+    name = _name()
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, None, self.name)
+
+class Zip(models.Model):
+    name = _name()
+    brick = models.ForeignKey(Brick)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.brick))
+
+
 
 class DoctorCat(models.Model):
     name = _name()
+
+    class Meta:
+        ordering = ('name',)
 
     def __unicode__(self):
         return _str(self, None, self.name)
 
 class DoctorSpecialty(models.Model):
     name = _name()
+
+    class Meta:
+        ordering = ('name',)
 
     def __unicode__(self):
         return _str(self, None, self.name)
@@ -121,28 +176,61 @@ class Doctor(models.Model):
     def specialties_(self):
         return multiple_(self, 'specialties')
 
-class DoctorLoc(models.Model):
-    doctor = models.ForeignKey(Doctor)
-    name = _name()
+class AbstractLoc(models.Model):
     street = models.CharField(max_length=200)
-    unit = models.CharField(max_length=30)
-    zip = models.CharField(max_length=10)
+    unit = models.CharField(max_length=30, blank=True, null=True)
+    zip = models.ForeignKey(Zip)
+    city = models.ForeignKey(City)
+
+    class Meta:
+        abstract = True
 
     def __unicode__(self):
         return _str(self, '%s, %s # %s, %s', (self.name, self.street, self.unit, self.zip))
 
-    def bricks(self):
-        return Brick.objects.filter(zips1__icontains=self.zip)
+class LocCat(models.Model):
+    name = _name()
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, None, self.name)
+
+class Loc(AbstractLoc):
+    name = _name()
+    cat = models.ForeignKey(LocCat)
+
+    class Meta:
+        ordering = ('name',)
+
+class DoctorLoc(AbstractLoc):
+    doctor = models.ForeignKey(Doctor)
+    loc = models.ForeignKey(Loc)
+    name = _name(unique=False, blank=True, null=True)
+
+    class Meta:
+        unique_together = ('doctor', 'name')
+        ordering = ('name',)
+
+
 
 class ItemCat(models.Model):
     name = _name()
+
+    class Meta:
+        ordering = ('name',)
 
     def __unicode__(self):
         return _str(self, None, self.name)
 
 class ItemSubcat(models.Model):
-    name = _name()
+    name = _name(unique=False)
     cat = models.ForeignKey(ItemCat)
+
+    class Meta:
+        unique_together = ('cat', 'name')
+        ordering = ('name',)
 
     def __unicode__(self):
         return _str(self, '%s > %s', (self.cat, self.name))
@@ -151,23 +239,46 @@ class Item(models.Model):
     name = _name()
     subcat = models.ForeignKey(ItemSubcat)
 
+    class Meta:
+        ordering = ('name',)
+
     def __unicode__(self):
         return _str(self, '%s @ %s', (self.name, self.subcat))
 
-class Market(models.Model):
+
+
+class MarketCat(models.Model):
     name = _name()
-    items = models.ManyToManyField(Item, blank=True)
+
+    class Meta:
+        ordering = ('name',)
 
     def __unicode__(self):
-        return _str(self, '%s [ %s ]', (self.name, self.items_()))
+        return _str(self, None, self.name)
+
+class Market(models.Model):
+    name = _name(unique=False)
+    cat = models.ForeignKey(MarketCat)
+    items = models.ManyToManyField(Item, blank=True)
+
+    class Meta:
+        unique_together = ('cat', 'name')
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s [ %s ]', (self.name, self.cat, self.items_()))
 
     def items_(self):
         return multiple_(self, 'items')
 
+
+
 class Force(models.Model):
     name = _name()
     markets = models.ManyToManyField(Market, blank=True)
-    bricks = models.ManyToManyField(Brick, blank=True)
+
+    class Meta:
+        ordering = ('name',)
 
     def __unicode__(self):
         return _str(self, None, self.name)
@@ -175,20 +286,36 @@ class Force(models.Model):
     def markets_(self):
         return multiple_(self, 'markets')
 
-    def bricks_(self):
-        return multiple_(self, 'bricks')
-
-class ForceMgr(models.Model):
-    user = models.ForeignKey(User)
+# http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
+class ForceMgr(MPTTModel):
     force = models.ForeignKey(Force)
+    user = models.ForeignKey(User)
+
+    # mptt.
+    parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
+    order = models.IntegerField()
+
+    class Meta:
+        unique_together = ('user', 'force', 'parent')
 
     def __unicode__(self):
         return _str(self, 'Force Mgr : %s @ %s', (self.user, self.force))
 
+    def save(self, *args, **kwargs):
+        print 'ForceMgr.save', self, args, kwargs
+        cls = self.__class__
+        super(cls, self).save(*args, **kwargs)
+        cls.objects.rebuild()
+
 class ForceRep(models.Model):
+    # force = models.ForeignKey(Force)
     user = models.ForeignKey(User)
     mgr = models.ForeignKey(ForceMgr)
+    bricks = models.ManyToManyField(Brick, blank=True)
     locs = models.ManyToManyField(DoctorLoc, blank=True, through='ForceVisit')
+
+    class Meta:
+        unique_together = ('user', 'mgr')
 
     def __unicode__(self):
         return _str(self, 'Force Rep : %s @ %s', (self.user, self.mgr))
@@ -196,16 +323,24 @@ class ForceRep(models.Model):
     def locs_(self):
         return multiple_(self, 'locs')
 
+    def bricks_(self):
+        return multiple_(self, 'bricks')
+
     def visits(self):
         return self.forcevisit_set.all()
 
 class ForceVisit(models.Model):
+    # force = models.ForeignKey(Force)
     rep = models.ForeignKey(ForceRep)
     loc = models.ForeignKey(DoctorLoc)
+    mgr = models.ForeignKey(ForceMgr, blank=True, null=True)
     datetime = models.DateTimeField()
     status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
     observations = _text()
     rec = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ('-datetime',)
 
     def __unicode__(self):
         return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.rep, self.loc))
@@ -213,38 +348,57 @@ class ForceVisit(models.Model):
     def rec_dict(self):
         return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()
 
+
+
 class Form(models.Model):
     name = _name()
     forces = models.ManyToManyField(Force, blank=True)
+    marketcats = models.ManyToManyField(MarketCat, blank=True)
     markets = models.ManyToManyField(Market, blank=True)
     bricks = models.ManyToManyField(Brick, blank=True)
-    # itemcats = models.ManyToManyField(ItemCat, blank=True)
-    # itemsubcats = models.ManyToManyField(ItemSubcat, blank=True)
+    itemcats = models.ManyToManyField(ItemCat, blank=True)
+    itemsubcats = models.ManyToManyField(ItemSubcat, blank=True)
+    doctorcats = models.ManyToManyField(DoctorCat, blank=True)
+    doctorspecialties = models.ManyToManyField(DoctorSpecialty, blank=True)
+    loccats = models.ManyToManyField(LocCat, blank=True)
+    locs = models.ManyToManyField(Loc, blank=True)
+
+    class Meta:
+        ordering = ('name',)
 
     def __unicode__(self):
         return _str(self, None, self.name)
 
-    def forces_(self):
-        return multiple_(self, 'forces')
+    def _h_all(self):
+        rels = []
+        for each in [ 'forces', 'marketcats', 'markets', 'bricks', 'itemcats', 'itemsubcats', 'doctorcats', 'doctorspecialties', 'loccats', 'locs' ]:
+            ev = multiple_(self, each)
+            if ev:
+                rels.append('<b>%s</b> : %s' % (each, ev))
+        print 'Form.all_', self, rels
+        return '<br>'.join(rels)
 
-    def markets_(self):
-        return multiple_(self, 'markets')
-
-    def bricks_(self):
-        return multiple_(self, 'bricks')
-
-    def itemcats_(self):
-        return multiple_(self, 'itemcats')
-
-    def itemsubcats_(self):
-        return multiple_(self, 'itemsubcats')
+    def forces_(self): return multiple_(self, 'forces')
+    def marketcats_(self): return multiple_(self, 'marketcats')
+    def markets_(self): return multiple_(self, 'markets')
+    def bricks_(self): return multiple_(self, 'bricks')
+    def itemcats_(self): return multiple_(self, 'itemcats')
+    def itemsubcats_(self): return multiple_(self, 'itemsubcats')
+    def doctorcats_(self): return multiple_(self, 'doctorcats')
+    def doctorspecialties_(self): return multiple_(self, 'doctorspecialties')
+    def loccats_(self): return multiple_(self, 'loccats')
+    def locs_(self): return multiple_(self, 'locs')
 
 class FormField(models.Model):
-    name = _name()
+    name = _name(unique=False)
     form = models.ForeignKey(Form)
     default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)
     opts1 = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ('form', 'name')
+        ordering = ('name',)
 
     def __unicode__(self):
         return _str(self, '%s @ %s', (self.name, self.form))
