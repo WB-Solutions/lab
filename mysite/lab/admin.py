@@ -189,7 +189,7 @@ class ForceVisitAdmin(AbstractAdmin):
 
 class FormFieldInline(admin.TabularInline):
     model = FormField
-    extra = 1
+    extra = 0
     suit_classes = 'suit-tab suit-tab-fields'
 
 class FormAdmin(AbstractAdmin):

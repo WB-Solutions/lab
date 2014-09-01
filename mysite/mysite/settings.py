@@ -118,3 +118,14 @@ SUIT_CONFIG = dict(
         # dict(label='ALL', icon='icon-cog', app='lab'),
     ),
 )
+
+'''
+    pip install ...
+	    django-extensions
+	    djangorestframework
+	    django-suit
+	    django-mptt
+    \lab\mysite> ...
+        python manage.py graph_models lab -g -o models_lab.png
+        python manage.py graph_models -a -g -o models_all.png
+'''

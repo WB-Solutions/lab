@@ -143,11 +143,10 @@ def _data(config=None):
             if ext:
                 _ext(visit, v)
             return v
+        bricks = rep.bricks.all()
         force = rep.mgr.force
         # def _db_ids(q): return [ each.id for each in q.all() ]
         markets = force.markets.all()
-        bricks = force.bricks.all()
-        # print '_data', markets, bricks
         data = _visit(visit, ext=True) if visit else dict(
             visits = _dict(rep.visits(), _visit),
             forms = _dict(forms, lambda form: dict(
@@ -213,8 +212,9 @@ def ajax(request):
                 _obj.save()
             rec = visit.rec_dict()
             rec2 = pvars.get('rec')
-            # print 'recs', rec, rec2
-            rec.update(rec2)
+            if rec2: # could be None.
+                # print 'recs', rec, rec2
+                rec.update(rec2)
             dbvars = dict(
                 # sched = _get_datetime('sched'),
                 status = _get('status'),
