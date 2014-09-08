@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils.translation import ugettext as _
 
 from decimal import Decimal
 import json
@@ -12,7 +13,7 @@ def _kw_merge(kwmain, **kwdef):
     return dict(kwdef, **kwmain)
 
 def _name(**kwargs):
-    return models.CharField('Name', **_kw_merge(kwargs, max_length=200, unique=True))
+    return models.CharField(_('name'), **_kw_merge(kwargs, max_length=200, unique=True))
 
 def _datetime(*args, **kwargs):
     return models.DateTimeField(*args, **_kw_merge(kwargs, blank=True, null=True))
@@ -32,7 +33,15 @@ def _str(row, tmpl, values):
 
 
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
+from django.contrib.auth.models import User
 
+from userena.models import UserenaBaseProfile
+
+class UserProfile(UserenaBaseProfile):
+    user = models.OneToOneField(User, unique=True, verbose_name=_('user'), related_name='user_profile'),
+    favourite_snack = models.CharField(_('favourite snack'), max_length=5)
+
+'''
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 
 class UserManager(BaseUserManager):
@@ -89,6 +98,7 @@ class User(AbstractBaseUser):
 
     def fullname(self):
         return '%s %s' % (self.first_name, self.last_name)
+'''
 
 
 
@@ -203,6 +213,8 @@ class Loc(AbstractLoc):
 
     class Meta:
         ordering = ('name',)
+        verbose_name = 'Domicilio'
+        verbose_name_plural = 'Domicilios'
 
 class DoctorLoc(AbstractLoc):
     doctor = models.ForeignKey(Doctor)
@@ -288,12 +300,9 @@ class Force(models.Model):
 
 # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
 class ForceMgr(MPTTModel):
+    name = _name(unique=False)
     force = models.ForeignKey(Force)
     user = models.ForeignKey(User)
-
-    # mptt.
-    parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
-    order = models.IntegerField()
 
     class Meta:
         unique_together = ('user', 'force', 'parent')
@@ -301,9 +310,14 @@ class ForceMgr(MPTTModel):
     def __unicode__(self):
         return _str(self, 'Force Mgr : %s @ %s', (self.user, self.force))
 
+    # mptt.
+    parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
+    order = models.IntegerField()
+    class MPTTMeta:
+        order_insertion_by = ('order',)
     def save(self, *args, **kwargs):
-        print 'ForceMgr.save', self, args, kwargs
         cls = self.__class__
+        print 'ForceMgr.save', self, cls, args, kwargs
         super(cls, self).save(*args, **kwargs)
         cls.objects.rebuild()
 

@@ -30,12 +30,12 @@ class CityInline(admin.TabularInline):
 
 class StateAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'country')
-    list_filter = ('country__name',)
+    list_filter = ('country',)
     inlines = (CityInline,)
 
 class CityAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'state')
-    list_filter = ('state__name', 'state__country__name')
+    list_filter = ('state', 'state__country')
 
 
 
@@ -64,7 +64,7 @@ class DoctorLocInline(admin.StackedInline):
 class DoctorAdmin(AbstractAdmin):
     list_display = ('id', 'user', 'cats_', 'specialties_')
     list_display_links = ('id', 'user')
-    list_filter = ('cats__name', 'specialties__name')
+    list_filter = ('cats', 'specialties')
     filter_vertical = ('cats', 'specialties')
     inlines = (DoctorLocInline,)
 
@@ -96,12 +96,12 @@ class ItemInline(admin.TabularInline):
 
 class ItemSubcatAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'cat')
-    list_filter = ('cat__name',)
+    list_filter = ('cat',)
     inlines = (ItemInline,)
 
 class ItemAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'subcat')
-    list_filter = ('subcat__name', 'market__name')
+    list_filter = ('subcat', 'market')
 
 
 
@@ -114,7 +114,7 @@ class MarketCatAdmin(AbstractAdmin):
 
 class MarketAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'cat', 'items_')
-    list_filter = ('cat__name',)
+    list_filter = ('cat',)
     filter_vertical = ('items',)
 
 
@@ -128,7 +128,7 @@ class ForceAdmin(AbstractAdmin):
         return format_html('<a href="/admin/lab/forcemgr/?force__name=%s"> Mgrs </a>' % (row.name))
 
     list_display = ('id', 'name', 'markets_', '_mgrs')
-    list_filter = ('markets__name',)
+    list_filter = ('markets',)
     filter_vertical = ('markets',)
     inlines = (ForceMgrInline,)
 
@@ -141,15 +141,14 @@ class ForceMgrAdmin(AbstractAdmin, MPTTModelAdmin, SortableModelAdmin):
         return utils._agenda('mgr', row)
     _agenda.allow_tags = True
 
-    # user first for tree view.
-    list_display = ('user', 'id', 'force') # '_agenda'
+    list_display = ('id', 'user', 'force') # '_agenda'
     list_display_links = ('user', 'id')
-    list_filter = ('force__name',)
+    list_filter = ('force',)
     inlines = (ForceRepInline,)
 
     # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
-    mptt_level_indent = 20
     sortable = 'order'
+    mptt_indent_field  = 'user'
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/#working-with-many-to-many-intermediary-models
 class ForceVisitInline(admin.TabularInline): # TabularInline / StackedInline
@@ -164,7 +163,7 @@ class ForceRepAdmin(AbstractAdmin):
 
     list_display = ('id', 'user', 'mgr', 'bricks_', 'locs_', '_agenda')
     list_display_links = ('id', 'user')
-    list_filter = ('bricks__name',)
+    list_filter = ('bricks',)
     filter_vertical = ('bricks',)
     inlines = (ForceVisitInline,)
 
@@ -260,6 +259,8 @@ for dbmodel, dbadmin in dbadmins:
 
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
 
+'''
+
 from django.contrib import admin
 from django.contrib.auth.models import Group # User.
 from django.contrib.auth.admin import UserAdmin
@@ -329,3 +330,5 @@ class UserAdmin(UserAdmin):
 
 admin.site.register(User, UserAdmin)
 admin.site.unregister(Group)
+
+'''

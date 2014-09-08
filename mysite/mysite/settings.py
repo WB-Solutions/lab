@@ -12,7 +12,7 @@ TEMPLATE_DEBUG = True
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = (
-    'suit',
+    'suit', # django-suit
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -21,10 +21,20 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'django_extensions',
-    'rest_framework',
+    'django_extensions', # django-extensions
+    'rest_framework', # djangorestframework
 
-    'mptt',
+    'mptt', # django-mptt
+
+    # 'bootstrap3', # django-bootstrap3
+
+    # userena.
+    'userena',
+    'guardian',
+    'easy_thumbnails',
+    'django.contrib.sites',
+    'userena.contrib.umessages',
+
     'lab',
 )
 
@@ -51,15 +61,13 @@ DATABASES = {
     },
 }
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
+# http://www.postgresql.org/docs/8.1/static/datetime-keywords.html#DATETIME-TIMEZONE-SET-TABLE
+TIME_ZONE = 'Mexico/General'
+USE_TZ = True
 
 USE_I18N = True
-
 USE_L10N = True
-
-USE_TZ = False
+LANGUAGE_CODE = 'en-us' # 'es-mx'
 
 STATIC_URL = '/static/'
 statics = os.path.join(BASE_DIR, 'static')
@@ -77,11 +85,28 @@ REST_FRAMEWORK = {
     # 'PAGINATE_BY': 10
 }
 
-AUTH_USER_MODEL = 'lab.User'
-
 TEMPLATE_CONTEXT_PROCESSORS = TCP + (
     'django.core.context_processors.request',
 )
+
+MPTT_ADMIN_LEVEL_INDENT = 20
+
+# https://docs.djangoproject.com/en/1.6/topics/email/#console-backend
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# userena.
+AUTHENTICATION_BACKENDS = (
+    'userena.backends.UserenaAuthenticationBackend',
+    'guardian.backends.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+ANONYMOUS_USER_ID = -1
+AUTH_PROFILE_MODULE = 'lab.UserProfile'
+USERENA_SIGNIN_REDIRECT_URL = '/accounts/%(username)s/'
+LOGIN_URL = '/accounts/signin/'
+LOGOUT_URL = '/accounts/signout/'
+USERENA_WITHOUT_USERNAMES = True
+SITE_ID = 1
 
 SUIT_CONFIG = dict(
     ADMIN_NAME = 'Medical Visits DEMO',
@@ -91,7 +116,8 @@ SUIT_CONFIG = dict(
     # SHOW_REQUIRED_ASTERISK = True,
     # CONFIRM_UNSAVED_CHANGES = True,
 
-    SEARCH_URL = '/admin/lab/user/', # http://django-suit.readthedocs.org/en/develop/configuration.html#search-url
+    # SEARCH_URL = '/admin/lab/user/', # http://django-suit.readthedocs.org/en/develop/configuration.html#search-url
+
     # MENU_ICONS: dict(
     #    sites = 'icon-leaf',
     #    auth = 'icon-lock',
@@ -106,7 +132,9 @@ SUIT_CONFIG = dict(
     # ),
 
     # LIST_PER_PAGE = 15,
-
+)
+'''
+SUIT_CONFIG.update(
     MENU = (
         dict(label='Users', icon='icon-cog', app='lab', models=('user',)),
         dict(label='Geos', icon='icon-cog', app='lab', models=('loc', 'loccat', 'country', 'state', 'city', 'brick', 'zip')),
@@ -118,13 +146,9 @@ SUIT_CONFIG = dict(
         # dict(label='ALL', icon='icon-cog', app='lab'),
     ),
 )
+'''
 
 '''
-    pip install ...
-	    django-extensions
-	    djangorestframework
-	    django-suit
-	    django-mptt
     \lab\mysite> ...
         python manage.py graph_models lab -g -o models_lab.png
         python manage.py graph_models -a -g -o models_all.png
