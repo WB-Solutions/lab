@@ -1,4 +1,4 @@
-from lab.models import *
+from .models import *
 
 import utils
 dbmodels = utils.db_models()

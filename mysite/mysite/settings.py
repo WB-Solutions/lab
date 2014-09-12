@@ -28,13 +28,6 @@ INSTALLED_APPS = (
 
     # 'bootstrap3', # django-bootstrap3
 
-    # userena.
-    'userena',
-    'guardian',
-    'easy_thumbnails',
-    'django.contrib.sites',
-    'userena.contrib.umessages',
-
     'lab',
 )
 
@@ -62,8 +55,9 @@ DATABASES = {
 }
 
 # http://www.postgresql.org/docs/8.1/static/datetime-keywords.html#DATETIME-TIMEZONE-SET-TABLE
+# http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 TIME_ZONE = 'Mexico/General'
-USE_TZ = True
+USE_TZ = False
 
 USE_I18N = True
 USE_L10N = True
@@ -93,20 +87,6 @@ MPTT_ADMIN_LEVEL_INDENT = 20
 
 # https://docs.djangoproject.com/en/1.6/topics/email/#console-backend
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# userena.
-AUTHENTICATION_BACKENDS = (
-    'userena.backends.UserenaAuthenticationBackend',
-    'guardian.backends.ObjectPermissionBackend',
-    'django.contrib.auth.backends.ModelBackend',
-)
-ANONYMOUS_USER_ID = -1
-AUTH_PROFILE_MODULE = 'lab.UserProfile'
-USERENA_SIGNIN_REDIRECT_URL = '/accounts/%(username)s/'
-LOGIN_URL = '/accounts/signin/'
-LOGOUT_URL = '/accounts/signout/'
-USERENA_WITHOUT_USERNAMES = True
-SITE_ID = 1
 
 SUIT_CONFIG = dict(
     ADMIN_NAME = 'Medical Visits DEMO',

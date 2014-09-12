@@ -1,5 +1,5 @@
 from django.test import TestCase
-from lab.models import *
+from .models import *
 import utils
 
 # python manage.py test

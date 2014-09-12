@@ -35,12 +35,6 @@ def _str(row, tmpl, values):
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
 from django.contrib.auth.models import User
 
-from userena.models import UserenaBaseProfile
-
-class UserProfile(UserenaBaseProfile):
-    user = models.OneToOneField(User, unique=True, verbose_name=_('user'), related_name='user_profile'),
-    favourite_snack = models.CharField(_('favourite snack'), max_length=5)
-
 '''
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 

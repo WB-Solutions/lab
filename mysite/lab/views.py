@@ -6,12 +6,12 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 import json
 
-from lab.models import *
+from .models import *
 
 import utils
 
 from rest_framework import viewsets
-from lab.serializers import *
+from .serializers import *
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()

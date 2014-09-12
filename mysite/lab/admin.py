@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from suit.admin import SortableModelAdmin
 from mptt.admin import MPTTModelAdmin
 
-from lab.models import *
+from .models import *
 import utils
 # dbmodels = utils.db_models()
 
