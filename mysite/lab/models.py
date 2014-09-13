@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import ugettext as _
+from django.contrib.auth import get_user_model
 
 from decimal import Decimal
 import json
@@ -33,7 +34,10 @@ def _str(row, tmpl, values):
 
 
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
+
+# https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#django.contrib.auth.get_user_model
+User = get_user_model()
 
 '''
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser

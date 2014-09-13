@@ -1,12 +1,12 @@
 import os
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
+from django.conf.global_settings import AUTHENTICATION_BACKENDS as AB
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 SECRET_KEY = '^d0!gm53217iw3jqr66svdtw$oc-$#5b+x7p)xc+5+m-ekvxf1'
 
 DEBUG = True
-
 TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -26,7 +26,17 @@ INSTALLED_APPS = (
 
     'mptt', # django-mptt
 
-    # 'bootstrap3', # django-bootstrap3
+    'allauth', # django-allauth
+    'allauth.account',
+    'allauth.socialaccount',
+    # 'allauth.socialaccount.providers.facebook',
+    # ...
+    'django.contrib.sites',
+    'bootstrap3', # django-bootstrap3
+    # 'bootstrapform', # django-bootstrap-form
+
+    'allauthdemo.auth',
+    'allauthdemo.demo',
 
     'lab',
 )
@@ -69,6 +79,10 @@ statics = os.path.join(BASE_DIR, 'static')
 
 TEMPLATE_DIRS = (
     os.path.join(BASE_DIR, 'templates'),
+
+    os.path.join(BASE_DIR, 'allauthdemo', 'templates', 'plain', 'example'),
+    os.path.join(BASE_DIR, 'allauthdemo', 'templates', 'allauth'),
+    os.path.join(BASE_DIR, 'allauthdemo', 'templates'),
 )
 
 STATICFILES_DIRS = (
@@ -79,9 +93,30 @@ REST_FRAMEWORK = {
     # 'PAGINATE_BY': 10
 }
 
+
+
+# allauth.
 TEMPLATE_CONTEXT_PROCESSORS = TCP + (
     'django.core.context_processors.request',
+    'allauth.account.context_processors.account',
+    'allauth.socialaccount.context_processors.socialaccount',
 )
+AUTHENTICATION_BACKENDS = AB + (
+    "allauth.account.auth_backends.AuthenticationBackend",
+)
+SITE_ID = 1
+ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_PASSWORD_MIN_LENGTH = 1
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+AUTH_USER_MODEL = 'auth.DemoUser'
+LOGIN_REDIRECT_URL = '/member/'
+
+
 
 MPTT_ADMIN_LEVEL_INDENT = 20
 

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django import forms
 from django.utils.html import format_html
+from django.utils.translation import ugettext as _
 
 from suit.admin import SortableModelAdmin
 from mptt.admin import MPTTModelAdmin
