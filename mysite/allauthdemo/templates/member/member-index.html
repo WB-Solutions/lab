@@ -9,17 +9,14 @@
   <div class="row">
     {% bootstrap_messages %}
 
-    <div class="col-sm-6 col-md-4 col-lg4">
+    <div class="col-sm-6">
       <p class="sticky taped2" style="width: 250px;">
         <strong>Welcome {{ request.user.name }}!</strong><br>
-        At this point, the site has<br />
-        authenticated you and, if you<br />
-        used a social network, retrieved<br />
-        your picture and key bio details<br />
-        such as name.
+        The site has authenticated you.
       </p>
     </div>
 
+<!--
     <div class="col-sm-6 col-md-4 col-lg-4">
       <h3>Picture</h3>
       <p class="picture-frame">
@@ -27,7 +24,9 @@
       {% else %}No picture available yet.{% endif %}
       </p>
     </div>
-    <div class="col-sm-6 col-md-4 col-lg-4">
+-->
+
+    <div class="col-sm-6">
       <h3>Profile</h3>
       <ul class="list-unstyled">
         <li>First name: <strong>{{user.first_name}}</strong></li>

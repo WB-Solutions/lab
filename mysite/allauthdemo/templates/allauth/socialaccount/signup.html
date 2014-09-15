@@ -1,4 +1,4 @@
-{% extends "bases/bootstrap-auth.html" %}
+{% extends "bases/bootstrap-member.html" %}
 
 {% load i18n %}
 {% load bootstrap3 %}
@@ -9,9 +9,9 @@
 
 <h1>{% trans "Sign Up" %}</h1>
 
-<p>{% blocktrans with provider_name=account.get_provider.name site_name=site.name %}You are about to use your {{provider_name}} account to login to 
+<p>{% blocktrans with provider_name=account.get_provider.name site_name=site.name %}You are about to use your {{provider_name}} account to login to
 {{site_name}}. As a final step, please complete the following form:{% endblocktrans %}</p>
-    
+
 <form class="signup" id="signup_form" method="post" action="">
   {% csrf_token %}
   {% bootstrap_form form %}
@@ -22,7 +22,7 @@
   <button class="btn btn-primary"  type="submit">{% trans "Sign Up" %}</button>
   </div>
 </form>
-        
+
 
 {% endblock %}
 

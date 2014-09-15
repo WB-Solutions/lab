@@ -1,18 +1,22 @@
-{% extends "bases/bootstrap-visitor.html" %}
+{% extends "bases/bootstrap-member.html" %}
 {% load staticfiles %}
 
 {% block content %}
 
 <div class="container">
   <div class="jumbotron text-center">
-    <h1>This = Django-Allauth <br>+ Bootstrap</h1>
+    <h1>Medical Visits DEMO</h1>
     <p class="lead">
       Read more on the <a href="{% url 'landing_about' %}">About Page.</a>
     </p>
     <p>
+{% if user.is_authenticated %}
+  <h2> Already authenticated !! </h2>
+{% else %}
       <a class="btn btn-lg btn-success " href="{% url 'account_signup' %}" role="button">Join</a>
       or
       <a class="btn btn-lg btn-success " href="{% url 'account_login' %}" role="button">Log In</a>
+{% endif %}
     </p>
   </div>
 </div>

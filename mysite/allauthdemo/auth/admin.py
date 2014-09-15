@@ -9,21 +9,8 @@ try:
 except ImportError:
     from django.utils.encoding import force_unicode as force_text
 
-from .models import DemoUser, UserProfile
+from .models import DemoUser
 from .forms import DemoUserAdminForm, DemoUserCreateAdminForm
-
-
-class UserProfileAdmin(admin.ModelAdmin):
-    search_fields = ('user', 'dob')
-    ordering = ('user',)
-    list_select_related = ('user',)
-
-
-admin.site.register(UserProfile, UserProfileAdmin)
-
-
-class UserProfileAdminInline(admin.TabularInline):
-    model = UserProfile
 
 
 # https://github.com/django/django/blob/stable/1.6.x/django/contrib/auth/admin.py
@@ -37,10 +24,6 @@ class DemoUserAdmin(UserAdmin):
     And:
     .../lib/python2.7/site-packages/django/contrib/auth/admin.py
     """
-
-    inlines = [
-        UserProfileAdminInline,
-        ]
 
     #readonly_fields = ('private_uuid', 'public_id')
 
