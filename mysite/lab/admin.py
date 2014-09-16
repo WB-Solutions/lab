@@ -85,9 +85,9 @@ class ForceNodeAdmin(AbstractTreeAdmin):
         return 'PENDING AGENDA' # utils._agenda('PENDING', row)
     _agenda.allow_tags = True
 
-    list_display = ('id', 'name', 'user', 'bricks_', 'locs_', '_agenda')
+    list_display = ('id', 'name', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
     list_display_links = ('id', 'name')
-    list_filter = ('bricks',)
+    list_filter = ('itemcats', 'bricks',)
     filter_vertical = ('bricks',)
     inlines = (ForceVisitInline,)
 
@@ -125,18 +125,21 @@ class UserAdmin(_UserAdmin):
         # (_('Personal info'), {'fields': ('first_name', 'last_name', 'display_name')}),
         # (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+        (_('Cats'), {'fields': ('cats',)}),
         #(_('Ids'), {'fields': ('private_uuid', 'public_id')}),
     )
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'password1', 'password2')}
+            'fields': ('email', 'first_name', 'last_name', 'password1', 'password2', 'cats')}
         ),
     )
-    list_display = ('email', 'first_name', 'last_name', 'display_name', 'is_staff')
-    search_fields = ('first_name', 'last_name', 'display_name', 'email')
+    list_display = ('email', 'first_name', 'last_name', 'last_login', 'date_joined', 'cats_')
+    search_fields = ('email', 'first_name', 'last_name')
     ordering = ('email',)
+
+    list_filter = ('cats',)
 
     form = UserAdminForm
     add_form = UserCreateAdminForm
@@ -153,11 +156,13 @@ class UserAdmin(_UserAdmin):
 
 
 class ItemAdmin(AbstractAdmin):
-    pass
+    list_display = ('id', 'name', 'cats_')
+    list_filter = ('cats',)
 
 class LocAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'street', 'unit', 'zip', 'city')
+    list_display = ('id', 'street', 'unit', 'phone', 'zip', 'city', 'name', 'at', 'user', 'cats_')
     list_display_links = ('id', 'street')
+    list_filter = ('cats',)
 
 
 
@@ -170,8 +175,9 @@ class FormAdmin(AbstractAdmin):
         return row._h_all()
     _h_all.allow_tags = True
 
-    list_display = ('id', 'name', '_h_all')
+    list_display = ('id', 'name', 'order', 'cats_', '_h_all')
     filter_vertical = ('bricks',)
+    list_filter = ('cats',)
     inlines = (FormFieldInline,)
 
     '''
