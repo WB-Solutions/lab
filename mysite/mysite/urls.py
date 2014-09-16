@@ -10,7 +10,7 @@ admin.autodiscover()
 
 
 from django.views.generic.base import TemplateView
-import allauthdemo.views
+from lab import views
 
 
 
@@ -32,10 +32,10 @@ urlpatterns = patterns('',
     url(r'^terms/$', TemplateView.as_view(template_name='visitor/terms.html'), name='website_terms'),
     url(r'^contact$', TemplateView.as_view(template_name='visitor/contact.html'), name='website_contact'),
 
-    url(r'^accounts/profile/$', 'allauthdemo.auth.views.account_profile', name='account_profile'),
+    url(r'^accounts/profile/$', views.account_profile, name='account_profile'),
 
-    url(r'^member/$', allauthdemo.views.member_index, name='user_home'),
-    url(r'^member/action$', allauthdemo.views.member_action, name='user_action'),
+    url(r'^member/$', views.member_index, name='user_home'),
+    url(r'^member/action$', views.member_action, name='user_action'),
 
     url(r'^admin/', include(admin.site.urls)),
 )

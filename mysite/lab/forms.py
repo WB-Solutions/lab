@@ -2,15 +2,10 @@ from django import forms
 from django.core.validators import MinLengthValidator
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import DemoUser
+from .models import *
 
 
-class DemoUserEditForm(forms.ModelForm):
-    """Form for viewing and editing name fields in a DemoUser object.
-
-    A good reference for Django forms is:
-    http://pydanny.com/core-concepts-django-modelforms.html
-    """
+class UserEditForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         # TODO: this doesn't seem to work. Need to get to the bottom of it.
@@ -20,25 +15,25 @@ class DemoUserEditForm(forms.ModelForm):
         super(forms.ModelForm, self).__init__(*args, **kwargs)
 
     class Meta:
-        model = DemoUser
+        model = User
         fields = ('first_name', 'last_name', 'display_name')
 
 
-class DemoUserAdminForm(forms.ModelForm):
+class UserAdminForm(forms.ModelForm):
 
     class Meta:
-        model = DemoUser
+        model = User
 
     def is_valid(self):
         #log.info(force_text(self.errors))
-        return super(DemoUserAdminForm, self).is_valid()
+        return super(UserAdminForm, self).is_valid()
 
 
-class DemoUserCreateAdminForm(UserCreationForm):
+class UserCreateAdminForm(UserCreationForm):
     username = forms.CharField(required=False)
 
     class Meta:
-        model = DemoUser
+        model = User
         fields = ('email',)
 
     def clean_username(self):

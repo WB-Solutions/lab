@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.utils.translation import ugettext as _
-from django.contrib.auth import get_user_model
+from django.utils.translation import ugettext as _ # use ugettext_lazy instead?.
 
 from decimal import Decimal
 import json
@@ -22,6 +21,9 @@ def _datetime(*args, **kwargs):
 def _text(**kwargs):
     return models.TextField(**_kw_merge(kwargs, blank=True))
 
+def _many(*args, **kwargs):
+    return models.ManyToManyField(*args, **_kw_merge(kwargs, blank=True))
+
 def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
 
@@ -32,12 +34,110 @@ def _str(row, tmpl, values):
     return unicode(v)
 
 
+class AbstractModel(models.Model):
+
+    class Meta:
+        abstract = True
+
+    def cats_(self):
+        return multiple_(self, 'cats')
+
+
+
+class Country(AbstractModel):
+    name = _name()
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, None, self.name)
+
+class State(AbstractModel):
+    name = _name()
+    country = models.ForeignKey(Country)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.country))
+
+class City(AbstractModel):
+    name = _name()
+    state = models.ForeignKey(State)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.state))
+
+class Brick(AbstractModel):
+    name = _name()
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, None, self.name)
+
+class Zip(AbstractModel):
+    name = _name()
+    brick = models.ForeignKey(Brick)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.brick))
+
+
+
+# http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
+class AbstractTree(MPTTModel):
+    name = _name(unique=False)
+    parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
+    order = models.IntegerField()
+
+    class Meta:
+        abstract = True
+
+    class MPTTMeta:
+        order_insertion_by = ('order',)
+
+    def __unicode__(self):
+        return _str(self, '%s %s', (' . ' * self.level, self.name))
+
+    def save(self, *args, **kwargs):
+        # print 'AbstractTree.save', self, args, kwargs
+        super(AbstractTree, self).save(*args, **kwargs)
+        self.__class__.objects.rebuild()
+
+class UserCat(AbstractTree):
+    pass
+
+class ItemCat(AbstractTree):
+    pass
+
+class LocCat(AbstractTree):
+    pass
+
+class FormCat(AbstractTree):
+    pass
+
+
+
+
 
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
 # from django.contrib.auth.models import User
 
+'''
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#django.contrib.auth.get_user_model
+from django.contrib.auth import get_user_model
 User = get_user_model()
+'''
 
 '''
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
@@ -99,309 +199,192 @@ class User(AbstractBaseUser):
 '''
 
 
+# https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
 
-class Country(models.Model):
-    name = _name()
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from django.utils.http import urlquote
+from django.core.mail import send_mail
+from django.utils import timezone
+
+class UserManager(BaseUserManager):
+
+    def _create_user(self, email, password, is_staff, is_superuser, **extra_fields):
+        # print '_create_user', email, password, is_staff, is_superuser, extra_fields
+        now = timezone.now()
+        email = self.normalize_email(email)
+        user = self.model(email=email, is_staff=is_staff, is_active=True, is_superuser=is_superuser, date_joined=now, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        return self._create_user(email, password, False, False, **extra_fields)
+
+    def create_superuser(self, email, password, **extra_fields):
+        # print 'create_superuser', email, password, extra_fields
+        return self._create_user(email, password, True, True, **extra_fields)
+
+class User(AbstractModel, AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(_('email address'), blank=False, unique=True)
+    first_name = models.CharField(_('first name'), max_length=40, blank=True, null=True, unique=False)
+    last_name = models.CharField(_('last name'), max_length=40, blank=True, null=True, unique=False)
+    display_name = models.CharField(_('display name'), max_length=14, blank=True, null=True, unique=False)
+    is_staff = models.BooleanField(_('staff status'), default=False,
+        help_text=_('Designates whether the user can log into this admin '
+                    'site.'))
+    is_active = models.BooleanField(_('active'), default=True,
+        help_text=_('Designates whether this user should be treated as '
+                    'active. Unselect this instead of deleting accounts.'))
+    date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
+
+    cats = _many(UserCat)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
 
     class Meta:
-        ordering = ('name',)
+        verbose_name = _('user')
+        verbose_name_plural = _('users')
+        # db_table = 'auth_user'
+        # abstract = False
 
     def __unicode__(self):
-        return _str(self, None, self.name)
+        return _str(self, None, self.email) # _str(self, '%s [ %s ]', (self.email, self.cats_()))
 
-class State(models.Model):
-    name = _name()
-    country = models.ForeignKey(Country)
+    def get_absolute_url(self):
+        # TODO: what is this for?
+        return "/users/%s/" % urlquote(self.email)  # TODO: email ok for this? better to have uuid?
 
-    class Meta:
-        ordering = ('name',)
+    @property
+    def name(self):
+        if self.first_name:
+            return self.first_name
+        elif self.display_name:
+            return self.display_name
+        return 'You'
 
-    def __unicode__(self):
-        return _str(self, '%s @ %s', (self.name, self.country))
+    def get_full_name(self):
+        """
+        Returns the first_name plus the last_name, with a space in between.
+        """
+        full_name = '%s %s' % (self.first_name, self.last_name)
+        return full_name.strip()
 
-class City(models.Model):
-    name = _name()
-    state = models.ForeignKey(State)
+    def get_short_name(self):
+        "Returns the short name for the user."
+        return self.first_name
 
-    class Meta:
-        ordering = ('name',)
+    def guess_display_name(self):
+        """Set a display name, if one isn't already set."""
+        if self.display_name:
+            return
 
-    def __unicode__(self):
-        return _str(self, '%s @ %s', (self.name, self.state))
+        if self.first_name and self.last_name:
+            dn = "%s %s" % (self.first_name, self.last_name[0]) # like "Andrew E"
+        elif self.first_name:
+            dn = self.first_name
+        else:
+            dn = 'You'
+        self.display_name = dn.strip()
 
+    def email_user(self, subject, message, from_email=None):
+        """
+        Sends an email to this User.
+        """
+        send_mail(subject, message, from_email, [self.email])
 
-
-class Brick(models.Model):
-    name = _name()
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, None, self.name)
-
-class Zip(models.Model):
-    name = _name()
-    brick = models.ForeignKey(Brick)
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, '%s @ %s', (self.name, self.brick))
-
-
-
-class DoctorCat(models.Model):
-    name = _name()
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, None, self.name)
-
-class DoctorSpecialty(models.Model):
-    name = _name()
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, None, self.name)
-
-class Doctor(models.Model):
-    user = models.OneToOneField(User)
-    cats = models.ManyToManyField(DoctorCat, blank=True)
-    specialties = models.ManyToManyField(DoctorSpecialty, blank=True)
-
-    def __unicode__(self):
-        return _str(self, '%s [ %s ] [ %s ]', (self.user, self.cats_(), self.specialties_()))
-
-    def cats_(self):
-        return multiple_(self, 'cats')
-
-    def specialties_(self):
-        return multiple_(self, 'specialties')
-
-class AbstractLoc(models.Model):
-    street = models.CharField(max_length=200)
-    unit = models.CharField(max_length=30, blank=True, null=True)
-    zip = models.ForeignKey(Zip)
-    city = models.ForeignKey(City)
-
-    class Meta:
-        abstract = True
-
-    def __unicode__(self):
-        return _str(self, '%s, %s # %s, %s', (self.name, self.street, self.unit, self.zip))
-
-class LocCat(models.Model):
-    name = _name()
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, None, self.name)
-
-class Loc(AbstractLoc):
-    name = _name()
-    cat = models.ForeignKey(LocCat)
-
-    class Meta:
-        ordering = ('name',)
-        verbose_name = 'Domicilio'
-        verbose_name_plural = 'Domicilios'
-
-class DoctorLoc(AbstractLoc):
-    doctor = models.ForeignKey(Doctor)
-    loc = models.ForeignKey(Loc)
-    name = _name(unique=False, blank=True, null=True)
-
-    class Meta:
-        unique_together = ('doctor', 'name')
-        ordering = ('name',)
+    def natural_key(self):
+        return (self.email,)
 
 
 
-class ItemCat(models.Model):
-    name = _name()
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, None, self.name)
-
-class ItemSubcat(models.Model):
-    name = _name(unique=False)
-    cat = models.ForeignKey(ItemCat)
-
-    class Meta:
-        unique_together = ('cat', 'name')
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, '%s > %s', (self.cat, self.name))
-
-class Item(models.Model):
-    name = _name()
-    subcat = models.ForeignKey(ItemSubcat)
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, '%s @ %s', (self.name, self.subcat))
 
 
-
-class MarketCat(models.Model):
-    name = _name()
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, None, self.name)
-
-class Market(models.Model):
-    name = _name(unique=False)
-    cat = models.ForeignKey(MarketCat)
-    items = models.ManyToManyField(Item, blank=True)
-
-    class Meta:
-        unique_together = ('cat', 'name')
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, '%s @ %s [ %s ]', (self.name, self.cat, self.items_()))
-
-    def items_(self):
-        return multiple_(self, 'items')
-
-
-
-class Force(models.Model):
-    name = _name()
-    markets = models.ManyToManyField(Market, blank=True)
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, None, self.name)
-
-    def markets_(self):
-        return multiple_(self, 'markets')
-
-# http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
-class ForceMgr(MPTTModel):
-    name = _name(unique=False)
-    force = models.ForeignKey(Force)
+class ForceNode(AbstractTree):
     user = models.ForeignKey(User)
-
-    class Meta:
-        unique_together = ('user', 'force', 'parent')
-
-    def __unicode__(self):
-        return _str(self, 'Force Mgr : %s @ %s', (self.user, self.force))
-
-    # mptt.
-    parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
-    order = models.IntegerField()
-    class MPTTMeta:
-        order_insertion_by = ('order',)
-    def save(self, *args, **kwargs):
-        cls = self.__class__
-        print 'ForceMgr.save', self, cls, args, kwargs
-        super(cls, self).save(*args, **kwargs)
-        cls.objects.rebuild()
-
-class ForceRep(models.Model):
-    # force = models.ForeignKey(Force)
-    user = models.ForeignKey(User)
-    mgr = models.ForeignKey(ForceMgr)
-    bricks = models.ManyToManyField(Brick, blank=True)
-    locs = models.ManyToManyField(DoctorLoc, blank=True, through='ForceVisit')
-
-    class Meta:
-        unique_together = ('user', 'mgr')
+    itemcats = _many(ItemCat)
+    bricks = _many(Brick)
+    locs = _many('Loc', through='ForceVisit')
 
     def __unicode__(self):
-        return _str(self, 'Force Rep : %s @ %s', (self.user, self.mgr))
+        return _str(self, 'Force: %s @ %s', (self.user, self.name))
 
-    def locs_(self):
-        return multiple_(self, 'locs')
+    def itemcats_(self):
+        return multiple_(self, 'itemcats')
 
     def bricks_(self):
         return multiple_(self, 'bricks')
 
+    def locs_(self):
+        return multiple_(self, 'locs')
+
     def visits(self):
         return self.forcevisit_set.all()
 
-class ForceVisit(models.Model):
-    # force = models.ForeignKey(Force)
-    rep = models.ForeignKey(ForceRep)
-    loc = models.ForeignKey(DoctorLoc)
-    mgr = models.ForeignKey(ForceMgr, blank=True, null=True)
-    datetime = models.DateTimeField()
-    status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
-    observations = _text()
-    rec = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ('-datetime',)
-
-    def __unicode__(self):
-        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.rep, self.loc))
-
-    def rec_dict(self):
-        return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()
-
-
-
-class Form(models.Model):
+class Item(AbstractModel):
     name = _name()
-    forces = models.ManyToManyField(Force, blank=True)
-    marketcats = models.ManyToManyField(MarketCat, blank=True)
-    markets = models.ManyToManyField(Market, blank=True)
-    bricks = models.ManyToManyField(Brick, blank=True)
-    itemcats = models.ManyToManyField(ItemCat, blank=True)
-    itemsubcats = models.ManyToManyField(ItemSubcat, blank=True)
-    doctorcats = models.ManyToManyField(DoctorCat, blank=True)
-    doctorspecialties = models.ManyToManyField(DoctorSpecialty, blank=True)
-    loccats = models.ManyToManyField(LocCat, blank=True)
-    locs = models.ManyToManyField(Loc, blank=True)
+    cats = _many(ItemCat)
 
     class Meta:
         ordering = ('name',)
 
     def __unicode__(self):
-        return _str(self, None, self.name)
+        return _str(self, '%s [ %s ]', (self.name, self.cats_()))
+
+class Loc(AbstractModel):
+    name = _name(unique=False, blank=True)
+    user = models.ForeignKey(User)
+    street = models.CharField(max_length=200)
+    unit = models.CharField(max_length=30, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    fax = models.CharField(max_length=30, blank=True)
+    zip = models.ForeignKey(Zip)
+    city = models.ForeignKey(City)
+    at = models.ForeignKey('self', blank=True, null=True)
+    cats = _many(LocCat)
+
+    class Meta:
+        ordering = ('name',)
+        # verbose_name = 'Domicilio'
+        # verbose_name_plural = 'Domicilios'
+
+    def __unicode__(self):
+        return _str(self, '%s, %s # %s, %s [ %s ]', (self.name, self.street, self.unit, self.zip, self.cats_()))
+
+class Form(AbstractModel):
+    name = _name()
+    order = models.IntegerField(blank=True, null=True)
+    usercats = _many(UserCat)
+    itemcats = _many(ItemCat)
+    loccats = _many(LocCat)
+    forcenodes = _many(ForceNode)
+    bricks = _many(Brick)
+    cats = _many(FormCat)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s [ %s ]', (self.name, self.cats_()))
 
     def _h_all(self):
         rels = []
-        for each in [ 'forces', 'marketcats', 'markets', 'bricks', 'itemcats', 'itemsubcats', 'doctorcats', 'doctorspecialties', 'loccats', 'locs' ]:
+        for each in [ 'usercats', 'itemcats', 'loccats', 'forcenodes', 'bricks' ]:
             ev = multiple_(self, each)
             if ev:
                 rels.append('<b>%s</b> : %s' % (each, ev))
         print 'Form.all_', self, rels
         return '<br>'.join(rels)
 
-    def forces_(self): return multiple_(self, 'forces')
-    def marketcats_(self): return multiple_(self, 'marketcats')
-    def markets_(self): return multiple_(self, 'markets')
-    def bricks_(self): return multiple_(self, 'bricks')
+    def usercats_(self): return multiple_(self, 'usercats')
     def itemcats_(self): return multiple_(self, 'itemcats')
-    def itemsubcats_(self): return multiple_(self, 'itemsubcats')
-    def doctorcats_(self): return multiple_(self, 'doctorcats')
-    def doctorspecialties_(self): return multiple_(self, 'doctorspecialties')
     def loccats_(self): return multiple_(self, 'loccats')
-    def locs_(self): return multiple_(self, 'locs')
+    def forcenodes_(self): return multiple_(self, 'forcenodes')
+    def bricks_(self): return multiple_(self, 'bricks')
 
-class FormField(models.Model):
+class FormField(AbstractModel):
     name = _name(unique=False)
     form = models.ForeignKey(Form)
     default = models.CharField(max_length=200, blank=True)
@@ -423,3 +406,23 @@ class FormField(models.Model):
 
     def opts(self):
         return [ [ each.strip() for each in opt.split(':', 1) ] for opt in self._opts() ]
+
+
+
+class ForceVisit(AbstractModel):
+    forcenode = models.ForeignKey(ForceNode)
+    loc = models.ForeignKey(Loc)
+    datetime = models.DateTimeField()
+    status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
+    accompanied = models.BooleanField(default=False)
+    observations = _text()
+    rec = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ('-datetime',)
+
+    def __unicode__(self):
+        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.forcenode, self.loc))
+
+    def rec_dict(self):
+        return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()

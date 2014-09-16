@@ -35,9 +35,6 @@ INSTALLED_APPS = (
     'bootstrap3', # django-bootstrap3
     # 'bootstrapform', # django-bootstrap-form
 
-    'allauthdemo.auth',
-    'allauthdemo.demo',
-
     'lab',
 )
 
@@ -113,7 +110,7 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_PASSWORD_MIN_LENGTH = 1
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-AUTH_USER_MODEL = 'auth.DemoUser'
+AUTH_USER_MODEL = 'lab.User'
 LOGIN_REDIRECT_URL = '/member/'
 
 
@@ -148,20 +145,15 @@ SUIT_CONFIG = dict(
 
     # LIST_PER_PAGE = 15,
 )
-'''
 SUIT_CONFIG.update(
     MENU = (
-        dict(label='Users', icon='icon-cog', app='lab', models=('user',)),
-        dict(label='Geos', icon='icon-cog', app='lab', models=('loc', 'loccat', 'country', 'state', 'city', 'brick', 'zip')),
-        dict(label='Forces', icon='icon-cog', app='lab', models=('force', 'forcemgr', 'forcerep', 'forcevisit')),
-        dict(label='Doctors', icon='icon-cog', app='lab', models=('doctor', 'doctorloc', 'doctorcat', 'doctorspecialty')),
-        dict(label='Markets', icon='icon-cog', app='lab', models=('market', 'marketcat')),
-        dict(label='Items', icon='icon-cog', app='lab', models=('item', 'itemcat', 'itemsubcat')),
-        dict(label='Forms', icon='icon-cog', app='lab', models=('form', 'formfield')),
+        dict(label='Users', icon='icon-cog', models=('lab.user', 'account.emailconfirmation')),
+        dict(label='Geos', icon='icon-cog', app='lab', models=('country', 'state', 'city', 'brick', 'zip')),
+        dict(label='Cats', icon='icon-cog', app='lab', models=('usercat', 'itemcat', 'loccat', 'formcat')),
+        dict(label='Lab', icon='icon-cog', app='lab', models=('forcenode', 'forcevisit', 'item', 'loc', 'form', 'formfield')),
         # dict(label='ALL', icon='icon-cog', app='lab'),
     ),
 )
-'''
 
 '''
     \lab\mysite> ...

@@ -7,6 +7,7 @@ from suit.admin import SortableModelAdmin
 from mptt.admin import MPTTModelAdmin
 
 from .models import *
+from .forms import *
 import utils
 # dbmodels = utils.db_models()
 
@@ -16,18 +17,22 @@ class AbstractAdmin(admin.ModelAdmin):
     list_display_links = ('id', 'name')
     search_fields = ('name',)
 
-
-
-class StateInline(admin.TabularInline):
-    model = State
+class AbstractTabularInline(admin.TabularInline):
     extra = 0
+
+class AbstractStackedInline(admin.StackedInline):
+    extra = 0
+
+
+
+class StateInline(AbstractTabularInline):
+    model = State
 
 class CountryAdmin(AbstractAdmin):
     inlines = (StateInline,)
 
-class CityInline(admin.TabularInline):
+class CityInline(AbstractTabularInline):
     model = City
-    extra = 0
 
 class StateAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'country')
@@ -43,127 +48,45 @@ class CityAdmin(AbstractAdmin):
 class ZipAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'brick')
 
-class ZipInline(admin.TabularInline):
+class ZipInline(AbstractTabularInline):
     model = Zip
-    extra = 0
 
 class BrickAdmin(AbstractAdmin):
     inlines = (ZipInline,)
 
 
 
-class DoctorCatAdmin(AbstractAdmin):
-    pass
-
-class DoctorSpecialtyAdmin(AbstractAdmin):
-    pass
-
-class DoctorLocInline(admin.StackedInline):
-    model = DoctorLoc
-    extra = 1
-
-class DoctorAdmin(AbstractAdmin):
-    list_display = ('id', 'user', 'cats_', 'specialties_')
-    list_display_links = ('id', 'user')
-    list_filter = ('cats', 'specialties')
-    filter_vertical = ('cats', 'specialties')
-    inlines = (DoctorLocInline,)
-
-class LocInline(admin.StackedInline):
-    model = Loc
-    extra = 0
-
-class LocCatAdmin(AbstractAdmin):
-    inlines = (LocInline,)
-
-class LocAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'street', 'unit', 'zip', 'city', 'cat')
-
-class DoctorLocAdmin(LocAdmin):
-    list_display = ('id', 'name', 'doctor', 'street', 'unit', 'zip', 'city')
-
-
-
-class ItemSubcatInline(admin.TabularInline):
-    model = ItemSubcat
-    extra = 0
-
-class ItemCatAdmin(AbstractAdmin):
-    inlines = (ItemSubcatInline,)
-
-class ItemInline(admin.TabularInline):
-    model = Item
-    extra = 0
-
-class ItemSubcatAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'cat')
-    list_filter = ('cat',)
-    inlines = (ItemInline,)
-
-class ItemAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'subcat')
-    list_filter = ('subcat', 'market')
-
-
-
-class MarketInline(admin.TabularInline):
-    model = Market
-    extra = 0
-
-class MarketCatAdmin(AbstractAdmin):
-    inlines = (MarketInline,)
-
-class MarketAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'cat', 'items_')
-    list_filter = ('cat',)
-    filter_vertical = ('items',)
-
-
-
-class ForceMgrInline(admin.TabularInline):
-    model = ForceMgr
-    extra = 0
-
-class ForceAdmin(AbstractAdmin):
-    def _mgrs(scope, row):
-        return format_html('<a href="/admin/lab/forcemgr/?force__name=%s"> Mgrs </a>' % (row.name))
-
-    list_display = ('id', 'name', 'markets_', '_mgrs')
-    list_filter = ('markets',)
-    filter_vertical = ('markets',)
-    inlines = (ForceMgrInline,)
-
-class ForceRepInline(admin.TabularInline):
-    model = ForceRep
-    extra = 0
-
-class ForceMgrAdmin(AbstractAdmin, MPTTModelAdmin, SortableModelAdmin):
-    def _agenda(self, row):
-        return utils._agenda('mgr', row)
-    _agenda.allow_tags = True
-
-    list_display = ('id', 'user', 'force') # '_agenda'
-    list_display_links = ('user', 'id')
-    list_filter = ('force',)
-    inlines = (ForceRepInline,)
-
+class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin, SortableModelAdmin):
     # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
     sortable = 'order'
-    mptt_indent_field  = 'user'
+    mptt_indent_field  = 'name'
+
+class UserCatAdmin(AbstractTreeAdmin):
+    pass
+
+class ItemCatAdmin(AbstractTreeAdmin):
+    pass
+
+class LocCatAdmin(AbstractTreeAdmin):
+    pass
+
+class FormCatAdmin(AbstractTreeAdmin):
+    pass
+
+
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/#working-with-many-to-many-intermediary-models
-class ForceVisitInline(admin.TabularInline): # TabularInline / StackedInline
+class ForceVisitInline(AbstractTabularInline):
     model = ForceVisit
-    extra = 0
     exclude = ('observations', 'rec')
 
-class ForceRepAdmin(AbstractAdmin):
+class ForceNodeAdmin(AbstractTreeAdmin):
     def _agenda(self, row):
-        return utils._agenda('rep', row)
+        return 'PENDING AGENDA' # utils._agenda('PENDING', row)
     _agenda.allow_tags = True
 
-    list_display = ('id', 'user', 'mgr', 'bricks_', 'locs_', '_agenda')
-    list_display_links = ('id', 'user')
+    list_display = ('id', 'name', 'user', 'bricks_', 'locs_', '_agenda')
+    list_display_links = ('id', 'name')
     list_filter = ('bricks',)
     filter_vertical = ('bricks',)
     inlines = (ForceVisitInline,)
@@ -172,13 +95,13 @@ class ForceRepAdmin(AbstractAdmin):
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = ('id', 'datetime', 'status', 'rep', 'loc', 'mgr') # 'observations', 'rec'
+    list_display = ('id', 'datetime', 'status', 'accompanied', 'forcenode', 'loc') # 'observations', 'rec'
     list_display_links = ('id', 'datetime')
     date_hierarchy = 'datetime'
     list_editable = ('status',)
     list_filter = ('datetime', 'status')
     # radio_fields = dict(status=admin.VERTICAL)
-    # raw_id_fields = ('rep',)
+    # raw_id_fields = ('forcenode',)
     # readonly_fields = ('datetime',)
     # def has_add_permission(self, request): return False
     # def get_queryset(self, request): ... FILTER by current user and such?.
@@ -187,10 +110,60 @@ class ForceVisitAdmin(AbstractAdmin):
 
 
 
-class FormFieldInline(admin.TabularInline):
+class LocInline(AbstractStackedInline):
+    model = Loc
+
+# https://github.com/django/django/blob/stable/1.6.x/django/contrib/auth/admin.py
+
+from django.contrib.auth.admin import UserAdmin as _UserAdmin
+
+class UserAdmin(_UserAdmin):
+    #readonly_fields = ('private_uuid', 'public_id')
+
+    fieldsets = (
+        (None, {'fields': ('email', 'first_name', 'last_name', 'password')}),
+        # (_('Personal info'), {'fields': ('first_name', 'last_name', 'display_name')}),
+        # (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+        #(_('Ids'), {'fields': ('private_uuid', 'public_id')}),
+    )
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'first_name', 'last_name', 'password1', 'password2')}
+        ),
+    )
+    list_display = ('email', 'first_name', 'last_name', 'display_name', 'is_staff')
+    search_fields = ('first_name', 'last_name', 'display_name', 'email')
+    ordering = ('email',)
+
+    form = UserAdminForm
+    add_form = UserCreateAdminForm
+
+    inlines = (LocInline,)
+
+
+
+'''
+    def _mgrs(scope, row):
+        return format_html('<a href="/admin/lab/forcemgr/?force__name=%s"> Mgrs </a>' % (row.name))
+'''
+
+
+
+class ItemAdmin(AbstractAdmin):
+    pass
+
+class LocAdmin(AbstractAdmin):
+    list_display = ('id', 'name', 'street', 'unit', 'zip', 'city')
+    list_display_links = ('id', 'street')
+
+
+
+class FormFieldInline(AbstractStackedInline):
     model = FormField
-    extra = 0
-    suit_classes = 'suit-tab suit-tab-fields'
+    # suit_classes = 'suit-tab suit-tab-fields'
 
 class FormAdmin(AbstractAdmin):
     def _h_all(self, row):
@@ -198,11 +171,12 @@ class FormAdmin(AbstractAdmin):
     _h_all.allow_tags = True
 
     list_display = ('id', 'name', '_h_all')
-    filter_vertical = ('forces', 'marketcats', 'markets', 'bricks', 'itemcats', 'itemsubcats', 'doctorcats', 'doctorspecialties', 'loccats', 'locs')
+    filter_vertical = ('bricks',)
     inlines = (FormFieldInline,)
 
+    '''
+    # pending also to use suit_classes @ inline(s).
     suit_form_tabs = (('general', 'General'), ('rels', 'Relations'), ('fields', 'Fields'))
-
     fieldsets = [
         (None, dict(
             classes = ('suit-tab suit-tab-general',),
@@ -210,9 +184,10 @@ class FormAdmin(AbstractAdmin):
         )),
         (None, dict(
             classes = ('suit-tab suit-tab-rels',),
-            fields = [ 'forces', 'marketcats', 'markets', 'bricks', 'itemcats', 'itemsubcats', 'doctorcats', 'doctorspecialties', 'loccats', 'locs' ],
+            fields = [ 'bricks' ],
         )),
     ]
+    '''
 
 class FormFieldAdmin(AbstractAdmin):
     list_display = ('id', 'name', 'form', 'default', 'required', 'opts_')
@@ -221,9 +196,6 @@ class FormFieldAdmin(AbstractAdmin):
 
 dbadmins = [
 
-    (LocCat, LocCatAdmin),
-    (Loc, LocAdmin),
-
     (Country, CountryAdmin),
     (State, StateAdmin),
     (City, CityAdmin),
@@ -231,22 +203,17 @@ dbadmins = [
     (Zip, ZipAdmin),
     (Brick, BrickAdmin),
 
-    (DoctorCat, DoctorCatAdmin),
-    (DoctorSpecialty, DoctorSpecialtyAdmin),
-    (Doctor, DoctorAdmin),
-    (DoctorLoc, DoctorLocAdmin),
-
+    (UserCat, UserCatAdmin),
     (ItemCat, ItemCatAdmin),
-    (ItemSubcat, ItemSubcatAdmin),
-    (Item, ItemAdmin),
+    (LocCat, LocCatAdmin),
+    (FormCat, FormCatAdmin),
 
-    (MarketCat, MarketCatAdmin),
-    (Market, MarketAdmin),
-
-    (Force, ForceAdmin),
-    (ForceMgr, ForceMgrAdmin),
-    (ForceRep, ForceRepAdmin),
+    (ForceNode, ForceNodeAdmin),
     (ForceVisit, ForceVisitAdmin),
+
+    (User, UserAdmin),
+    (Item, ItemAdmin),
+    (Loc, LocAdmin),
 
     (Form, FormAdmin),
     (FormField, FormFieldAdmin),

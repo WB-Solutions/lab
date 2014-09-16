@@ -7,22 +7,7 @@ from rest_framework import routers
 router = routers.DefaultRouter()
 
 for er, eset in [
-    (r'users', views.UserViewSet),
     (r'bricks', views.BrickViewSet),
-    (r'doctor_cats', views.DoctorCatViewSet),
-    (r'doctor_specialties', views.DoctorSpecialtyViewSet),
-    (r'doctors', views.DoctorViewSet),
-    (r'doctor_locs', views.DoctorLocViewSet),
-    (r'item_cats', views.ItemCatViewSet),
-    (r'item_subcats', views.ItemSubcatViewSet),
-    (r'items', views.ItemViewSet),
-    (r'markets', views.MarketViewSet),
-    (r'forces', views.ForceViewSet),
-    (r'force_mgrs', views.ForceMgrViewSet),
-    (r'force_reps', views.ForceRepViewSet),
-    (r'force_visits', views.ForceVisitViewSet),
-    (r'forms', views.FormViewSet),
-    (r'form_fields', views.FormFieldViewSet),
 ]:
     router.register(er, eset)
 
