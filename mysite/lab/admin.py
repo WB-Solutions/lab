@@ -45,14 +45,14 @@ class CityAdmin(AbstractAdmin):
 
 
 
-class ZipAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'brick')
-
 class ZipInline(AbstractTabularInline):
     model = Zip
 
 class BrickAdmin(AbstractAdmin):
     inlines = (ZipInline,)
+
+class ZipAdmin(AbstractAdmin):
+    list_display = ('id', 'name', 'brick')
 
 
 
