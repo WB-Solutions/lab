@@ -7,11 +7,8 @@ class AbstractSerializer(serializers.HyperlinkedModelSerializer):
     pass
 
 _fields = ('url', 'id')
-
 _fields_name = _fields + ('name',)
-
 _fields_cat = _fields_name + ('parent',)
-
 
 
 
@@ -84,7 +81,7 @@ class ForceVisitSerializer(AbstractSerializer):
 
     class Meta:
         model = ForceVisit
-        fields = _fields + ('datetime', 'status', 'accompanied', 'forcenode', 'loc')
+        fields = _fields + ('datetime', 'status', 'accompanied', 'node', 'loc')
 
 
 

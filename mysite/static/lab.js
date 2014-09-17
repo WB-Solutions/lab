@@ -68,13 +68,13 @@ $(function(){
 	w_form.empty().jsonForm({
 	  schema: {
 		datetime: { type: 'string' },
-		doc_name: { type: 'string' },
-		doc_email: { type: 'string' },
-		doc_cats: { type: 'string' },
-		doc_specialties: { type: 'string' },
+		user_name: { type: 'string' },
+		user_email: { type: 'string' },
+		user_cats: { type: 'string' },
 		loc_name: { type: 'string' },
 		loc_address: { type: 'string' },
 		status: { type: 'string', enum: [ '', 'v', 'n', 'r' ] },
+		accompanied: { type: 'boolean' },
 		observations: { type: 'string' },
 		rec: {
 		  type: 'object',
@@ -89,12 +89,12 @@ $(function(){
 		  items: [
 			{ key: 'status', prepend: 'Status', notitle: true, titleMap: { "": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
 			{ key: 'datetime', prepend: 'Date/Time', notitle: true, disabled: true },
-			{ key: 'doc_name', prepend: 'Doctor', notitle: true, disabled: true },
-			{ key: 'doc_email', prepend: 'Email', notitle: true, disabled: true },
-			{ key: 'doc_cats', prepend: 'Categories', notitle: true, disabled: true },
-			{ key: 'doc_specialties', prepend: 'Specialties', notitle: true, disabled: true },
+			{ key: 'user_name', prepend: 'User', notitle: true, disabled: true },
+			{ key: 'user_email', prepend: 'Email', notitle: true, disabled: true },
+			{ key: 'user_cats', prepend: 'Categories', notitle: true, disabled: true },
 			{ key: 'loc_name', prepend: 'Location', notitle: true, disabled: true },
 			{ key: 'loc_address', prepend: 'Address', notitle: true, disabled: true },
+			{ key: 'accompanied', inlinetitle: 'Accompanied' },
 		  ],
 		},
 	  ].concat(fieldsets).concat([
@@ -176,7 +176,7 @@ $(function(){
     columns: [
 	  { title: 'Visit', data: 'acts' },
 	  { title: 'Date/Time', data: 'datetime' },
-	  { title: 'Doctor', data: 'h_doc' },
+	  { title: 'User', data: 'h_user' },
 	  { title: 'Categories', data: 'h_cats' },
 	  { title: 'Address', data: 'h_loc' },
 	],
@@ -229,15 +229,15 @@ $(function(){
 	_(visit).extend({
 	  DT_RowId: _visit_row(visit), // http://next.datatables.net/examples/server_side/ids.html
 	  acts: _button(visit.id, _stat('primary', 'success', 'warning', 'danger'), 'visit-edit', 'Visit'),
-	  h_doc: _h2(visit.doc_name, _('<a href="mailto:%(email)s"> %(email)s </a>').sprintf({ email: visit.doc_email })),
-	  h_cats: _h2(visit.doc_cats, visit.doc_specialties),
+	  h_user: _h2(visit.user_name, _('<a href="mailto:%(email)s"> %(email)s </a>').sprintf({ email: visit.user_email })),
+	  h_cats: _h2(visit.user_cats),
 	  h_loc: _h2(visit.loc_name, visit.loc_address),
 	})
 	var ev = {
 	  id: visit.id,
 	  allDay: false,
 	  start: visit.datetime,
-	  title: visit.doc_name,
+	  title: visit.user_name,
 	  color: _stat('#357ebd', '#4cae4c', '#eea236', '#d43f3a'),
 	}
 	return ev

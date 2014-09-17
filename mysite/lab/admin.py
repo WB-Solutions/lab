@@ -56,9 +56,9 @@ class ZipAdmin(AbstractAdmin):
 
 
 
-class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin, SortableModelAdmin):
+class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin): # SortableModelAdmin
     # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
-    sortable = 'order'
+    # sortable = 'order'
     mptt_indent_field  = 'name'
 
 class UserCatAdmin(AbstractTreeAdmin):
@@ -82,7 +82,7 @@ class ForceVisitInline(AbstractTabularInline):
 
 class ForceNodeAdmin(AbstractTreeAdmin):
     def _agenda(self, row):
-        return 'PENDING AGENDA' # utils._agenda('PENDING', row)
+        return utils._agenda('node', row)
     _agenda.allow_tags = True
 
     list_display = ('id', 'name', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
@@ -95,13 +95,13 @@ class ForceNodeAdmin(AbstractTreeAdmin):
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = ('id', 'datetime', 'status', 'accompanied', 'forcenode', 'loc') # 'observations', 'rec'
+    list_display = ('id', 'datetime', 'status', 'accompanied', 'node', 'loc') # 'observations', 'rec'
     list_display_links = ('id', 'datetime')
     date_hierarchy = 'datetime'
     list_editable = ('status',)
     list_filter = ('datetime', 'status')
     # radio_fields = dict(status=admin.VERTICAL)
-    # raw_id_fields = ('forcenode',)
+    # raw_id_fields = ('node',)
     # readonly_fields = ('datetime',)
     # def has_add_permission(self, request): return False
     # def get_queryset(self, request): ... FILTER by current user and such?.
@@ -120,6 +120,10 @@ from django.contrib.auth.admin import UserAdmin as _UserAdmin
 class UserAdmin(_UserAdmin):
     #readonly_fields = ('private_uuid', 'public_id')
 
+    def _agenda(self, row):
+        return utils._agenda('user', row)
+    _agenda.allow_tags = True
+
     fieldsets = (
         (None, {'fields': ('email', 'first_name', 'last_name', 'password')}),
         # (_('Personal info'), {'fields': ('first_name', 'last_name', 'display_name')}),
@@ -135,7 +139,7 @@ class UserAdmin(_UserAdmin):
             'fields': ('email', 'first_name', 'last_name', 'password1', 'password2', 'cats')}
         ),
     )
-    list_display = ('email', 'first_name', 'last_name', 'last_login', 'date_joined', 'cats_')
+    list_display = ('email', 'first_name', 'last_name', 'last_login', 'date_joined', 'cats_', '_agenda')
     search_fields = ('email', 'first_name', 'last_name')
     ordering = ('email',)
 
@@ -177,7 +181,7 @@ class FormAdmin(AbstractAdmin):
 
     list_display = ('id', 'name', 'order', 'cats_', '_h_all')
     filter_vertical = ('bricks',)
-    list_filter = ('cats',)
+    list_filter = ('cats', 'usercats', 'itemcats', 'loccats', 'forcenodes')
     inlines = (FormFieldInline,)
 
     '''
@@ -279,11 +283,7 @@ class UserAdmin(UserAdmin):
     form = UserChangeForm
     add_form = UserCreationForm
 
-    def _agenda(self, row):
-        return utils._agenda('user', row)
-    _agenda.allow_tags = True
-
-    list_display = ('id', 'email', 'first_name', 'last_name', 'is_admin') # '_agenda'
+    list_display = ('id', 'email', 'first_name', 'last_name', 'is_admin')
     list_display_links = ('id', 'email')
     list_filter = ('is_admin',)
 

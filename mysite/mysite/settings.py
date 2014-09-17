@@ -114,11 +114,8 @@ AUTH_USER_MODEL = 'lab.User'
 LOGIN_REDIRECT_URL = '/member/'
 
 
-
 MPTT_ADMIN_LEVEL_INDENT = 20
 
-# https://docs.djangoproject.com/en/1.6/topics/email/#console-backend
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 SUIT_CONFIG = dict(
     ADMIN_NAME = 'Medical Visits DEMO',
@@ -147,7 +144,7 @@ SUIT_CONFIG = dict(
 )
 SUIT_CONFIG.update(
     MENU = (
-        dict(label='Users', icon='icon-cog', models=('lab.user', 'account.emailconfirmation')),
+        dict(label='Users', icon='icon-cog', models=('lab.user', 'account.emailconfirmation', 'sites.site')),
         dict(label='Geos', icon='icon-cog', app='lab', models=('country', 'state', 'city', 'brick', 'zip')),
         dict(label='Cats', icon='icon-cog', app='lab', models=('usercat', 'itemcat', 'loccat', 'formcat')),
         dict(label='Lab', icon='icon-cog', app='lab', models=('forcenode', 'forcevisit', 'item', 'loc', 'form', 'formfield')),
@@ -160,3 +157,5 @@ SUIT_CONFIG.update(
         python manage.py graph_models lab -g -o models_lab.png
         python manage.py graph_models -a -g -o models_all.png
 '''
+
+from settings_server import *

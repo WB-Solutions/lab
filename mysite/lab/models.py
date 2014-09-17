@@ -34,17 +34,8 @@ def _str(row, tmpl, values):
     return unicode(v)
 
 
-class AbstractModel(models.Model):
 
-    class Meta:
-        abstract = True
-
-    def cats_(self):
-        return multiple_(self, 'cats')
-
-
-
-class Country(AbstractModel):
+class Country(models.Model):
     name = _name()
 
     class Meta:
@@ -53,7 +44,7 @@ class Country(AbstractModel):
     def __unicode__(self):
         return _str(self, None, self.name)
 
-class State(AbstractModel):
+class State(models.Model):
     name = _name()
     country = models.ForeignKey(Country)
 
@@ -63,7 +54,7 @@ class State(AbstractModel):
     def __unicode__(self):
         return _str(self, '%s @ %s', (self.name, self.country))
 
-class City(AbstractModel):
+class City(models.Model):
     name = _name()
     state = models.ForeignKey(State)
 
@@ -73,7 +64,7 @@ class City(AbstractModel):
     def __unicode__(self):
         return _str(self, '%s @ %s', (self.name, self.state))
 
-class Brick(AbstractModel):
+class Brick(models.Model):
     name = _name()
 
     class Meta:
@@ -82,7 +73,7 @@ class Brick(AbstractModel):
     def __unicode__(self):
         return _str(self, None, self.name)
 
-class Zip(AbstractModel):
+class Zip(models.Model):
     name = _name()
     brick = models.ForeignKey(Brick)
 
@@ -98,16 +89,16 @@ class Zip(AbstractModel):
 class AbstractTree(MPTTModel):
     name = _name(unique=False)
     parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
-    order = models.IntegerField()
+    # order = models.IntegerField() # also create @ REST api NOT working: IntegrityError: X.order may not be NULL.
 
     class Meta:
         abstract = True
 
     class MPTTMeta:
-        order_insertion_by = ('order',)
+        order_insertion_by = ('name',) # 'order'
 
     def __unicode__(self):
-        return _str(self, '%s %s', (' . ' * self.level, self.name))
+        return _str(self, '%s %s', (' . ' * (self.level or 0), self.name))
 
     def save(self, *args, **kwargs):
         # print 'AbstractTree.save', self, args, kwargs
@@ -193,9 +184,6 @@ class User(AbstractBaseUser):
     @property
     def is_staff(self): # is the user a member of staff?.
         return self.is_admin
-
-    def fullname(self):
-        return '%s %s' % (self.first_name, self.last_name)
 '''
 
 
@@ -224,7 +212,7 @@ class UserManager(BaseUserManager):
         # print 'create_superuser', email, password, extra_fields
         return self._create_user(email, password, True, True, **extra_fields)
 
-class User(AbstractModel, AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(_('email address'), blank=False, unique=True)
     first_name = models.CharField(_('first name'), max_length=40, blank=True, null=True, unique=False)
     last_name = models.CharField(_('last name'), max_length=40, blank=True, null=True, unique=False)
@@ -248,6 +236,12 @@ class User(AbstractModel, AbstractBaseUser, PermissionsMixin):
 
     def __unicode__(self):
         return _str(self, None, self.email) # _str(self, '%s [ %s ]', (self.email, self.cats_()))
+
+    def fullname(self):
+        return '%s %s' % (self.first_name, self.last_name)
+
+    def cats_(self):
+        return multiple_(self, 'cats')
 
     def get_absolute_url(self):
         # TODO: what is this for?
@@ -319,7 +313,7 @@ class ForceNode(AbstractTree):
     def visits(self):
         return self.forcevisit_set.all()
 
-class Item(AbstractModel):
+class Item(models.Model):
     name = _name()
     cats = _many(ItemCat)
 
@@ -329,7 +323,10 @@ class Item(AbstractModel):
     def __unicode__(self):
         return _str(self, '%s [ %s ]', (self.name, self.cats_()))
 
-class Loc(AbstractModel):
+    def cats_(self):
+        return multiple_(self, 'cats')
+
+class Loc(models.Model):
     name = _name(unique=False, blank=True)
     user = models.ForeignKey(User)
     street = models.CharField(max_length=200)
@@ -349,7 +346,10 @@ class Loc(AbstractModel):
     def __unicode__(self):
         return _str(self, '%s, %s # %s, %s [ %s ]', (self.name, self.street, self.unit, self.zip, self.cats_()))
 
-class Form(AbstractModel):
+    def cats_(self):
+        return multiple_(self, 'cats')
+
+class Form(models.Model):
     name = _name()
     order = models.IntegerField(blank=True, null=True)
     usercats = _many(UserCat)
@@ -371,7 +371,7 @@ class Form(AbstractModel):
             ev = multiple_(self, each)
             if ev:
                 rels.append('<b>%s</b> : %s' % (each, ev))
-        print 'Form.all_', self, rels
+        # print 'Form.all_', self, rels
         return '<br>'.join(rels)
 
     def usercats_(self): return multiple_(self, 'usercats')
@@ -380,7 +380,10 @@ class Form(AbstractModel):
     def forcenodes_(self): return multiple_(self, 'forcenodes')
     def bricks_(self): return multiple_(self, 'bricks')
 
-class FormField(AbstractModel):
+    def cats_(self):
+        return multiple_(self, 'cats')
+
+class FormField(models.Model):
     name = _name(unique=False)
     form = models.ForeignKey(Form)
     default = models.CharField(max_length=200, blank=True)
@@ -405,8 +408,8 @@ class FormField(AbstractModel):
 
 
 
-class ForceVisit(AbstractModel):
-    forcenode = models.ForeignKey(ForceNode)
+class ForceVisit(models.Model):
+    node = models.ForeignKey(ForceNode)
     loc = models.ForeignKey(Loc)
     datetime = models.DateTimeField()
     status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
@@ -418,7 +421,7 @@ class ForceVisit(AbstractModel):
         ordering = ('-datetime',)
 
     def __unicode__(self):
-        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.forcenode, self.loc))
+        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.node, self.loc))
 
     def rec_dict(self):
         return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()

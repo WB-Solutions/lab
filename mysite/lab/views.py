@@ -118,59 +118,70 @@ def _data(config=None):
     )
     """
     data = None
-    rep = config.get('rep')
+    nodes = None
+    user = config.get('user')
+    if user:
+        nodes = ForceNode.objects.filter(user=user)
+    else:
+        node = config.get('node')
+        if node:
+            nodes = [node]
     visit = config.get('visit')
     if visit:
-        if rep: error
-        rep = visit.rep
-    if rep:
-        forms = _all(Form)
+        if nodes is not None: error
+        nodes = [visit.node]
+    if nodes:
+        forms = Form.objects.order_by('order').all()
         def _names(rel):
             return ', '.join([ each.name for each in rel.all() ])
         def _visit(visit, ext=False):
             loc = visit.loc
-            doc = loc.doctor
+            user = loc.user
+            node = visit.node
+            # print '_visit', visit, ext, user, loc, node
+            def _any(n1, n2):
+                return any( [ each for each in n1.all() if each in n2.all() ] )
             v = dict(
                 datetime = _datetime(visit.datetime),
-                status = visit.status or '',
+                status = visit.status,
+                accompanied = visit.accompanied,
                 observations = visit.observations,
-                doc_name = doc.user.fullname(),
-                doc_email = doc.user.email,
-                doc_cats = _names(doc.cats),
-                doc_specialties = _names(doc.specialties),
+                user_name = user.fullname(),
+                user_email = user.email,
+                user_cats = _names(user.cats),
                 loc_name = loc.name,
                 loc_address = '%s # %s, %s' % (loc.street, loc.unit, loc.zip),
                 forms = [ form.id for form in forms
-                          if force in form.forces.all()
-                          or any( [ each for each in markets if each in form.markets.all() ] )
-                          or any( [ each for each in [ e.cat for e in markets ] if each in form.marketcats.all() ] )
+                          if False
+                          # or any( [ each for each in markets if each in form.markets.all() ] )
+                          # or any( [ each for each in [ e.cat for e in markets ] if each in form.marketcats.all() ] )
+                          # or (loc.loc and loc.loc in form.locs.all())
+                          # or (loc.loc and loc.loc.cat in form.loccats.all())
                           or loc.zip.brick in form.bricks.all()
-                          or (loc.loc and loc.loc in form.locs.all())
-                          or (loc.loc and loc.loc.cat in form.loccats.all())
-                          or any( [ each for each in doc.cats.all() if each in form.doctorcats.all() ] )
-                          or any( [ each for each in doc.specialties.all() if each in form.doctorspecialties.all() ] )
+                          or _any(user.cats, form.usercats)
                           ],
                 rec = visit.rec_dict(),
             )
             if ext:
                 _ext(visit, v)
             return v
-        # bricks = rep.bricks.all()
-        force = rep.mgr.force
-        # def _db_ids(q): return [ each.id for each in q.all() ]
-        markets = force.markets.all()
-        data = _visit(visit, ext=True) if visit else dict(
-            visits = _dict(rep.visits(), _visit),
-            forms = _dict(forms, lambda form: dict(
-                name = form.name,
-                fields = _dict(form.formfield_set.all(), lambda field: dict(
-                    name = field.name,
-                    required = field.required,
-                    default = field.default,
-                    opts = field.opts(),
+        if visit:
+            data = _visit(visit, ext=True)
+        else:
+            visits = reduce(list.__add__, [ node.visits() for node in nodes ])
+            # print 'visits', visits
+            data = dict(
+                visits = _dict(visits, _visit),
+                forms = _dict(forms, lambda form: dict(
+                    name = form.name,
+                    fields = _dict(form.formfield_set.all(), lambda field: dict(
+                        name = field.name,
+                        required = field.required,
+                        default = field.default,
+                        opts = field.opts(),
+                    )),
                 )),
-            )),
-        )
+            )
     # print '_data', config, data
     return data
 
@@ -178,12 +189,22 @@ def agenda(request):
     data = None
     def _dbget(dbmodel, dbid):
         return utils.db_get(dbmodel, dbid)
-    scope = request.GET.get('rep')
-    if scope: # only rep scope supported for now.
-        # print 'agenda > rep scope', scope
-        rep = _dbget(ForceRep, scope)
-        if rep:
-            data = _data(dict(rep=rep))
+    for name, model in [ ('node', ForceNode), ('user', User), (None, User) ]:
+        if name is None:
+            user = request.user
+            if user and user.is_authenticated():
+                name = 'user'
+                scope = user.id
+            else:
+                scope = None
+        else:
+            scope = request.GET.get(name)
+        if scope:
+            row = _dbget(model, scope)
+            if row:
+                # print 'agenda > scope', scope, model, row
+                data = _data({name:row})
+            break
     return render(request, 'lab/agenda.html', dict(agenda=True, data=json.dumps(data) or 'null'))
 
 def ajax(request):
