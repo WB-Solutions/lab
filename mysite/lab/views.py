@@ -168,7 +168,7 @@ def _data(config=None):
         if visit:
             data = _visit(visit, ext=True)
         else:
-            visits = reduce(list.__add__, [ node.visits() for node in nodes ])
+            visits = reduce(list.__add__, [ list(node.visits()) for node in nodes ])
             # print 'visits', visits
             data = dict(
                 visits = _dict(visits, _visit),

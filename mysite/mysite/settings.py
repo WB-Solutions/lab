@@ -144,7 +144,7 @@ SUIT_CONFIG = dict(
 )
 SUIT_CONFIG.update(
     MENU = (
-        dict(label='Users', icon='icon-cog', models=('lab.user', 'account.emailconfirmation', 'sites.site')),
+        dict(label='Users', icon='icon-cog', models=('lab.user', 'account.emailconfirmation', 'account.emailaddress', 'sites.site')),
         dict(label='Geos', icon='icon-cog', app='lab', models=('country', 'state', 'city', 'brick', 'zip')),
         dict(label='Cats', icon='icon-cog', app='lab', models=('usercat', 'itemcat', 'loccat', 'formcat')),
         dict(label='Lab', icon='icon-cog', app='lab', models=('forcenode', 'forcevisit', 'item', 'loc', 'form', 'formfield')),
