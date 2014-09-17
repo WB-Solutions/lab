@@ -351,7 +351,7 @@ class Loc(models.Model):
 
 class Form(models.Model):
     name = _name()
-    order = models.IntegerField(blank=True, null=True)
+    order = models.IntegerField(blank=True, null=True, default=0)
     usercats = _many(UserCat)
     itemcats = _many(ItemCat)
     loccats = _many(LocCat)

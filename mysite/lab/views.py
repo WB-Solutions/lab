@@ -132,6 +132,9 @@ def _data(config=None):
         nodes = [visit.node]
     if nodes:
         forms = Form.objects.order_by('order').all()
+        def _reduce(_fn, _els):
+            # print '_reduce'
+            return reduce(list.__add__, [ list(_fn(each)) for each in _els ])
         def _names(rel):
             return ', '.join([ each.name for each in rel.all() ])
         def _visit(visit, ext=False):
@@ -139,8 +142,13 @@ def _data(config=None):
             user = loc.user
             node = visit.node
             # print '_visit', visit, ext, user, loc, node
-            def _any(n1, n2):
-                return any( [ each for each in n1.all() if each in n2.all() ] )
+            upnodes = node.get_ancestors(include_self=True)
+            itemcats = _reduce(lambda node: node.itemcats.all(), upnodes)
+            # bricks = _reduce(lambda node: node.bricks, upnodes)
+            def _any(n1, n2, asdb=True):
+                n1 = n1.all() if asdb else n1
+                # print '_any', n1, n2
+                return any( [ each for each in n1 if each in n2.all() ] )
             v = dict(
                 datetime = _datetime(visit.datetime),
                 status = visit.status,
@@ -150,15 +158,14 @@ def _data(config=None):
                 user_email = user.email,
                 user_cats = _names(user.cats),
                 loc_name = loc.name,
-                loc_address = '%s # %s, %s' % (loc.street, loc.unit, loc.zip),
+                loc_address = '%s # %s, %s, %s' % (loc.street, loc.unit, loc.city, loc.zip),
                 forms = [ form.id for form in forms
                           if False
-                          # or any( [ each for each in markets if each in form.markets.all() ] )
-                          # or any( [ each for each in [ e.cat for e in markets ] if each in form.marketcats.all() ] )
-                          # or (loc.loc and loc.loc in form.locs.all())
-                          # or (loc.loc and loc.loc.cat in form.loccats.all())
                           or loc.zip.brick in form.bricks.all()
+                          or _any(upnodes, form.forcenodes)
                           or _any(user.cats, form.usercats)
+                          or _any(itemcats, form.itemcats, asdb=False)
+                          or _any(loc.cats, form.loccats)
                           ],
                 rec = visit.rec_dict(),
             )
@@ -168,7 +175,7 @@ def _data(config=None):
         if visit:
             data = _visit(visit, ext=True)
         else:
-            visits = reduce(list.__add__, [ list(node.visits()) for node in nodes ])
+            visits = _reduce(lambda node: node.visits(), nodes)
             # print 'visits', visits
             data = dict(
                 visits = _dict(visits, _visit),

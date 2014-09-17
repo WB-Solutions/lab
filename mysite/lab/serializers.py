@@ -108,7 +108,7 @@ class FormSerializer(AbstractSerializer):
 
     class Meta:
         model = Form
-        fields = _fields_name + ('order', 'cats')
+        fields = _fields_name + ('order', 'cats', 'usercats', 'itemcats', 'loccats', 'forcenodes')
 
 class FormFieldSerializer(AbstractSerializer):
 
