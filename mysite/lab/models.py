@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import ugettext as _ # use ugettext_lazy instead?.
+from django.utils import timezone
 
 from decimal import Decimal
 import json
@@ -192,7 +193,6 @@ class User(AbstractBaseUser):
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils.http import urlquote
 from django.core.mail import send_mail
-from django.utils import timezone
 
 class UserManager(BaseUserManager):
 
@@ -299,7 +299,7 @@ class ForceNode(AbstractTree):
     locs = _many('Loc', through='ForceVisit')
 
     def __unicode__(self):
-        return _str(self, 'Force: %s @ %s', (self.user, self.name))
+        return _str(self, '%s %s: %s', (' . ' * (self.level or 0), self.name, self.user))
 
     def itemcats_(self):
         return multiple_(self, 'itemcats')
@@ -388,7 +388,7 @@ class FormField(models.Model):
     form = models.ForeignKey(Form)
     default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)
-    opts1 = models.TextField(blank=True)
+    opts1 = models.TextField(blank=True, help_text=_('Each option in a separate line with format Value:Label'))
 
     class Meta:
         unique_together = ('form', 'name')
@@ -411,7 +411,7 @@ class FormField(models.Model):
 class ForceVisit(models.Model):
     node = models.ForeignKey(ForceNode)
     loc = models.ForeignKey(Loc)
-    datetime = models.DateTimeField()
+    datetime = models.DateTimeField(default=timezone.now)
     status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
     accompanied = models.BooleanField(default=False)
     observations = _text()

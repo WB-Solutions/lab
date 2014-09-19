@@ -95,7 +95,7 @@ class ItemSerializer(AbstractSerializer):
 
     class Meta:
         model = Item
-        fields = _fields + ('cats',)
+        fields = _fields_name + ('cats',)
 
 class LocSerializer(AbstractSerializer):
 

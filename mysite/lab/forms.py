@@ -16,7 +16,7 @@ class UserEditForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'display_name')
+        fields = ('first_name', 'last_name') # 'display_name'
 
 
 class UserAdminForm(forms.ModelForm):
@@ -30,7 +30,7 @@ class UserAdminForm(forms.ModelForm):
 
 
 class UserCreateAdminForm(UserCreationForm):
-    username = forms.CharField(required=False)
+    username = forms.CharField(required=False) # ignore, just to NOT make it mandatory during save.
 
     class Meta:
         model = User

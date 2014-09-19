@@ -152,10 +152,12 @@ SUIT_CONFIG.update(
     ),
 )
 
-'''
-    \lab\mysite> ...
-        python manage.py graph_models lab -g -o models_lab.png
-        python manage.py graph_models -a -g -o models_all.png
-'''
+# https://docs.djangoproject.com/en/1.6/topics/email/#console-backend
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-from settings_server import *
+try:
+    from settings_server import *
+except ImportError:
+    pass
+
+# \lab\mysite> python manage.py graph_models lab -g -o models_lab.png
