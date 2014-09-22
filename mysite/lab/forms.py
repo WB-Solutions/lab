@@ -30,7 +30,7 @@ class UserAdminForm(forms.ModelForm):
 
 
 class UserCreateAdminForm(UserCreationForm):
-    username = forms.CharField(required=False) # ignore, just to NOT make it mandatory during save.
+    username = forms.CharField(required=False) # ignored / hidden, just to NOT validate as mandatory during save.
 
     class Meta:
         model = User
