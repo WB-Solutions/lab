@@ -88,6 +88,17 @@ STATICFILES_DIRS = (
 
 REST_FRAMEWORK = {
     # 'PAGINATE_BY': 10
+
+    # http://www.django-rest-framework.org/api-guide/authentication
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        # 'rest_framework.authentication.BasicAuthentication', # http://stackoverflow.com/questions/17665035/logout-not-working
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+
+    # http://www.django-rest-framework.org/api-guide/permissions
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAdminUser', # AllowAny / IsAuthenticated / IsAdminUser / DjangoModelPermissions
+    ),
 }
 
 

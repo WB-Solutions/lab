@@ -14,6 +14,7 @@ from rest_framework import viewsets
 from .serializers import *
 
 class AbstractView(viewsets.ModelViewSet):
+    # permission_classes = (IsAuthenticated,)
     pass
 
 
@@ -134,7 +135,7 @@ def _data(config=None):
         forms = Form.objects.order_by('order').all()
         def _reduce(_fn, _els):
             # print '_reduce'
-            return reduce(list.__add__, [ list(_fn(each)) for each in _els ])
+            return reduce(list.__add__, [ list(_fn(each)) for each in _els ]) if _els else []
         def _names(rel):
             return ', '.join([ each.name for each in rel.all() ])
         def _visit(visit, ext=False):
@@ -142,13 +143,17 @@ def _data(config=None):
             user = loc.user
             node = visit.node
             # print '_visit', visit, ext, user, loc, node
-            upnodes = node.get_ancestors(include_self=True)
-            itemcats = _reduce(lambda node: node.itemcats.all(), upnodes)
-            # bricks = _reduce(lambda node: node.bricks, upnodes)
-            def _any(n1, n2, asdb=True):
+            def _ups(treenode):
+                return treenode.get_ancestors(include_self=True)
+            def _any(n1, n2, asdb=True, ups=True):
                 n1 = n1.all() if asdb else n1
+                if ups:
+                    n1 = _reduce(lambda ex: _ups(ex), n1)
                 # print '_any', n1, n2
                 return any( [ each for each in n1 if each in n2.all() ] )
+            upnodes = _ups(node)
+            itemcats = _reduce(lambda node: node.itemcats.all(), upnodes)
+            # bricks = _reduce(lambda node: node.bricks, upnodes)
             v = dict(
                 datetime = _datetime(visit.datetime),
                 status = visit.status,
@@ -162,7 +167,7 @@ def _data(config=None):
                 forms = [ form.id for form in forms
                           if False
                           or loc.zip.brick in form.bricks.all()
-                          or _any(upnodes, form.forcenodes)
+                          or _any(upnodes, form.forcenodes, ups=False)
                           or _any(user.cats, form.usercats)
                           or _any(itemcats, form.itemcats, asdb=False)
                           or _any(loc.cats, form.loccats)

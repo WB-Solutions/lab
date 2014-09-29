@@ -95,7 +95,7 @@ class ItemSerializer(AbstractSerializer):
 
     class Meta:
         model = Item
-        fields = _fields_name + ('cats',)
+        fields = _fields_name + ('cats', 'visits_usercats', 'visits_loccats')
 
 class LocSerializer(AbstractSerializer):
 
@@ -108,7 +108,7 @@ class FormSerializer(AbstractSerializer):
 
     class Meta:
         model = Form
-        fields = _fields_name + ('order', 'cats', 'usercats', 'itemcats', 'loccats', 'forcenodes')
+        fields = _fields_name + ('order', 'repitems', 'cats', 'usercats', 'itemcats', 'loccats', 'forcenodes')
 
 class FormFieldSerializer(AbstractSerializer):
 

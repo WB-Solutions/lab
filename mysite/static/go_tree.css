@@ -1,0 +1,26 @@
+@charset "UTF-8";
+
+.go-tree {
+    display: inline-block;
+    vertical-align: middle;
+    background: white;
+    width: 250px;
+    max-height: 175px;
+    overflow: auto;
+    border: 2px solid #eee;
+}
+
+.go-tree ul {
+    list-style-type: none;
+    margin-left: 5px;
+}
+
+.go-tree li {
+    margin: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.go-tree input {
+    margin-right: 5px;
+    vertical-align: top;
+}

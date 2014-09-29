@@ -7,15 +7,15 @@
 
 
 {# Additional CSS includes #}
-{#{% block extrastyle %}#}
-{#  <link rel="stylesheet" type="text/css" href="{% static 'css/my_project.css' %}" media="all">#}
-{#{% endblock %}#}
+{% block extrastyle %}
+  <link rel="stylesheet" type="text/css" href="{% static 'go_admin.css' %}" media="all">
+{% endblock %}
 
 
 {# Additional JS files in footer, right before </body> #}
-{#{% block extrajs %}#}
-{#  <script type="text/javascript" src="{% static 'js/my_project.js' %}"></script>#}
-{#{% endblock %}#}
+{% block extrajs %}
+  <script type="text/javascript" src="{% static 'go_admin.js' %}"></script>
+{% endblock %}
 
 
 {# Footer links (left side) #}

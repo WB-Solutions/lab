@@ -10,6 +10,9 @@ from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
 
 
+class GoTreeM2MField(models.ManyToManyField):
+    pass
+
 def _kw_merge(kwmain, **kwdef):
     return dict(kwdef, **kwmain)
 
@@ -24,6 +27,9 @@ def _text(**kwargs):
 
 def _many(*args, **kwargs):
     return models.ManyToManyField(*args, **_kw_merge(kwargs, blank=True))
+
+def _many_tree(*args, **kwargs):
+    return GoTreeM2MField(*args, **_kw_merge(kwargs, blank=True))
 
 def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
@@ -99,7 +105,10 @@ class AbstractTree(MPTTModel):
         order_insertion_by = ('name',) # 'order'
 
     def __unicode__(self):
-        return _str(self, '%s %s', (' . ' * (self.level or 0), self.name))
+        return _str(self, '%s %s', (self.h_level(), self.name))
+
+    def h_level(self):
+        return ' -- ' * (self.level or 0)
 
     def save(self, *args, **kwargs):
         # print 'AbstractTree.save', self, args, kwargs
@@ -221,7 +230,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(_('active'), default=True, help_text=_('Designates whether this user should be treated as active. Unselect this instead of deleting accounts.'))
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
 
-    cats = _many(UserCat)
+    cats = _many_tree(UserCat)
 
     objects = UserManager()
 
@@ -294,12 +303,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class ForceNode(AbstractTree):
     user = models.ForeignKey(User)
-    itemcats = _many(ItemCat)
+    itemcats = _many_tree(ItemCat)
     bricks = _many(Brick)
     locs = _many('Loc', through='ForceVisit')
 
     def __unicode__(self):
-        return _str(self, '%s %s: %s', (' . ' * (self.level or 0), self.name, self.user))
+        return _str(self, '%s %s: %s', (self.h_level(), self.name, self.user))
 
     def itemcats_(self):
         return multiple_(self, 'itemcats')
@@ -315,7 +324,9 @@ class ForceNode(AbstractTree):
 
 class Item(models.Model):
     name = _name()
-    cats = _many(ItemCat)
+    cats = _many_tree(ItemCat)
+    visits_usercats = _many_tree(UserCat)
+    visits_loccats = _many_tree(LocCat)
 
     class Meta:
         ordering = ('name',)
@@ -325,6 +336,12 @@ class Item(models.Model):
 
     def cats_(self):
         return multiple_(self, 'cats')
+
+    def visits_usercats_(self):
+        return multiple_(self, 'visits_usercats')
+
+    def visits_loccats_(self):
+        return multiple_(self, 'visits_loccats')
 
 class Loc(models.Model):
     name = _name(unique=False, blank=True)
@@ -336,7 +353,7 @@ class Loc(models.Model):
     zip = models.ForeignKey(Zip)
     city = models.ForeignKey(City)
     at = models.ForeignKey('self', blank=True, null=True)
-    cats = _many(LocCat)
+    cats = _many_tree(LocCat)
 
     class Meta:
         ordering = ('name',)
@@ -352,12 +369,14 @@ class Loc(models.Model):
 class Form(models.Model):
     name = _name()
     order = models.IntegerField(blank=True, null=True, default=0)
-    usercats = _many(UserCat)
-    itemcats = _many(ItemCat)
-    loccats = _many(LocCat)
-    forcenodes = _many(ForceNode)
+    repitems = _many(Item)
+    cats = _many_tree(FormCat)
+
+    usercats = _many_tree(UserCat)
+    itemcats = _many_tree(ItemCat)
+    loccats = _many_tree(LocCat)
+    forcenodes = _many_tree(ForceNode)
     bricks = _many(Brick)
-    cats = _many(FormCat)
 
     class Meta:
         ordering = ('name',)
@@ -378,6 +397,8 @@ class Form(models.Model):
     def itemcats_(self): return multiple_(self, 'itemcats')
     def loccats_(self): return multiple_(self, 'loccats')
     def forcenodes_(self): return multiple_(self, 'forcenodes')
+
+    def repitems_(self): return multiple_(self, 'repitems')
     def bricks_(self): return multiple_(self, 'bricks')
 
     def cats_(self):
