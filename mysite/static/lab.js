@@ -33,36 +33,70 @@ $(function(){
 	var refvars = { ref_visit: visit.id }
 	var forms = data.forms
 	// _log('modal', z, vjson)
+
 	var rec = visit.rec
 	var schema2 = {}
-	var fieldsets = _(_(visit.forms).collect(function(form_id){
-	  var form = data.forms[form_id]
-	  if (!form) { return } // removed via compact.
-	  return {
+	function _do_fields(fields, pre_id) {
+	  return _(fields).collect(function(field){
+		var key = pre_id + field.id // _('field_%s').sprintf(k)
+		if (!(key in rec)) { rec[key] = field.default }
+		var f_schema = {
+		  type: 'string',
+		  required: field.required,
+		  description: field.description,
+		}
+		var f_form = { key: _('rec.%s').sprintf(key), prepend: field.name, notitle: true }
+		if (field.opts.length) {
+		  var enums = [] // respect order.
+		  var opts = _(field.opts).collect(function(opt){
+			var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
+			enums.push(opt2[0])
+			return opt2
+		  })
+		  // _log('modal > each opts', opts)
+		  f_form['titleMap'] = _(opts).object()
+		  f_schema['enum'] = enums
+		}
+		schema2[key] = f_schema
+		return f_form
+	  })
+	}
+
+	var fieldsets = []
+	function _do_fieldset(forms_ids, item) {
+	  var forms = _(_(forms_ids).collect(function(each){
+		return data.forms[each]
+	  })).compact() // compact to handle not found.
+	  var fields = _(_(forms).collect(function(form){
+		return _(form.fields).values()
+	  })).flatten()
+	  // _log('modal > fields', forms, fields)
+	  if (!fields.length) { return }
+	  var source = item || forms[0]
+	  fset = {
 		type: 'fieldset',
-		title: form.name,
-		// expandable: true,
-		items: _(form.fields).collect(function(field){
-		  var key = field.id // _('field_%s').sprintf(k)
-		  if (!(key in rec)) { rec[key] = field.default }
-		  var f_schema = { type: 'string', required: field.required }
-		  var f_form = { key: _('rec.%s').sprintf(key), prepend: field.name, notitle: true }
-		  if (field.opts.length) {
-			var enums = [] // respect order.
-			var opts = _(field.opts).collect(function(opt){
-			  var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
-			  enums.push(opt2[0])
-			  return opt2
-			})
-			// _log('modal > each opts', opts)
-			f_form['titleMap'] = _(opts).object()
-			f_schema['enum'] = enums
-		  }
-		  schema2[key] = f_schema
-		  return f_form
-		}),
+		title: source.name,
+		expandable: source.expandable,
+		items: _do_fields(fields, item ? item.id + '_' : ''),
 	  }
-	})).compact()
+	  fieldsets.push(fset)
+	}
+
+	_(visit.forms).each(function(form_id){
+	  _do_fieldset([form_id])
+	})
+
+	var reps = visit.repforms
+	var repitems = _(_(_(_(reps).keys()).collect(function(item_id){
+	  return data.items[item_id]
+	})).sortBy(function(item){
+	  return [ item.order, item.name ]
+	})).compact() // compact to handle not found.
+	// _log('repitems', repitems)
+	_(repitems).each(function(item){
+	  _do_fieldset(reps[item.id], item)
+	})
+
 	// _log('modal > vjson', vjson)
 	// _log('modal > schema2 / fieldsets', schema2, fieldsets)
 	w_form.empty().jsonForm({

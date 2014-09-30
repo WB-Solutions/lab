@@ -195,7 +195,7 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
 
 
 class ItemAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'cats_', 'visits_usercats_', 'visits_loccats_')
+    list_display = ('id', 'name', 'cats_', 'visits_usercats_', 'visits_loccats_', 'visits_expandable', 'visits_order')
     list_filter = ('cats', 'visits_usercats', 'visits_loccats')
 
 class LocAdmin(AbstractAdmin):
@@ -214,7 +214,7 @@ class FormAdmin(AbstractAdmin):
         return row._h_all()
     _h_all.allow_tags = True
 
-    list_display = ('id', 'name', 'order', 'repitems_', 'cats_', '_h_all', 'fields_')
+    list_display = ('id', 'name', 'expandable', 'order', 'repitems_', 'cats_', '_h_all', 'fields_')
     filter_vertical = ('repitems', 'bricks',)
     list_filter = ('cats', 'usercats', 'itemcats', 'loccats', 'forcenodes')
     inlines = (FormFieldInline,)
@@ -235,7 +235,7 @@ class FormAdmin(AbstractAdmin):
     '''
 
 class FormFieldAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'form', 'default', 'required', 'opts_')
+    list_display = ('id', 'name', 'description', 'form', 'default', 'required', 'opts_')
 
 
 

@@ -41,6 +41,12 @@ def _str(row, tmpl, values):
     return unicode(v)
 
 
+def _form_expandable(**kwargs):
+    return models.BooleanField(**_kw_merge(kwargs, default=False))
+
+def _form_order(**kwargs):
+    return models.IntegerField(**_kw_merge(kwargs, blank=True, null=True, default=0))
+
 
 class Country(models.Model):
     name = _name()
@@ -324,12 +330,14 @@ class Item(models.Model):
     cats = _many_tree(ItemCat)
     visits_usercats = _many_tree(UserCat)
     visits_loccats = _many_tree(LocCat)
+    visits_expandable = _form_expandable()
+    visits_order = _form_order()
 
     class Meta:
         ordering = ('name',)
 
     def __unicode__(self):
-        return _str(self, '%s [ %s ]', (self.name, self.cats_()))
+        return _str(self, None, self.name) # _str(self, '%s [ %s ]', (self.name, self.cats_()))
 
     def cats_(self):
         return multiple_(self, 'cats')
@@ -358,14 +366,15 @@ class Loc(models.Model):
         # verbose_name_plural = 'Domicilios'
 
     def __unicode__(self):
-        return _str(self, '%s, %s # %s, %s [ %s ]', (self.name, self.street, self.unit, self.zip, self.cats_()))
+        return _str(self, '%s, %s # %s, %s', (self.name, self.street, self.unit, self.zip)) # self.cats_()
 
     def cats_(self):
         return multiple_(self, 'cats')
 
 class Form(models.Model):
     name = _name()
-    order = models.IntegerField(blank=True, null=True, default=0)
+    expandable = _form_expandable()
+    order = _form_order()
     repitems = _many(Item)
     cats = _many_tree(FormCat)
 
@@ -379,7 +388,7 @@ class Form(models.Model):
         ordering = ('name',)
 
     def __unicode__(self):
-        return _str(self, '%s [ %s ]', (self.name, self.cats_()))
+        return _str(self, None, self.name) # _str(self, '%s [ %s ]', (self.name, self.cats_()))
 
     def _h_all(self):
         rels = []
@@ -403,6 +412,7 @@ class Form(models.Model):
 
 class FormField(models.Model):
     name = _name(unique=False)
+    description = models.CharField(max_length=250, blank=True)
     form = models.ForeignKey(Form, related_name='fields')
     default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)

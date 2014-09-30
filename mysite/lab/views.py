@@ -121,15 +121,19 @@ def _data(config=None):
         if nodes is not None: error
         nodes = [visit.node]
     if nodes:
-        forms = Form.objects.order_by('order').all()
+        allforms = Form.objects.order_by('order', 'name').all()
         def _reduce(_fn, _els):
             # print '_reduce'
             return reduce(list.__add__, [ list(_fn(each)) for each in _els ]) if _els else []
         def _names(rel):
             return ', '.join([ each.name for each in rel.all() ])
+        def _ids(rows):
+            return [ row.id for row in rows ]
         def _visit(visit, ext=False):
             loc = visit.loc
+            loccats = loc.cats
             user = loc.user
+            usercats = user.cats
             node = visit.node
             # print '_visit', visit, ext, user, loc, node
             def _ups(treenode):
@@ -143,6 +147,28 @@ def _data(config=None):
             upnodes = _ups(node)
             itemcats = _reduce(lambda node: node.itemcats.all(), upnodes)
             # bricks = _reduce(lambda node: node.bricks, upnodes)
+            repforms = dict()
+            def _doreps(form):
+                reps = form.repitems.all()
+                if reps:
+                    for item in reps:
+                        if _any(usercats, item.visits_usercats) or _any(loccats, item.visits_loccats):
+                            k = item.id
+                            rforms = repforms.get(k) or []
+                            repforms[k] = rforms
+                            rforms.append(form.id)
+                    return False
+                return True
+            forms = [ form for form in allforms
+                      if (
+                          False
+                          or loc.zip.brick in form.bricks.all()
+                          or _any(upnodes, form.forcenodes, ups=False)
+                          or _any(usercats, form.usercats)
+                          or _any(itemcats, form.itemcats, asdb=False)
+                          or _any(loccats, form.loccats)
+                      ) and _doreps(form) ]
+            # print 'repforms', repforms
             v = dict(
                 datetime = _datetime(visit.datetime),
                 status = visit.status,
@@ -153,14 +179,8 @@ def _data(config=None):
                 user_cats = _names(user.cats),
                 loc_name = loc.name,
                 loc_address = '%s # %s, %s, %s' % (loc.street, loc.unit, loc.city, loc.zip),
-                forms = [ form.id for form in forms
-                          if False
-                          or loc.zip.brick in form.bricks.all()
-                          or _any(upnodes, form.forcenodes, ups=False)
-                          or _any(user.cats, form.usercats)
-                          or _any(itemcats, form.itemcats, asdb=False)
-                          or _any(loc.cats, form.loccats)
-                          ],
+                forms = _ids(forms),
+                repforms = repforms,
                 rec = visit.rec_dict(),
             )
             if ext:
@@ -171,12 +191,23 @@ def _data(config=None):
         else:
             visits = _reduce(lambda node: node.visits.all(), nodes)
             # print 'visits', visits
+            allitems = _all(Item)
+            # print 'allitems', allitems
             data = dict(
                 visits = _dict(visits, _visit),
-                forms = _dict(forms, lambda form: dict(
+                items = _dict(allitems, lambda item: dict(
+                    name = item.name,
+                    expandable = item.visits_expandable,
+                    order = item.visits_order,
+                )),
+                forms = _dict(allforms, lambda form: dict(
                     name = form.name,
+                    expandable = form.expandable,
+                    order = form.order,
+                    repitems = _ids(form.repitems.all()),
                     fields = _dict(form.fields.all(), lambda field: dict(
                         name = field.name,
+                        description = field.description,
                         required = field.required,
                         default = field.default,
                         opts = field.opts(),
