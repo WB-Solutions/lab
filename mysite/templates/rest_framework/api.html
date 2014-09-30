@@ -8,4 +8,13 @@
   <a class="brand" rel="nofollow" href="/lab"> Medical Visits DEMO : Web browsable REST API </a>
 {% endblock %}
 
-{% block userlinks %} <a class='brand' rel="nofollow" href='/lab'>Menu</a> {% endblock %}
+{% block userlinks %}
+  <a class='brand' rel="nofollow" href='/lab'>Menu</a>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script>
+    // $(function(){ alert('API') })
+  </script>
+{% endblock %}

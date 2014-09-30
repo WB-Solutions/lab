@@ -214,7 +214,7 @@ class FormAdmin(AbstractAdmin):
         return row._h_all()
     _h_all.allow_tags = True
 
-    list_display = ('id', 'name', 'order', 'repitems_', 'cats_', '_h_all')
+    list_display = ('id', 'name', 'order', 'repitems_', 'cats_', '_h_all', 'fields_')
     filter_vertical = ('repitems', 'bricks',)
     list_filter = ('cats', 'usercats', 'itemcats', 'loccats', 'forcenodes')
     inlines = (FormFieldInline,)

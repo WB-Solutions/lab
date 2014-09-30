@@ -53,7 +53,7 @@ class Country(models.Model):
 
 class State(models.Model):
     name = _name()
-    country = models.ForeignKey(Country)
+    country = models.ForeignKey(Country, related_name='states')
 
     class Meta:
         ordering = ('name',)
@@ -63,7 +63,7 @@ class State(models.Model):
 
 class City(models.Model):
     name = _name()
-    state = models.ForeignKey(State)
+    state = models.ForeignKey(State, related_name='cities')
 
     class Meta:
         ordering = ('name',)
@@ -82,7 +82,7 @@ class Brick(models.Model):
 
 class Zip(models.Model):
     name = _name()
-    brick = models.ForeignKey(Brick)
+    brick = models.ForeignKey(Brick, related_name='zips')
 
     class Meta:
         ordering = ('name',)
@@ -302,7 +302,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class ForceNode(AbstractTree):
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, blank=True, null=True, related_name='nodes')
     itemcats = _many_tree(ItemCat)
     bricks = _many(Brick)
     locs = _many('Loc', through='ForceVisit')
@@ -318,9 +318,6 @@ class ForceNode(AbstractTree):
 
     def locs_(self):
         return multiple_(self, 'locs')
-
-    def visits(self):
-        return self.forcevisit_set.all()
 
 class Item(models.Model):
     name = _name()
@@ -345,14 +342,14 @@ class Item(models.Model):
 
 class Loc(models.Model):
     name = _name(unique=False, blank=True)
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, related_name='locs')
     street = models.CharField(max_length=200)
     unit = models.CharField(max_length=30, blank=True)
     phone = models.CharField(max_length=30, blank=True)
     fax = models.CharField(max_length=30, blank=True)
-    zip = models.ForeignKey(Zip)
-    city = models.ForeignKey(City)
-    at = models.ForeignKey('self', blank=True, null=True)
+    zip = models.ForeignKey(Zip, related_name='locs')
+    city = models.ForeignKey(City, related_name='locs')
+    at = models.ForeignKey('self', blank=True, null=True, related_name='locs')
     cats = _many_tree(LocCat)
 
     class Meta:
@@ -398,15 +395,15 @@ class Form(models.Model):
     def loccats_(self): return multiple_(self, 'loccats')
     def forcenodes_(self): return multiple_(self, 'forcenodes')
 
-    def repitems_(self): return multiple_(self, 'repitems')
     def bricks_(self): return multiple_(self, 'bricks')
 
-    def cats_(self):
-        return multiple_(self, 'cats')
+    def repitems_(self): return multiple_(self, 'repitems')
+    def cats_(self): return multiple_(self, 'cats')
+    def fields_(self): return multiple_(self, 'fields')
 
 class FormField(models.Model):
     name = _name(unique=False)
-    form = models.ForeignKey(Form)
+    form = models.ForeignKey(Form, related_name='fields')
     default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)
     opts1 = models.TextField(blank=True, help_text=_('Each option in a separate line with format Value:Label'))
@@ -430,8 +427,8 @@ class FormField(models.Model):
 
 
 class ForceVisit(models.Model):
-    node = models.ForeignKey(ForceNode)
-    loc = models.ForeignKey(Loc)
+    node = models.ForeignKey(ForceNode, related_name='visits')
+    loc = models.ForeignKey(Loc, related_name='visits')
     datetime = models.DateTimeField(default=timezone.now)
     status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
     accompanied = models.BooleanField(default=False)

@@ -107,17 +107,6 @@ def _data(config=None):
     def _dict(dbn, fn):
         return dict([ (each.id, _ext(each, fn(each)))
             for each in dbn ])
-    """
-    data = dict(
-        forces = _dict(_list(Force), lambda force: dict(
-            name = force.name,
-            mgrs = _dict(force.forcemgr_set.all(), lambda mgr: dict(
-                reps = _dict(mgr.forcerep_set.all(), lambda rep: dict(
-                )),
-            )),
-        )),
-    )
-    """
     data = None
     nodes = None
     user = config.get('user')
@@ -180,13 +169,13 @@ def _data(config=None):
         if visit:
             data = _visit(visit, ext=True)
         else:
-            visits = _reduce(lambda node: node.visits(), nodes)
+            visits = _reduce(lambda node: node.visits.all(), nodes)
             # print 'visits', visits
             data = dict(
                 visits = _dict(visits, _visit),
                 forms = _dict(forms, lambda form: dict(
                     name = form.name,
-                    fields = _dict(form.formfield_set.all(), lambda field: dict(
+                    fields = _dict(form.fields.all(), lambda field: dict(
                         name = field.name,
                         required = field.required,
                         default = field.default,
