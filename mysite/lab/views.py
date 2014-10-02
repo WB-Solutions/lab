@@ -121,7 +121,8 @@ def _data(config=None):
         if nodes is not None: error
         nodes = [visit.node]
     if nodes:
-        allforms = Form.objects.order_by('order', 'name').all()
+        def _ups(treenode):
+            return treenode.get_ancestors(include_self=True)
         def _reduce(_fn, _els):
             # print '_reduce'
             return reduce(list.__add__, [ list(_fn(each)) for each in _els ]) if _els else []
@@ -129,28 +130,44 @@ def _data(config=None):
             return ', '.join([ each.name for each in rel.all() ])
         def _ids(rows):
             return [ row.id for row in rows ]
+        def _any(n1, n2, asdb=True, ups=True):
+            n1 = n1.all() if asdb else n1
+            if ups:
+                n1 = _reduce(lambda ex: _ups(ex), n1)
+            # print '_any', n1, n2
+            return any( [ each for each in n1 if each in n2.all() ] )
+        cached = dict()
+        def _node_data(_node):
+            d = cached.get(_node)
+            iscached = d is not None
+            if not iscached:
+                _upnodes = _ups(_node)
+                _itemcats = _reduce(lambda enode: enode.itemcats.all(), _upnodes)
+                d = dict(
+                    upnodes = _upnodes,
+                    itemcats = _itemcats,
+                    items = Item.objects.filter(cats__in=_itemcats).order_by('name').all(),
+                )
+                cached[_node] = d
+            # print '_node_data cached', iscached, _node, d
+            return d
+        allforms = Form.objects.order_by('order', 'name').all()
         def _visit(visit, ext=False):
             loc = visit.loc
             loccats = loc.cats
             user = loc.user
             usercats = user.cats
             node = visit.node
-            # print '_visit', visit, ext, user, loc, node
-            def _ups(treenode):
-                return treenode.get_ancestors(include_self=True)
-            def _any(n1, n2, asdb=True, ups=True):
-                n1 = n1.all() if asdb else n1
-                if ups:
-                    n1 = _reduce(lambda ex: _ups(ex), n1)
-                # print '_any', n1, n2
-                return any( [ each for each in n1 if each in n2.all() ] )
-            upnodes = _ups(node)
-            itemcats = _reduce(lambda node: node.itemcats.all(), upnodes)
-            # bricks = _reduce(lambda node: node.bricks, upnodes)
+            nodedata = _node_data(node)
+            # print '_visit', visit, ext, user, loc, node, nodedata
+            upnodes = nodedata.get('upnodes')
+            itemcats = nodedata.get('itemcats')
+            items = nodedata.get('items')
             repforms = dict()
             def _doreps(form):
-                reps = form.repitems.all()
-                if reps:
+                reps = form.repitems
+                if reps.exists(): # must check, even if empty after the below filter.
+                    reps = reps.filter(id__in=items).all()
                     for item in reps:
                         if _any(usercats, item.visits_usercats) or _any(loccats, item.visits_loccats):
                             k = item.id
