@@ -197,19 +197,22 @@ def _data(config=None):
                 visits = _dict(visits, _visit),
                 items = _dict(allitems, lambda item: dict(
                     name = item.name,
+                    description = item.visits_description,
                     expandable = item.visits_expandable,
                     order = item.visits_order,
                 )),
                 forms = _dict(allforms, lambda form: dict(
                     name = form.name,
+                    description = form.description,
                     expandable = form.expandable,
                     order = form.order,
                     repitems = _ids(form.repitems.all()),
                     fields = _dict(form.fields.all(), lambda field: dict(
                         name = field.name,
                         description = field.description,
-                        required = field.required,
+                        type = field.type or '',
                         default = field.default,
+                        required = field.required,
                         opts = field.opts(),
                     )),
                 )),

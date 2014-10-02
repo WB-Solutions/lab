@@ -40,13 +40,18 @@ $(function(){
 	  return _(fields).collect(function(field){
 		var key = pre_id + field.id // _('field_%s').sprintf(k)
 		if (!(key in rec)) { rec[key] = field.default }
+		var ftype = field.type || 'string'
+		var isopts = _(ftype).startsWith('opts-')
+		var isbool = ftype == 'boolean'
+		var desc = field.description
 		var f_schema = {
-		  type: 'string',
+		  type: ftype,
+		  description: isbool ? null : desc,
 		  required: field.required,
-		  description: field.description,
 		}
 		var f_form = { key: _('rec.%s').sprintf(key), prepend: field.name, notitle: true }
-		if (field.opts.length) {
+		if (isbool) { f_form['inlinetitle'] = desc }
+		if (isopts && field.opts.length) {
 		  var enums = [] // respect order.
 		  var opts = _(field.opts).collect(function(opt){
 			var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
@@ -56,7 +61,9 @@ $(function(){
 		  // _log('modal > each opts', opts)
 		  f_form['titleMap'] = _(opts).object()
 		  f_schema['enum'] = enums
+		  if (ftype == 'opts-radios') { f_form['type'] = 'radios' }
 		}
+		f_form['htmlClass'] = _('lab-field-%s').sprintf(ftype)
 		schema2[key] = f_schema
 		return f_form
 	  })
@@ -73,15 +80,17 @@ $(function(){
 	  // _log('modal > fields', forms, fields)
 	  if (!fields.length) { return }
 	  var source = item || forms[0]
+	  var f_fields = _do_fields(fields, item ? item.id + '_' : '')
+	  var desc = source.description
+	  if (desc) { f_fields = [ { type: 'help', helpvalue: desc } ].concat(f_fields) }
 	  fset = {
 		type: 'fieldset',
 		title: source.name,
 		expandable: source.expandable,
-		items: _do_fields(fields, item ? item.id + '_' : ''),
+		items: f_fields
 	  }
 	  fieldsets.push(fset)
 	}
-
 	_(visit.forms).each(function(form_id){
 	  _do_fieldset([form_id])
 	})
@@ -118,7 +127,7 @@ $(function(){
 	  },
 	  form: [
 		{
-		  type: 'fieldset',
+		  type: 'section', // fieldset
 		  title: 'Visit',
 		  items: [
 			{ key: 'status', prepend: 'Status', notitle: true, titleMap: { "": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
@@ -128,7 +137,7 @@ $(function(){
 			{ key: 'user_cats', prepend: 'Categories', notitle: true, disabled: true },
 			{ key: 'loc_name', prepend: 'Location', notitle: true, disabled: true },
 			{ key: 'loc_address', prepend: 'Address', notitle: true, disabled: true },
-			{ key: 'accompanied', inlinetitle: 'Accompanied' },
+			{ key: 'accompanied', prepend: 'Accompanied', inlinetitle: 'Accompanied', htmlClass: 'lab-field-boolean' },
 		  ],
 		},
 	  ].concat(fieldsets).concat([

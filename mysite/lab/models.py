@@ -47,6 +47,9 @@ def _form_expandable(**kwargs):
 def _form_order(**kwargs):
     return models.IntegerField(**_kw_merge(kwargs, blank=True, null=True, default=0))
 
+def _form_description(**kwargs):
+    return models.TextField(**_kw_merge(kwargs, blank=True))
+
 
 class Country(models.Model):
     name = _name()
@@ -330,6 +333,7 @@ class Item(models.Model):
     cats = _many_tree(ItemCat)
     visits_usercats = _many_tree(UserCat)
     visits_loccats = _many_tree(LocCat)
+    visits_description = _form_description()
     visits_expandable = _form_expandable()
     visits_order = _form_order()
 
@@ -373,6 +377,7 @@ class Loc(models.Model):
 
 class Form(models.Model):
     name = _name()
+    description = _form_description()
     expandable = _form_expandable()
     order = _form_order()
     repitems = _many(Item)
@@ -412,8 +417,9 @@ class Form(models.Model):
 
 class FormField(models.Model):
     name = _name(unique=False)
-    description = models.CharField(max_length=250, blank=True)
+    description = _form_description()
     form = models.ForeignKey(Form, related_name='fields')
+    type = models.CharField(max_length=30, blank=True, default='', choices=[ (e, e) for e in [ 'boolean', 'textarea', 'opts-select', 'opts-radios' ] ])
     default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)
     opts1 = models.TextField(blank=True, help_text=_('Each option in a separate line with format Value:Label'))

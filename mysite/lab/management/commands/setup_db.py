@@ -72,6 +72,8 @@ class Command(BaseCommand):
             loccats = _new_cats(LocCat, 'Loc')
             formcats = _new_cats(FormCat, 'Form')
 
+            usercat = _first(UserCat) # root.
+
             users = dict()
             for ei, each in enumerate([ 'force', 'rep', 'doc' ]):
                 user = _new(User, first_name=each, last_name=each, email=_email(each))
@@ -83,17 +85,18 @@ class Command(BaseCommand):
             nodes = _new_cats(ForceNode, 'Force', isforce=True)
 
             for each in [ 'Item A', 'Item B', 'Item C' ]:
-                item = _new(Item, name=each)
+                item = _new(Item, name=each, visits_description='Description @ %s' % each)
                 item.cats.add(itemcats.pop(0))
+                item.visits_usercats.add(usercat)
 
-            usercat = _first(UserCat) # root.
             for each in [ 'A', 'B', 'repitems' ]:
-                form = _new(Form, name='Form %s' % each)
+                ename = 'Form %s' % each
+                form = _new(Form, name=ename, description='Description @ %s' % ename)
                 form.cats.add(formcats.pop(0))
                 form.usercats.add(usercat)
                 for ei in range(1, 3):
                     ename = 'Field %s %s' % (each, ei)
-                    field = _new(FormField, form=form, name=ename, default=ename, required=True)
+                    field = _new(FormField, form=form, name=ename, description='Description @ %s' % ename, default=ename, required=True)
             form.repitems.add(_first(Item), _last(Item)) # last form.
 
         err = None

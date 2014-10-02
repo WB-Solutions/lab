@@ -235,7 +235,7 @@ class FormAdmin(AbstractAdmin):
     '''
 
 class FormFieldAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'description', 'form', 'default', 'required', 'opts_')
+    list_display = ('id', 'name', 'description', 'form', 'type', 'default', 'required', 'opts_')
 
 
 

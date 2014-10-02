@@ -6,8 +6,21 @@ h1 { margin-bottom: 20px; }
 
 #service-form .tab-content { padding-top: 20px; }
 
-X.input-group-addon { width: 120px; }
-
 ._jsonform-array-deleteitem { display: none; }
 
-.help-block { margin-left: 30px; }
+.help-block { margin-left: 5px; }
+
+.help-block:first-child { margin-top: -10px; }
+
+label { font-weight: normal; }
+
+.form-control[disabled], .form-control[readonly], fieldset[disabled] .form-control { background-color: #fbfbfb; }
+
+fieldset:first-of-type { margin-top: 30px !important; }
+
+.lab-field-boolean .input-group-addon, .lab-field-opts-radios .input-group-addon { border-right: 1px solid #ccc !important; }
+
+.lab-field-boolean .checkbox, .lab-field-opts-radios .radio { margin-left: 10px; }
+
+.expandable > legend:before { content: '\25B8'; padding-right: 5px; }
+.expanded > legend:before { content: '\25BE'; }

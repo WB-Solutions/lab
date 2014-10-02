@@ -1,3 +1,5 @@
 @charset "UTF-8";
 
-select[multiple] { height: 160px; }
+select[multiple] { height: 13em; }
+
+textarea { height: 5em; }
