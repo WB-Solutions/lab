@@ -317,7 +317,7 @@ class ForceNode(AbstractTree):
     locs = _many('Loc', through='ForceVisit')
 
     def __unicode__(self):
-        return _str(self, '%s %s: %s', (self.h_level(), self.name, self.user))
+        return _str(self, '%s %s: %s', (self.h_level(), self.name, self.user or '-'))
 
     def itemcats_(self):
         return multiple_(self, 'itemcats')
