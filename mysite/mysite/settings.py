@@ -22,7 +22,10 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
 
     'django_extensions', # django-extensions
+
     'rest_framework', # djangorestframework
+    # 'rest_framework.authtoken', # http://www.django-rest-framework.org/api-guide/authentication.html#tokenauthentication
+    # djangorestframework-jwt
 
     'mptt', # django-mptt
 
@@ -93,6 +96,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         # 'rest_framework.authentication.BasicAuthentication', # http://stackoverflow.com/questions/17665035/logout-not-working
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
     ),
 
     # http://www.django-rest-framework.org/api-guide/permissions

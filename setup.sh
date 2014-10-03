@@ -65,6 +65,7 @@ sudo pip install Django==1.6.5
 sudo pip install django-suit
 sudo pip install django-extensions
 sudo pip install djangorestframework
+sudo pip install djangorestframework-jwt
 sudo pip install django-mptt
 sudo pip install django-allauth
 sudo pip install django-bootstrap3
