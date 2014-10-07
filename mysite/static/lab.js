@@ -29,6 +29,11 @@ $(function(){
 	  _log('_obj', _v)
 	  return _v
 	}
+	function _sorted(_els) {
+	  return _(_els).sortBy(function(each){
+		return [ each.order, each.name ]
+	  })
+	}
 	var vjson = _({}).extend(visit)
 	var refvars = { ref_visit: visit.id }
 	var forms = data.forms
@@ -37,7 +42,8 @@ $(function(){
 	var rec = visit.rec
 	var schema2 = {}
 	function _do_fields(fields, pre_id) {
-	  return _(fields).collect(function(field){
+	  // _log('_do_fields', fields)
+	  return _(_sorted(fields)).collect(function(field){
 		var key = pre_id + field.id // _('field_%s').sprintf(k)
 		if (!(key in rec)) { rec[key] = field.default }
 		var ftype = field.type || 'string'
@@ -96,11 +102,9 @@ $(function(){
 	})
 
 	var reps = visit.repforms
-	var repitems = _(_(_(_(reps).keys()).collect(function(item_id){
+	var repitems = _(_sorted(_(_(reps).keys()).collect(function(item_id){
 	  return data.items[item_id]
-	})).sortBy(function(item){
-	  return [ item.order, item.name ]
-	})).compact() // compact to handle not found.
+	}))).compact() // compact to handle not found.
 	// _log('repitems', repitems)
 	_(repitems).each(function(item){
 	  _do_fieldset(reps[item.id], item)

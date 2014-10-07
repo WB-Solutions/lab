@@ -105,13 +105,13 @@ class Zip(models.Model):
 class AbstractTree(MPTTModel):
     name = _name(unique=False)
     parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
-    # order = models.IntegerField() # also create @ REST api NOT working: IntegrityError: X.order may not be NULL.
+    order = _form_order()
 
     class Meta:
         abstract = True
 
     class MPTTMeta:
-        order_insertion_by = ('name',) # 'order'
+        order_insertion_by = ('order', 'name')
 
     def __unicode__(self):
         return _str(self, '%s %s', (self.h_level(), self.name))
@@ -136,74 +136,6 @@ class LocCat(AbstractTree):
 class FormCat(AbstractTree):
     pass
 
-
-
-
-
-# https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
-# from django.contrib.auth.models import User
-
-'''
-# https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#django.contrib.auth.get_user_model
-from django.contrib.auth import get_user_model
-User = get_user_model()
-'''
-
-'''
-from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
-
-class UserManager(BaseUserManager):
-
-    def create_user(self, email, first_name, last_name, password=None):
-        if not email:
-            raise ValueError('Users must have an email address')
-        user = self.model(
-            email = self.normalize_email(email),
-            first_name = first_name,
-            last_name = last_name,
-        )
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, email, first_name, last_name, password):
-        user = self.create_user(email, first_name, last_name, password=password)
-        user.is_admin = True
-        user.save(using=self._db)
-        return user
-
-class User(AbstractBaseUser):
-    email = models.EmailField(verbose_name='email address', max_length=255, unique=True)
-    first_name = models.CharField(max_length=200)
-    last_name = models.CharField(max_length=200)
-
-    is_active = models.BooleanField(default=True)
-    is_admin = models.BooleanField(default=False)
-
-    objects = UserManager()
-
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = [ 'first_name', 'last_name' ]
-
-    def __unicode__(self):
-        return _str(self, '%s %s : %s', (self.first_name, self.last_name, self.email))
-
-    def get_full_name(self):
-        return self.email
-
-    def get_short_name(self):
-        return self.email
-
-    def has_perm(self, perm, obj=None): # does the user have a specific permission?.
-        return True
-
-    def has_module_perms(self, app_label): # does the user have permissions to view the app "app_label"?.
-        return True
-
-    @property
-    def is_staff(self): # is the user a member of staff?.
-        return self.is_admin
-'''
 
 
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
@@ -239,7 +171,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(_('active'), default=True, help_text=_('Designates whether this user should be treated as active. Unselect this instead of deleting accounts.'))
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
 
-    cats = _many_tree(UserCat)
+    cats = _many_tree(UserCat, related_name='users')
 
     objects = UserManager()
 
@@ -306,13 +238,19 @@ class User(AbstractBaseUser, PermissionsMixin):
     def natural_key(self):
         return (self.email,)
 
+'''
+    def has_perm(self, perm, obj=None): # does the user have a specific permission?.
+        return True
 
+    def has_module_perms(self, app_label): # does the user have permissions to view the app "app_label"?.
+        return True
+'''
 
 
 
 class ForceNode(AbstractTree):
     user = models.ForeignKey(User, blank=True, null=True, related_name='nodes')
-    itemcats = _many_tree(ItemCat)
+    itemcats = _many_tree(ItemCat, related_name='nodes')
     bricks = _many(Brick)
     locs = _many('Loc', through='ForceVisit')
 
@@ -330,9 +268,9 @@ class ForceNode(AbstractTree):
 
 class Item(models.Model):
     name = _name()
-    cats = _many_tree(ItemCat)
-    visits_usercats = _many_tree(UserCat)
-    visits_loccats = _many_tree(LocCat)
+    cats = _many_tree(ItemCat, related_name='items')
+    visits_usercats = _many_tree(UserCat, related_name='visits_items')
+    visits_loccats = _many_tree(LocCat, related_name='visits_items')
     visits_description = _form_description()
     visits_expandable = _form_expandable()
     visits_order = _form_order()
@@ -362,7 +300,7 @@ class Loc(models.Model):
     zip = models.ForeignKey(Zip, related_name='locs')
     city = models.ForeignKey(City, related_name='locs')
     at = models.ForeignKey('self', blank=True, null=True, related_name='locs')
-    cats = _many_tree(LocCat)
+    cats = _many_tree(LocCat, related_name='locs')
 
     class Meta:
         ordering = ('name',)
@@ -380,14 +318,16 @@ class Form(models.Model):
     description = _form_description()
     expandable = _form_expandable()
     order = _form_order()
-    repitems = _many(Item)
-    cats = _many_tree(FormCat)
+    cats = _many_tree(FormCat, related_name='forms')
 
-    usercats = _many_tree(UserCat)
-    itemcats = _many_tree(ItemCat)
-    loccats = _many_tree(LocCat)
-    forcenodes = _many_tree(ForceNode)
-    bricks = _many(Brick)
+    visits_repitems = _many(Item, related_name='visits_repforms')
+    visits_repitemcats = _many_tree(ItemCat, related_name='visits_repforms')
+
+    visits_usercats = _many_tree(UserCat, related_name='visits_forms')
+    visits_itemcats = _many_tree(ItemCat, related_name='visits_forms')
+    visits_loccats = _many_tree(LocCat, related_name='visits_forms')
+    visits_forcenodes = _many_tree(ForceNode, related_name='visits_forms')
+    visits_bricks = _many(Brick, related_name='visits_forms')
 
     class Meta:
         ordering = ('name',)
@@ -397,22 +337,25 @@ class Form(models.Model):
 
     def _h_all(self):
         rels = []
-        for each in [ 'usercats', 'itemcats', 'loccats', 'forcenodes', 'bricks' ]:
+        for each in [ 'visits_repitems', 'visits_repitemcats', 'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes', 'visits_bricks' ]:
             ev = multiple_(self, each)
             if ev:
                 rels.append('<b>%s</b> : %s' % (each, ev))
         # print 'Form.all_', self, rels
         return '<br>'.join(rels)
 
-    def usercats_(self): return multiple_(self, 'usercats')
-    def itemcats_(self): return multiple_(self, 'itemcats')
-    def loccats_(self): return multiple_(self, 'loccats')
-    def forcenodes_(self): return multiple_(self, 'forcenodes')
-
-    def bricks_(self): return multiple_(self, 'bricks')
-
-    def repitems_(self): return multiple_(self, 'repitems')
     def cats_(self): return multiple_(self, 'cats')
+
+    def visits_repitems_(self): return multiple_(self, 'visits_repitems')
+    def visits_repitemcats_(self): return multiple_(self, 'visits_repitemcats')
+
+    def visits_usercats_(self): return multiple_(self, 'visits_usercats')
+    def visits_itemcats_(self): return multiple_(self, 'visits_itemcats')
+    def visits_loccats_(self): return multiple_(self, 'visits_loccats')
+    def visits_forcenodes_(self): return multiple_(self, 'visits_forcenodes')
+
+    def visits_bricks_(self): return multiple_(self, 'visits_bricks')
+
     def fields_(self): return multiple_(self, 'fields')
 
 class FormField(models.Model):
@@ -422,6 +365,7 @@ class FormField(models.Model):
     type = models.CharField(max_length=30, blank=True, default='', choices=[ (e, e) for e in [ 'boolean', 'textarea', 'opts-select', 'opts-radios' ] ])
     default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)
+    order = _form_order()
     opts1 = models.TextField(blank=True, help_text=_('Each option in a separate line with format Value:Label'))
 
     class Meta:

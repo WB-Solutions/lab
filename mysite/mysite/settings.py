@@ -1,6 +1,7 @@
 import os
-from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
-from django.conf.global_settings import AUTHENTICATION_BACKENDS as AB
+from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
+from django.conf.global_settings import AUTHENTICATION_BACKENDS
+import datetime
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -10,6 +11,22 @@ DEBUG = True
 TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# http://integricho.github.io/2013/07/22/mutant-introduction/
+# https://github.com/integricho/mutant-sample-app
+apps_mutant = (
+    'south', # auto-installed by mutant.
+    'mutant', # django-mutant
+    'mutant.contrib.boolean',
+    'mutant.contrib.temporal',
+    'mutant.contrib.file',
+    'mutant.contrib.numeric',
+    'mutant.contrib.text',
+    'mutant.contrib.web',
+    'mutant.contrib.related',
+    'mutantgui',
+)
+apps_mutant = () # DISABLED for now.
 
 INSTALLED_APPS = (
     'suit', # django-suit
@@ -23,9 +40,11 @@ INSTALLED_APPS = (
 
     'django_extensions', # django-extensions
 
+) + apps_mutant + (
+
     'rest_framework', # djangorestframework
-    # 'rest_framework.authtoken', # http://www.django-rest-framework.org/api-guide/authentication.html#tokenauthentication
-    # djangorestframework-jwt
+    # 'rest_framework.authtoken', # NOT in use, using JWT below (not required as installed app here) instead, http://www.django-rest-framework.org/api-guide/authentication.html#tokenauthentication
+    # djangorestframework-jwt # https://github.com/GetBlimp/django-rest-framework-jwt
 
     'mptt', # django-mptt
 
@@ -105,15 +124,56 @@ REST_FRAMEWORK = {
     ),
 }
 
+# https://github.com/GetBlimp/django-rest-framework-jwt
+JWT_AUTH = {
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=1 * 60),
+}
 
+# https://github.com/GetBlimp/django-rest-framework-jwt
+'''
+$.post(
+    'http://localhost:8000/api-token-auth/',
+    { email: 'admin@go.com', password: 'admin' },
+    function(data){
+        $.ajax({
+            url: 'http://localhost:8000/lab/api/users/',
+            headers: { Authorization: 'JWT ' + data.token }
+        })
+    },
+    'json'
+)
+'''
+# same as above but as interval with same token.
+'''
+$.post(
+  'http://localhost:8000/api-token-auth/',
+  { email: 'admin@go.com', password: 'admin' },
+  function(data){
+    xTOKEN = data.token
+    xSTART = new Date().getTime()
+  },
+  'json'
+)
+setInterval(
+  function(){
+    var diff = new Date().getTime() - xSTART
+    console.log(_('Time: %s').sprintf(diff / 1000 / 60))
+    $.ajax(
+      { url: 'http://localhost:8000/lab/api/users/',
+       headers: { Authorization: 'JWT ' + xTOKEN }
+    })
+  },
+  3000
+)
+'''
 
 # allauth.
-TEMPLATE_CONTEXT_PROCESSORS = TCP + (
+TEMPLATE_CONTEXT_PROCESSORS += (
     'django.core.context_processors.request',
     'allauth.account.context_processors.account',
     'allauth.socialaccount.context_processors.socialaccount',
 )
-AUTHENTICATION_BACKENDS = AB + (
+AUTHENTICATION_BACKENDS += (
     "allauth.account.auth_backends.AuthenticationBackend",
 )
 SITE_ID = 1
@@ -156,8 +216,7 @@ SUIT_CONFIG = dict(
     # ),
 
     # LIST_PER_PAGE = 15,
-)
-SUIT_CONFIG.update(
+
     MENU = (
         dict(label='Site', icon='icon-cog', models=('account.emailconfirmation', 'account.emailaddress', 'sites.site')),
         dict(label='Geos', icon='icon-cog', app='lab', models=('country', 'state', 'city', 'brick', 'zip')),

@@ -89,15 +89,15 @@ class Command(BaseCommand):
                 item.cats.add(itemcats.pop(0))
                 item.visits_usercats.add(usercat)
 
-            for each in [ 'A', 'B', 'repitems' ]:
+            for each in [ 'A', 'B', 'visits_repitems' ]:
                 ename = 'Form %s' % each
                 form = _new(Form, name=ename, description='Description @ %s' % ename)
                 form.cats.add(formcats.pop(0))
-                form.usercats.add(usercat)
+                form.visits_usercats.add(usercat)
                 for ei in range(1, 3):
                     ename = 'Field %s %s' % (each, ei)
                     field = _new(FormField, form=form, name=ename, description='Description @ %s' % ename, default=ename, required=True)
-            form.repitems.add(_first(Item), _last(Item)) # last form.
+            form.visits_repitems.add(_first(Item), _last(Item)) # last form.
 
         err = None
         if User.objects.exists():

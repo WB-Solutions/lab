@@ -91,8 +91,8 @@ class ZipAdmin(AbstractAdmin):
 
 
 class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin): # SortableModelAdmin
-    # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
-    # sortable = 'order'
+    # sortable = 'order' # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
+    list_display = ('id', 'name', 'order')
     mptt_indent_field  = 'name'
 
 class UserCatAdmin(AbstractTreeAdmin):
@@ -119,7 +119,7 @@ class ForceNodeAdmin(AbstractTreeAdmin):
         return utils._agenda('node', row)
     _agenda.allow_tags = True
 
-    list_display = ('id', 'name', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
+    list_display = ('id', 'name', 'order', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
     list_display_links = ('id', 'name')
     list_filter = ('itemcats', 'bricks',)
     filter_vertical = ('bricks',)
@@ -214,9 +214,9 @@ class FormAdmin(AbstractAdmin):
         return row._h_all()
     _h_all.allow_tags = True
 
-    list_display = ('id', 'name', 'expandable', 'order', 'repitems_', 'cats_', '_h_all', 'fields_')
-    filter_vertical = ('repitems', 'bricks',)
-    list_filter = ('cats', 'usercats', 'itemcats', 'loccats', 'forcenodes')
+    list_display = ('id', 'name', 'expandable', 'order', 'cats_', '_h_all', 'fields_')
+    filter_vertical = ('visits_repitems', 'visits_bricks',)
+    list_filter = ('cats', 'visits_repitemcats', 'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes')
     inlines = (FormFieldInline,)
 
     '''
@@ -229,13 +229,13 @@ class FormAdmin(AbstractAdmin):
         )),
         (None, dict(
             classes = ('suit-tab suit-tab-rels',),
-            fields = [ 'bricks' ],
+            fields = [ 'visits_bricks' ],
         )),
     ]
     '''
 
 class FormFieldAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'description', 'form', 'type', 'default', 'required', 'opts_')
+    list_display = ('id', 'name', 'description', 'form', 'type', 'default', 'required', 'order', 'opts_')
 
 
 

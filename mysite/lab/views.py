@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse_lazy
 
 from decimal import Decimal
 import json
@@ -123,8 +124,10 @@ def _data(config=None):
     if nodes:
         def _ups(treenode):
             return treenode.get_ancestors(include_self=True)
-        def _reduce(_fn, _els):
-            # print '_reduce'
+        def _downs(treenode):
+            return treenode.get_descendants(include_self=True)
+        def _flatten(_fn, _els):
+            # print '_flatten', _els
             return reduce(list.__add__, [ list(_fn(each)) for each in _els ]) if _els else []
         def _names(rel):
             return ', '.join([ each.name for each in rel.all() ])
@@ -133,20 +136,24 @@ def _data(config=None):
         def _any(n1, n2, asdb=True, ups=True):
             n1 = n1.all() if asdb else n1
             if ups:
-                n1 = _reduce(lambda ex: _ups(ex), n1)
+                n1 = _flatten(lambda ex: _ups(ex), n1)
             # print '_any', n1, n2
             return any( [ each for each in n1 if each in n2.all() ] )
         cached = dict()
+        def _nodes_downs(_cats):
+            return set(_flatten(lambda ecat: _downs(ecat), _cats))
+        def _cats_items(_cats):
+            return Item.objects.filter(cats__in=_cats).order_by('name').all()
         def _node_data(_node):
             d = cached.get(_node)
             iscached = d is not None
             if not iscached:
                 _upnodes = _ups(_node)
-                _itemcats = _reduce(lambda enode: enode.itemcats.all(), _upnodes)
+                _itemcats = _nodes_downs(_flatten(lambda enode: enode.itemcats.all(), _upnodes))
                 d = dict(
                     upnodes = _upnodes,
                     itemcats = _itemcats,
-                    items = Item.objects.filter(cats__in=_itemcats).order_by('name').all(),
+                    items = _cats_items(_itemcats),
                 )
                 cached[_node] = d
             # print '_node_data cached', iscached, _node, d
@@ -165,7 +172,11 @@ def _data(config=None):
             items = nodedata.get('items')
             repforms = dict()
             def _doreps(form):
-                reps = form.repitems
+                reps1 = form.visits_repitems.all()
+                repcats = _nodes_downs(form.visits_repitemcats.all())
+                reps2 = _cats_items(repcats)
+                reps = (reps1 | reps2).distinct()
+                # print '_doreps > reps', reps
                 if reps.exists(): # must check, even if empty after the below filter.
                     reps = reps.filter(id__in=items).all()
                     for item in reps:
@@ -179,11 +190,11 @@ def _data(config=None):
             forms = [ form for form in allforms
                       if (
                           False
-                          or loc.zip.brick in form.bricks.all()
-                          or _any(upnodes, form.forcenodes, ups=False)
-                          or _any(usercats, form.usercats)
-                          or _any(itemcats, form.itemcats, asdb=False)
-                          or _any(loccats, form.loccats)
+                          or loc.zip.brick in form.visits_bricks.all()
+                          or _any(upnodes, form.visits_forcenodes, ups=False)
+                          or _any(usercats, form.visits_usercats)
+                          or _any(itemcats, form.visits_itemcats, asdb=False)
+                          or _any(loccats, form.visits_loccats)
                       ) and _doreps(form) ]
             # print 'repforms', repforms
             v = dict(
@@ -206,7 +217,7 @@ def _data(config=None):
         if visit:
             data = _visit(visit, ext=True)
         else:
-            visits = _reduce(lambda node: node.visits.all(), nodes)
+            visits = _flatten(lambda node: node.visits.all(), nodes)
             # print 'visits', visits
             allitems = _all(Item)
             # print 'allitems', allitems
@@ -223,13 +234,14 @@ def _data(config=None):
                     description = form.description,
                     expandable = form.expandable,
                     order = form.order,
-                    repitems = _ids(form.repitems.all()),
+                    repitems = _ids(form.visits_repitems.all()),
                     fields = _dict(form.fields.all(), lambda field: dict(
                         name = field.name,
                         description = field.description,
                         type = field.type or '',
                         default = field.default,
                         required = field.required,
+                        order = field.order,
                         opts = field.opts(),
                     )),
                 )),
@@ -330,7 +342,6 @@ from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 
 from django.views.generic.edit import UpdateView
-from django.core.urlresolvers import reverse_lazy
 from django.contrib import messages
 
 from .forms import *

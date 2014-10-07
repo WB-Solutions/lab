@@ -8,7 +8,7 @@ class AbstractSerializer(serializers.HyperlinkedModelSerializer):
 
 _fields = ('url', 'id')
 _fields_name = _fields + ('name',)
-_fields_cat = _fields_name + ('parent',)
+_fields_cat = _fields_name + ('order', 'parent', 'level')
 
 
 
@@ -44,25 +44,29 @@ class ZipSerializer(AbstractSerializer):
 
 
 
-class UserCatSerializer(AbstractSerializer):
+class AbstractTreeSerializer(serializers.HyperlinkedModelSerializer):
+    # level = serializers.Field(source='level') # NOT necessary because *Cat._meta.get_field('level').editable is False.
+    pass
+
+class UserCatSerializer(AbstractTreeSerializer):
 
     class Meta:
         model = UserCat
         fields = _fields_cat
 
-class ItemCatSerializer(AbstractSerializer):
+class ItemCatSerializer(AbstractTreeSerializer):
 
     class Meta:
         model = ItemCat
         fields = _fields_cat
 
-class LocCatSerializer(AbstractSerializer):
+class LocCatSerializer(AbstractTreeSerializer):
 
     class Meta:
         model = LocCat
         fields = _fields_cat
 
-class FormCatSerializer(AbstractSerializer):
+class FormCatSerializer(AbstractTreeSerializer):
 
     class Meta:
         model = FormCat
@@ -70,7 +74,7 @@ class FormCatSerializer(AbstractSerializer):
 
 
 
-class ForceNodeSerializer(AbstractSerializer):
+class ForceNodeSerializer(AbstractTreeSerializer):
     # visits = serializers.Field(source='visits')
 
     class Meta:
@@ -108,10 +112,10 @@ class FormSerializer(AbstractSerializer):
 
     class Meta:
         model = Form
-        fields = _fields_name + ('description', 'expandable', 'order', 'repitems', 'cats', 'usercats', 'itemcats', 'loccats', 'forcenodes')
+        fields = _fields_name + ('description', 'expandable', 'order', 'cats', 'visits_repitems', 'visits_repitemcats', 'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes', 'visits_bricks')
 
 class FormFieldSerializer(AbstractSerializer):
 
     class Meta:
         model = FormField
-        fields = _fields_name + ('description', 'form', 'type', 'default', 'required', 'opts1')
+        fields = _fields_name + ('description', 'form', 'type', 'default', 'required', 'order', 'opts1')

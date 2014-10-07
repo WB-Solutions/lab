@@ -39,4 +39,6 @@ urlpatterns = patterns('',
     url(r'^member/action$', views.member_action, name='user_action'),
 
     url(r'^admin/', include(admin.site.urls)),
+
+    # url(r'^mutantgui/', include('mutantgui.urls')),
 )
