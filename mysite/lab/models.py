@@ -51,58 +51,37 @@ def _form_description(**kwargs):
     return models.TextField(**_kw_merge(kwargs, blank=True))
 
 
-class Country(models.Model):
-    name = _name()
+# http://bitofpixels.com/blog/unique-on-charfield-when-blanktrue/
+class NullableUniqueField(models.CharField):
+
+    def to_python(self, value):
+        return value or ''
+
+    def get_prep_value(self, value):
+        return value or None
+
+def _syscode(**kwargs):
+    return NullableUniqueField(**_kw_merge(kwargs, max_length=200, blank=True, null=True, unique=True))
+
+
+class AbstractModel(models.Model):
+    syscode = _syscode()
 
     class Meta:
-        ordering = ('name',)
+        abstract = True
 
     def __unicode__(self):
         return _str(self, None, self.name)
 
-class State(models.Model):
-    name = _name()
-    country = models.ForeignKey(Country, related_name='states')
+    def syscodes_(self):
+        return ' : '.join([ str(each) for each in [ self.id, self.syscode ] if each ])
 
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, '%s @ %s', (self.name, self.country))
-
-class City(models.Model):
-    name = _name()
-    state = models.ForeignKey(State, related_name='cities')
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, '%s @ %s', (self.name, self.state))
-
-class Brick(models.Model):
-    name = _name()
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, None, self.name)
-
-class Zip(models.Model):
-    name = _name()
-    brick = models.ForeignKey(Brick, related_name='zips')
-
-    class Meta:
-        ordering = ('name',)
-
-    def __unicode__(self):
-        return _str(self, '%s @ %s', (self.name, self.brick))
-
+    def cats_(self):
+        return multiple_(self, 'cats')
 
 
 # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
-class AbstractTree(MPTTModel):
+class AbstractTree(MPTTModel, AbstractModel):
     name = _name(unique=False)
     parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
     order = _form_order()
@@ -124,14 +103,74 @@ class AbstractTree(MPTTModel):
         super(AbstractTree, self).save(*args, **kwargs)
         self.__class__.objects.rebuild()
 
+
+
+class Country(AbstractModel):
+    name = _name()
+
+    class Meta:
+        ordering = ('name',)
+
+
+
+class State(AbstractModel):
+    name = _name()
+    country = models.ForeignKey(Country, related_name='states')
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.country))
+
+
+
+class City(AbstractModel):
+    name = _name()
+    state = models.ForeignKey(State, related_name='cities')
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.state))
+
+
+
+class Brick(AbstractModel):
+    name = _name()
+
+    class Meta:
+        ordering = ('name',)
+
+
+
+class Zip(AbstractModel):
+    name = _name()
+    brick = models.ForeignKey(Brick, related_name='zips')
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.brick))
+
+
+
 class UserCat(AbstractTree):
     pass
+
+
 
 class ItemCat(AbstractTree):
     pass
 
+
+
 class LocCat(AbstractTree):
     pass
+
+
 
 class FormCat(AbstractTree):
     pass
@@ -162,11 +201,11 @@ class UserManager(BaseUserManager):
         # print 'create_superuser', email, password, extra_fields
         return self._create_user(email, password, True, True, **extra_fields)
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
     email = models.EmailField(_('email address'), blank=False, unique=True)
-    first_name = models.CharField(_('first name'), max_length=40, blank=True, null=True, unique=False)
-    last_name = models.CharField(_('last name'), max_length=40, blank=True, null=True, unique=False)
-    display_name = models.CharField(_('display name'), max_length=14, blank=True, null=True, unique=False)
+    first_name = models.CharField(_('first name'), max_length=40, blank=True, null=True)
+    last_name = models.CharField(_('last name'), max_length=40, blank=True, null=True)
+    display_name = models.CharField(_('display name'), max_length=14, blank=True, null=True)
     is_staff = models.BooleanField(_('staff status'), default=False, help_text=_('Designates whether the user can log into this admin site.'))
     is_active = models.BooleanField(_('active'), default=True, help_text=_('Designates whether this user should be treated as active. Unselect this instead of deleting accounts.'))
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
@@ -189,9 +228,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def fullname(self):
         return '%s %s' % (self.first_name, self.last_name)
-
-    def cats_(self):
-        return multiple_(self, 'cats')
 
     def get_absolute_url(self):
         # TODO: what is this for?
@@ -238,13 +274,50 @@ class User(AbstractBaseUser, PermissionsMixin):
     def natural_key(self):
         return (self.email,)
 
-'''
-    def has_perm(self, perm, obj=None): # does the user have a specific permission?.
-        return True
+    # def has_perm(self, perm, obj=None): return True # does the user have a specific permission?.
+    # def has_module_perms(self, app_label): return True # does the user have permissions to view the app "app_label"?.
 
-    def has_module_perms(self, app_label): # does the user have permissions to view the app "app_label"?.
-        return True
-'''
+
+
+class Item(AbstractModel):
+    name = _name()
+    cats = _many_tree(ItemCat, related_name='items')
+    visits_usercats = _many_tree(UserCat, related_name='visits_items')
+    visits_loccats = _many_tree(LocCat, related_name='visits_items')
+    visits_description = _form_description()
+    visits_expandable = _form_expandable()
+    visits_order = _form_order()
+
+    class Meta:
+        ordering = ('name',)
+
+    def visits_usercats_(self):
+        return multiple_(self, 'visits_usercats')
+
+    def visits_loccats_(self):
+        return multiple_(self, 'visits_loccats')
+
+
+
+class Loc(AbstractModel):
+    name = _name(unique=False, blank=True)
+    user = models.ForeignKey(User, related_name='locs')
+    street = models.CharField(max_length=200)
+    unit = models.CharField(max_length=30, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    fax = models.CharField(max_length=30, blank=True)
+    zip = models.ForeignKey(Zip, related_name='locs')
+    city = models.ForeignKey(City, related_name='locs')
+    at = models.ForeignKey('self', blank=True, null=True, related_name='locs')
+    cats = _many_tree(LocCat, related_name='locs')
+
+    class Meta:
+        ordering = ('name',)
+        # verbose_name = 'Domicilio'
+        # verbose_name_plural = 'Domicilios'
+
+    def __unicode__(self):
+        return _str(self, '%s, %s # %s, %s', (self.name, self.street, self.unit, self.zip)) # self.cats_()
 
 
 
@@ -266,54 +339,29 @@ class ForceNode(AbstractTree):
     def locs_(self):
         return multiple_(self, 'locs')
 
-class Item(models.Model):
-    name = _name()
-    cats = _many_tree(ItemCat, related_name='items')
-    visits_usercats = _many_tree(UserCat, related_name='visits_items')
-    visits_loccats = _many_tree(LocCat, related_name='visits_items')
-    visits_description = _form_description()
-    visits_expandable = _form_expandable()
-    visits_order = _form_order()
+
+
+class ForceVisit(AbstractModel):
+    node = models.ForeignKey(ForceNode, related_name='visits')
+    loc = models.ForeignKey(Loc, related_name='visits')
+    datetime = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
+    accompanied = models.BooleanField(default=False)
+    observations = _text()
+    rec = models.TextField(blank=True)
 
     class Meta:
-        ordering = ('name',)
+        ordering = ('-datetime',)
 
     def __unicode__(self):
-        return _str(self, None, self.name) # _str(self, '%s [ %s ]', (self.name, self.cats_()))
+        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.node, self.loc))
 
-    def cats_(self):
-        return multiple_(self, 'cats')
+    def rec_dict(self):
+        return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()
 
-    def visits_usercats_(self):
-        return multiple_(self, 'visits_usercats')
 
-    def visits_loccats_(self):
-        return multiple_(self, 'visits_loccats')
 
-class Loc(models.Model):
-    name = _name(unique=False, blank=True)
-    user = models.ForeignKey(User, related_name='locs')
-    street = models.CharField(max_length=200)
-    unit = models.CharField(max_length=30, blank=True)
-    phone = models.CharField(max_length=30, blank=True)
-    fax = models.CharField(max_length=30, blank=True)
-    zip = models.ForeignKey(Zip, related_name='locs')
-    city = models.ForeignKey(City, related_name='locs')
-    at = models.ForeignKey('self', blank=True, null=True, related_name='locs')
-    cats = _many_tree(LocCat, related_name='locs')
-
-    class Meta:
-        ordering = ('name',)
-        # verbose_name = 'Domicilio'
-        # verbose_name_plural = 'Domicilios'
-
-    def __unicode__(self):
-        return _str(self, '%s, %s # %s, %s', (self.name, self.street, self.unit, self.zip)) # self.cats_()
-
-    def cats_(self):
-        return multiple_(self, 'cats')
-
-class Form(models.Model):
+class Form(AbstractModel):
     name = _name()
     description = _form_description()
     expandable = _form_expandable()
@@ -332,9 +380,6 @@ class Form(models.Model):
     class Meta:
         ordering = ('name',)
 
-    def __unicode__(self):
-        return _str(self, None, self.name) # _str(self, '%s [ %s ]', (self.name, self.cats_()))
-
     def _h_all(self):
         rels = []
         for each in [ 'visits_repitems', 'visits_repitemcats', 'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes', 'visits_bricks' ]:
@@ -343,8 +388,6 @@ class Form(models.Model):
                 rels.append('<b>%s</b> : %s' % (each, ev))
         # print 'Form.all_', self, rels
         return '<br>'.join(rels)
-
-    def cats_(self): return multiple_(self, 'cats')
 
     def visits_repitems_(self): return multiple_(self, 'visits_repitems')
     def visits_repitemcats_(self): return multiple_(self, 'visits_repitemcats')
@@ -358,7 +401,9 @@ class Form(models.Model):
 
     def fields_(self): return multiple_(self, 'fields')
 
-class FormField(models.Model):
+
+
+class FormField(AbstractModel):
     name = _name(unique=False)
     description = _form_description()
     form = models.ForeignKey(Form, related_name='fields')
@@ -383,23 +428,3 @@ class FormField(models.Model):
 
     def opts(self):
         return [ [ each.strip() for each in opt.split(':', 1) ] for opt in self._opts() ]
-
-
-
-class ForceVisit(models.Model):
-    node = models.ForeignKey(ForceNode, related_name='visits')
-    loc = models.ForeignKey(Loc, related_name='visits')
-    datetime = models.DateTimeField(default=timezone.now)
-    status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
-    accompanied = models.BooleanField(default=False)
-    observations = _text()
-    rec = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ('-datetime',)
-
-    def __unicode__(self):
-        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.node, self.loc))
-
-    def rec_dict(self):
-        return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()

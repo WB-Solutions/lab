@@ -58,7 +58,7 @@ cd /home
 sudo mkdir django
 cd django
 sudo mkdir lab_db
-sudo git clone https://github.com/carlosgalindo/lab.git
+sudo git clone https://github.com/WB-Solutions/lab.git
 cd lab/mysite
 
 sudo pip install Django==1.6.5

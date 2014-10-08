@@ -11,12 +11,14 @@ from .forms import *
 import utils
 # dbmodels = utils.db_models()
 
-
-_go_tree = 'go_tree'
+def _admin(dbmodel, dbadmin):
+    admin.site.register(dbmodel, dbadmin)
 
 '''
 from django.forms import CheckboxSelectMultiple
 from django.utils.safestring import mark_safe
+
+_go_tree = 'go_tree'
 
 class GoTree(CheckboxSelectMultiple):
 
@@ -31,10 +33,13 @@ class GoTree(CheckboxSelectMultiple):
         return mark_safe('<div class="go-tree"> %s </div>' % v)
 '''
 
+_fields = ('syscodes_',)
+_fields_name = _fields + ('name',)
+
 class AbstractAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
-    list_display_links = ('id', 'name')
-    search_fields = ('name',)
+    list_display = _fields_name
+    list_display_links = _fields_name
+    search_fields = ('syscode', 'name')
 
     '''
     # formfield_overrides = dict(GoTreeM2MField=dict(widget=GoTree))
@@ -57,6 +62,11 @@ class AbstractTabularInline(admin.TabularInline):
 class AbstractStackedInline(admin.StackedInline):
     extra = 0
 
+class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin): # SortableModelAdmin
+    # sortable = 'order' # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
+    list_display = _fields_name + ('order',)
+    mptt_indent_field  = 'name'
+
 
 
 class StateInline(AbstractTabularInline):
@@ -65,17 +75,27 @@ class StateInline(AbstractTabularInline):
 class CountryAdmin(AbstractAdmin):
     inlines = (StateInline,)
 
+_admin(Country, CountryAdmin)
+
+
+
 class CityInline(AbstractTabularInline):
     model = City
 
 class StateAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'country')
+    list_display = _fields_name + ('country',)
     list_filter = ('country',)
     inlines = (CityInline,)
 
+_admin(State, StateAdmin)
+
+
+
 class CityAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'state')
+    list_display = _fields_name + ('state',)
     list_filter = ('state', 'state__country')
+
+_admin(City, CityAdmin)
 
 
 
@@ -85,27 +105,42 @@ class ZipInline(AbstractTabularInline):
 class BrickAdmin(AbstractAdmin):
     inlines = (ZipInline,)
 
+_admin(Brick, BrickAdmin)
+
+
+
 class ZipAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'brick')
+    list_display = _fields_name + ('brick',)
+
+_admin(Zip, ZipAdmin)
 
 
-
-class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin): # SortableModelAdmin
-    # sortable = 'order' # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
-    list_display = ('id', 'name', 'order')
-    mptt_indent_field  = 'name'
 
 class UserCatAdmin(AbstractTreeAdmin):
     pass
 
+_admin(UserCat, UserCatAdmin)
+
+
+
 class ItemCatAdmin(AbstractTreeAdmin):
     pass
+
+_admin(ItemCat, ItemCatAdmin)
+
+
 
 class LocCatAdmin(AbstractTreeAdmin):
     pass
 
+_admin(LocCat, LocCatAdmin)
+
+
+
 class FormCatAdmin(AbstractTreeAdmin):
     pass
+
+_admin(FormCat, FormCatAdmin)
 
 
 
@@ -119,18 +154,19 @@ class ForceNodeAdmin(AbstractTreeAdmin):
         return utils._agenda('node', row)
     _agenda.allow_tags = True
 
-    list_display = ('id', 'name', 'order', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
-    list_display_links = ('id', 'name')
+    list_display = _fields_name + ('order', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
     list_filter = ('itemcats', 'bricks',)
     filter_vertical = ('bricks',)
     inlines = (ForceVisitInline,)
+
+_admin(ForceNode, ForceNodeAdmin)
 
 
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = ('id', 'datetime', 'status', 'accompanied', 'node', 'loc') # 'observations', 'rec'
-    list_display_links = ('id', 'datetime')
+    list_display = _fields + ('datetime', 'status', 'accompanied', 'node', 'loc') # 'observations', 'rec'
+    list_display_links = _fields + ('datetime',)
     date_hierarchy = 'datetime'
     list_editable = ('status',)
     list_filter = ('datetime', 'status')
@@ -142,14 +178,16 @@ class ForceVisitAdmin(AbstractAdmin):
     # formfield_for_foreignkey / formfield_for_manytomany ... FILTER optios subset !!
     # class Media: ... css / js.
 
+_admin(ForceVisit, ForceVisitAdmin)
 
 
-class LocInline(AbstractStackedInline):
-    model = Loc
 
 # https://github.com/django/django/blob/stable/1.6.x/django/contrib/auth/admin.py
 
 from django.contrib.auth.admin import UserAdmin as _UserAdmin
+
+class LocInline(AbstractStackedInline):
+    model = Loc
 
 class UserAdmin(_UserAdmin, AbstractAdmin):
     #readonly_fields = ('private_uuid', 'public_id')
@@ -159,7 +197,7 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
     _agenda.allow_tags = True
 
     fieldsets = (
-        (None, {'fields': ('email', 'first_name', 'last_name', 'password')}),
+        (None, {'fields': ('email', 'first_name', 'last_name', 'syscode')}),
         # (_('Personal info'), {'fields': ('first_name', 'last_name', 'display_name')}),
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser')}), # 'groups', 'user_permissions'
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
@@ -170,12 +208,12 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'password1', 'password2', 'cats')}
+            'fields': ('email', 'first_name', 'last_name', 'password1', 'password2', 'cats', 'syscode')}
         ),
     )
-    list_display = ('id', 'email', 'first_name', 'last_name', 'last_login', 'date_joined', 'cats_', '_agenda')
-    list_display_links = ('id', 'email')
-    search_fields = ('email', 'first_name', 'last_name')
+    list_display = _fields + ('email', 'first_name', 'last_name', 'last_login', 'date_joined', 'cats_', '_agenda')
+    list_display_links = _fields + ('email',)
+    search_fields = ('syscode', 'email', 'first_name', 'last_name')
     ordering = ('email',)
 
     list_filter = ('cats',)
@@ -185,23 +223,24 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
 
     inlines = (LocInline,)
 
-
-
-'''
-    def _mgrs(scope, row):
-        return format_html('<a href="/admin/lab/forcemgr/?force__name=%s"> Mgrs </a>' % (row.name))
-'''
+_admin(User, UserAdmin)
 
 
 
 class ItemAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'cats_', 'visits_usercats_', 'visits_loccats_', 'visits_expandable', 'visits_order')
+    list_display = _fields_name + ('cats_', 'visits_usercats_', 'visits_loccats_', 'visits_expandable', 'visits_order')
     list_filter = ('cats', 'visits_usercats', 'visits_loccats')
 
+_admin(Item, ItemAdmin)
+
+
+
 class LocAdmin(AbstractAdmin):
-    list_display = ('id', 'street', 'unit', 'phone', 'zip', 'city', 'name', 'at', 'user', 'cats_')
-    list_display_links = ('id', 'street')
+    list_display = _fields_name + ('street', 'unit', 'phone', 'zip', 'city', 'at', 'user', 'cats_')
+    list_display_links = _fields_name + ('street',)
     list_filter = ('cats',)
+
+_admin(Loc, LocAdmin)
 
 
 
@@ -214,7 +253,7 @@ class FormAdmin(AbstractAdmin):
         return row._h_all()
     _h_all.allow_tags = True
 
-    list_display = ('id', 'name', 'expandable', 'order', 'cats_', '_h_all', 'fields_')
+    list_display = _fields_name + ('expandable', 'order', 'cats_', '_h_all', 'fields_')
     filter_vertical = ('visits_repitems', 'visits_bricks',)
     list_filter = ('cats', 'visits_repitemcats', 'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes')
     inlines = (FormFieldInline,)
@@ -234,110 +273,11 @@ class FormAdmin(AbstractAdmin):
     ]
     '''
 
+_admin(Form, FormAdmin)
+
+
+
 class FormFieldAdmin(AbstractAdmin):
-    list_display = ('id', 'name', 'description', 'form', 'type', 'default', 'required', 'order', 'opts_')
+    list_display = _fields_name + ('description', 'form', 'type', 'default', 'required', 'order', 'opts_')
 
-
-
-dbadmins = [
-
-    (Country, CountryAdmin),
-    (State, StateAdmin),
-    (City, CityAdmin),
-
-    (Zip, ZipAdmin),
-    (Brick, BrickAdmin),
-
-    (UserCat, UserCatAdmin),
-    (ItemCat, ItemCatAdmin),
-    (LocCat, LocCatAdmin),
-    (FormCat, FormCatAdmin),
-
-    (ForceNode, ForceNodeAdmin),
-    (ForceVisit, ForceVisitAdmin),
-
-    (User, UserAdmin),
-    (Item, ItemAdmin),
-    (Loc, LocAdmin),
-
-    (Form, FormAdmin),
-    (FormField, FormFieldAdmin),
-
-]
-
-for dbmodel, dbadmin in dbadmins:
-    admin.site.register(dbmodel, dbadmin)
-
-
-
-# https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
-
-'''
-
-from django.contrib import admin
-from django.contrib.auth.models import Group # User.
-from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.forms import ReadOnlyPasswordHashField
-
-class UserCreationForm(forms.ModelForm):
-    """
-    password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
-    password2 = forms.CharField(label='Password confirmation', widget=forms.PasswordInput)
-    """
-
-    class Meta:
-        model = User
-        fields = ('email',)
-
-    """
-    def clean_password2(self):
-        password1 = self.cleaned_data.get("password1")
-        password2 = self.cleaned_data.get("password2")
-        if password1 and password2 and password1 != password2:
-            raise forms.ValidationError("Passwords don't match")
-        return password2
-    def save(self, commit=True):
-        user = super(UserCreationForm, self).save(commit=False)
-        user.set_password(self.cleaned_data["password1"])
-        if commit:
-            user.save()
-        return user
-    """
-
-class UserChangeForm(forms.ModelForm):
-    password = ReadOnlyPasswordHashField()
-
-    class Meta:
-        model = User
-        fields = ('email', 'password', 'is_active', 'is_admin')
-
-    def clean_password(self):
-        return self.initial["password"]
-
-class UserAdmin(UserAdmin):
-    form = UserChangeForm
-    add_form = UserCreationForm
-
-    list_display = ('id', 'email', 'first_name', 'last_name', 'is_admin')
-    list_display_links = ('id', 'email')
-    list_filter = ('is_admin',)
-
-    fieldsets = (
-        (None, dict(fields=('email', 'password'))),
-        ('Personal info', dict(fields=('first_name', 'last_name'))),
-        ('Permissions', dict(fields=('is_admin',))),
-    )
-    add_fieldsets = (
-        (None, dict(
-            classes = ('wide',),
-            fields = ('email', 'first_name', 'last_name'), # 'password1', 'password2'
-        )),
-    )
-    search_fields = ('email',)
-    ordering = ('email',)
-    filter_horizontal = ()
-
-admin.site.register(User, UserAdmin)
-admin.site.unregister(Group)
-
-'''
+_admin(FormField, FormFieldAdmin)
