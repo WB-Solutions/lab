@@ -52,10 +52,35 @@ class AbstractView(viewsets.ModelViewSet):
     def destroy(self, request, pk=None):
     '''
 
+    # http://www.django-rest-framework.org/api-guide/viewsets#marking-extra-actions-for-routing
+
     @detail_route()
     def test(self, request, pk=None):
         print 'test', self, request, pk
-        return Response('TEST here')
+        return Response('test RESULT')
+
+    @list_route()
+    def tests(self, request):
+        print 'tests', self, request
+        return Response('tests RESULT')
+
+    def retrieve(self, request, *args, **kwargs):
+        # print 'retrieve', self, request, args, kwargs
+        self.kwargs['_go_retrieve'] = True
+        return super(AbstractView, self).retrieve(request, *args, **kwargs)
+
+    def get_object(self, queryset=None):
+        kw = self.kwargs
+        if kw.get('_go_retrieve'):
+            k = 'syscode'
+            pk = kw.get('pk')
+            pre = '@'
+            if pk and pk.startswith(pre):
+                self.lookup_field = k
+                kw[k] = pk[len(pre):]
+        v = super(AbstractView, self).get_object(queryset)
+        # print 'get_object', self, queryset, v
+        return v
 
 
 
