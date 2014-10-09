@@ -15,6 +15,7 @@ urlpatterns = patterns('',
     url(r'^accounts/', include('allauth.urls')),
 
     url(r'^api-token-auth/', 'rest_framework_jwt.views.obtain_jwt_token'),
+    # url(r'^oauth2/', include('provider.oauth2.urls', namespace='oauth2')),
 
     url(r'^$', TemplateView.as_view(template_name='visitor/landing-index.html'), name='landing_index'),
     url(r'^about$', TemplateView.as_view(template_name='visitor/landing-about.html'), name='landing_about'),
