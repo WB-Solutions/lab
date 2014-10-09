@@ -46,6 +46,10 @@ INSTALLED_APPS = (
     # 'rest_framework.authtoken', # NOT in use, using JWT below (not required as installed app here) instead, http://www.django-rest-framework.org/api-guide/authentication.html#tokenauthentication
     # djangorestframework-jwt # https://github.com/GetBlimp/django-rest-framework-jwt
 
+    # http://www.django-rest-framework.org/api-guide/authentication#oauth2authentication
+    # 'provider', # django-oauth2-provider
+    # 'provider.oauth2',
+
     'mptt', # django-mptt
 
     'allauth', # django-allauth
@@ -116,6 +120,7 @@ REST_FRAMEWORK = {
         # 'rest_framework.authentication.BasicAuthentication', # http://stackoverflow.com/questions/17665035/logout-not-working
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        # 'rest_framework.authentication.OAuth2Authentication', # provider & provider.oauth2 @ INSTALLED_APPS.
     ),
 
     # http://www.django-rest-framework.org/api-guide/permissions
@@ -126,7 +131,7 @@ REST_FRAMEWORK = {
 
 # https://github.com/GetBlimp/django-rest-framework-jwt
 JWT_AUTH = {
-    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=1 * 60),
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=10 * 60 * 60),
 }
 
 # https://github.com/GetBlimp/django-rest-framework-jwt
