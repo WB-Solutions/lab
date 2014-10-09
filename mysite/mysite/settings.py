@@ -131,7 +131,7 @@ REST_FRAMEWORK = {
 
 # https://github.com/GetBlimp/django-rest-framework-jwt
 JWT_AUTH = {
-    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=10 * 60 * 60),
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=15 * 60 * 60),
 }
 
 # https://github.com/GetBlimp/django-rest-framework-jwt
