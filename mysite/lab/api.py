@@ -24,9 +24,9 @@ _fields_name = _fields + ('name',)
 _fields_cat = _fields_name + (
     'order', 'level',
     'parent', 'parent_id',
-    'children_ids',
-    'all_children_ids',
-    'all_parents_ids',
+
+    # using detail_route @ AbstractTreeView instead.
+    # 'children_ids', 'allchildren_ids', 'allparents_ids',
 )
 
 class AbstractSerializer(serializers.HyperlinkedModelSerializer):
@@ -35,10 +35,9 @@ class AbstractSerializer(serializers.HyperlinkedModelSerializer):
 class AbstractTreeSerializer(AbstractSerializer):
     # level = serializers.Field(source='level') # NOT necessary because *Cat._meta.get_field('level').editable is False.
     parent_id = _id('parent')
-    children_ids = _ids('children')
-    all_children_ids = _ids('get_descendants')
-    all_parents_ids = _ids('get_ancestors')
-    pass
+    # children_ids = _ids('children')
+    # allchildren_ids = _ids('get_descendants')
+    # allparents_ids = _ids('get_ancestors')
 
 # http://www.django-rest-framework.org/api-guide/viewsets
 class AbstractView(viewsets.ModelViewSet):
@@ -81,6 +80,36 @@ class AbstractView(viewsets.ModelViewSet):
         v = super(AbstractView, self).get_object(queryset)
         # print 'get_object', self, queryset, v
         return v
+
+class AbstractTreeView(AbstractView):
+
+    @list_route()
+    def roots(self, request):
+        serializer = self.get_serializer()
+        model = serializer.opts.model
+        roots = list(model.objects.root_nodes())
+        # print 'AbstractTreeView.roots', self, model, roots
+        natives = [ serializer.to_native(each) for each in roots ]
+        return Response(natives)
+
+    def _field_value(self, name):
+        treenode = self.get_object()
+        serializer = self.get_serializer()
+        val = serializer.field_to_native(treenode, name)
+        # print 'AbstractTreeView._field_value', self, name, treenode, val
+        return Response(val)
+
+    @detail_route()
+    def children(self, request, pk=None):
+        return self._field_value('children')
+
+    @detail_route()
+    def allchildren(self, request, pk=None):
+        return self._field_value('get_descendants')
+
+    @detail_route()
+    def allparents(self, request, pk=None):
+        return self._field_value('get_ancestors')
 
 
 
@@ -163,13 +192,27 @@ _api('zips', ZipViewSet)
 
 
 
+class GenericCatSerializer(AbstractTreeSerializer):
+
+    class Meta:
+        model = GenericCat
+        fields = _fields_cat
+
+class GenericCatViewSet(AbstractTreeView):
+    queryset = GenericCat.objects.all()
+    serializer_class = GenericCatSerializer
+
+_api('genericcats', GenericCatViewSet)
+
+
+
 class UserCatSerializer(AbstractTreeSerializer):
 
     class Meta:
         model = UserCat
         fields = _fields_cat
 
-class UserCatViewSet(AbstractView):
+class UserCatViewSet(AbstractTreeView):
     queryset = UserCat.objects.all()
     serializer_class = UserCatSerializer
 
@@ -183,7 +226,7 @@ class ItemCatSerializer(AbstractTreeSerializer):
         model = ItemCat
         fields = _fields_cat
 
-class ItemCatViewSet(AbstractView):
+class ItemCatViewSet(AbstractTreeView):
     queryset = ItemCat.objects.all()
     serializer_class = ItemCatSerializer
 
@@ -197,7 +240,7 @@ class LocCatSerializer(AbstractTreeSerializer):
         model = LocCat
         fields = _fields_cat
 
-class LocCatViewSet(AbstractView):
+class LocCatViewSet(AbstractTreeView):
     queryset = LocCat.objects.all()
     serializer_class = LocCatSerializer
 
@@ -211,7 +254,7 @@ class FormCatSerializer(AbstractTreeSerializer):
         model = FormCat
         fields = _fields_cat
 
-class FormCatViewSet(AbstractView):
+class FormCatViewSet(AbstractTreeView):
     queryset = FormCat.objects.all()
     serializer_class = FormCatSerializer
 
@@ -237,7 +280,7 @@ class ForceNodeSerializer(AbstractTreeSerializer):
             'visits_ids', # 'visits'
         )
 
-class ForceNodeViewSet(AbstractView):
+class ForceNodeViewSet(AbstractTreeView):
     queryset = ForceNode.objects.all()
     serializer_class = ForceNodeSerializer
 
@@ -365,11 +408,13 @@ _api('forms', FormViewSet)
 
 class FormFieldSerializer(AbstractSerializer):
     form_id = _id('form')
+    optscat_id = _id('optscat')
 
     class Meta:
         model = FormField
         fields = _fields_name + (
-            'description', 'type', 'default', 'required', 'order', 'opts1',
+            'description', 'type', 'widget', 'default', 'required', 'order', 'opts1',
+            'optscat', 'optscat_id',
             'form', 'form_id',
         )
 

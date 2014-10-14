@@ -67,6 +67,7 @@ class Command(BaseCommand):
                     _cats.append(cat)
                 return _cats
 
+            generics = _new_cats(GenericCat, 'Generic')
             usercats = _new_cats(UserCat, 'User')
             itemcats = _new_cats(ItemCat, 'Item')
             loccats = _new_cats(LocCat, 'Loc')

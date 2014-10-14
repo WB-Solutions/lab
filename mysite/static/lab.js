@@ -46,30 +46,54 @@ $(function(){
 	  return _(_sorted(fields)).collect(function(field){
 		var key = pre_id + field.id // _('field_%s').sprintf(k)
 		if (!(key in rec)) { rec[key] = field.default }
-		var ftype = field.type || 'string'
-		var isopts = _(ftype).startsWith('opts-')
-		var isbool = ftype == 'boolean'
+		var ftype = field.type
+		var fwidget = field.widget
 		var desc = field.description
-		var f_schema = {
-		  type: ftype,
+		var req = field.required
+		var f_schema = {}
+		var f_form = {}
+		var isbool = ftype == 'boolean'
+		var ftype2 = 'string'
+		if (isbool) {
+		  f_form['inlinetitle'] = desc
+		  ftype2 = ftype
+		  fwidget = ''
+		}
+		else {
+		  if (_(ftype).startsWith('opts')) {
+			ftype = 'opts'
+			var opts = field.opts
+			if (!opts || !opts.length) { opts = [ ['','x'] ] }
+			var enums = [] // respect order.
+			var opts = _(opts).collect(function(opt){
+			  var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
+			  enums.push(opt2[0])
+			  return opt2
+			})
+			// _log('modal > each opts', opts)
+			f_form['titleMap'] = _(opts).object()
+			f_schema['enum'] = enums
+			if (fwidget == 'radios') { f_form['type'] = 'radios' }
+			else { fwidget = '' }
+		  }
+		  else if (fwidget == 'textarea') {
+			ftype2 = fwidget
+		  }
+		}
+		_(f_schema).extend({
+		  type: ftype2,
 		  description: isbool ? null : desc,
-		  required: field.required,
-		}
-		var f_form = { key: _('rec.%s').sprintf(key), prepend: field.name, notitle: true }
-		if (isbool) { f_form['inlinetitle'] = desc }
-		if (isopts && field.opts.length) {
-		  var enums = [] // respect order.
-		  var opts = _(field.opts).collect(function(opt){
-			var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
-			enums.push(opt2[0])
-			return opt2
-		  })
-		  // _log('modal > each opts', opts)
-		  f_form['titleMap'] = _(opts).object()
-		  f_schema['enum'] = enums
-		  if (ftype == 'opts-radios') { f_form['type'] = 'radios' }
-		}
-		f_form['htmlClass'] = _('lab-field-%s').sprintf(ftype)
+		  required: req
+		})
+		_(f_form).extend({
+		  key: _('rec.%s').sprintf(key),
+		  prepend: field.name,
+		  notitle: true,
+		  // https://github.com/joshfire/jsonform/issues/63
+		  // such that empty/blank fields are included in the submit values, otherwise form fields could NOT be emptied.
+		  allowEmpty: !req,
+		  htmlClass: _('lab-field-%s%s%s').sprintf(ftype, fwidget ? '-' : '', fwidget)
+		})
 		schema2[key] = f_schema
 		return f_form
 	  })

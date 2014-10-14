@@ -31,6 +31,11 @@ def _many(*args, **kwargs):
 def _many_tree(*args, **kwargs):
     return GoTreeM2MField(*args, **_kw_merge(kwargs, blank=True))
 
+def _choices(vmax, choices, **kwargs):
+    choices = [ e if isinstance(e, (list, tuple)) else (e, e) for e in choices ]
+    # print '_choices', choices
+    return models.CharField(**_kw_merge(kwargs, max_length=vmax, blank=True, default='', choices=choices))
+
 def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
 
@@ -93,10 +98,10 @@ class AbstractTree(MPTTModel, AbstractModel):
         order_insertion_by = ('order', 'name')
 
     def __unicode__(self):
-        return _str(self, '%s %s', (self.h_level(), self.name))
+        return _str(self, '%s %s', (self.str_level(), self.name))
 
-    def h_level(self):
-        return ' -- ' * (self.level or 0)
+    def str_level(self, diff=0):
+        return ' -- ' * ((self.level or 0) - diff)
 
     def save(self, *args, **kwargs):
         # print 'AbstractTree.save', self, args, kwargs
@@ -154,6 +159,11 @@ class Zip(AbstractModel):
 
     def __unicode__(self):
         return _str(self, '%s @ %s', (self.name, self.brick))
+
+
+
+class GenericCat(AbstractTree):
+    pass
 
 
 
@@ -328,7 +338,7 @@ class ForceNode(AbstractTree):
     locs = _many('Loc', through='ForceVisit')
 
     def __unicode__(self):
-        return _str(self, '%s %s: %s', (self.h_level(), self.name, self.user))
+        return _str(self, '%s %s: %s', (self.str_level(), self.name, self.user))
 
     def itemcats_(self):
         return multiple_(self, 'itemcats')
@@ -345,7 +355,7 @@ class ForceVisit(AbstractModel):
     node = models.ForeignKey(ForceNode, related_name='visits')
     loc = models.ForeignKey(Loc, related_name='visits')
     datetime = models.DateTimeField(default=timezone.now)
-    status = models.CharField(max_length=2, blank=True, default='', choices=[ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
+    status = _choices(2, [ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
     accompanied = models.BooleanField(default=False)
     observations = _text()
     rec = models.TextField(blank=True)
@@ -382,7 +392,10 @@ class Form(AbstractModel):
 
     def _h_all(self):
         rels = []
-        for each in [ 'visits_repitems', 'visits_repitemcats', 'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes', 'visits_bricks' ]:
+        for each in [
+            'visits_repitems', 'visits_repitemcats',
+            'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes', 'visits_bricks',
+        ]:
             ev = multiple_(self, each)
             if ev:
                 rels.append('<b>%s</b> : %s' % (each, ev))
@@ -407,11 +420,16 @@ class FormField(AbstractModel):
     name = _name(unique=False)
     description = _form_description()
     form = models.ForeignKey(Form, related_name='fields')
-    type = models.CharField(max_length=30, blank=True, default='', choices=[ (e, e) for e in [ 'boolean', 'textarea', 'opts-select', 'opts-radios' ] ])
+    type = _choices(20, [
+        'boolean',
+        'opts', 'optscat', 'optscat-all', # must start with 'opts', used in lab.js.
+    ])
+    widget = _choices(20, [ 'radios', 'textarea' ])
     default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)
     order = _form_order()
     opts1 = models.TextField(blank=True, help_text=_('Each option in a separate line with format Value:Label'))
+    optscat = models.ForeignKey(GenericCat, blank=True, null=True, related_name='fields')
 
     class Meta:
         unique_together = ('form', 'name')
@@ -420,11 +438,27 @@ class FormField(AbstractModel):
     def __unicode__(self):
         return _str(self, '%s @ %s', (self.name, self.form))
 
-    def _opts(self):
+    def _opts1_lines(self):
         return self.opts1.splitlines()
 
-    def opts_(self):
-        return ', '.join(self._opts())
+    def opts1_(self):
+        return ', '.join(self._opts1_lines())
 
     def opts(self):
-        return [ [ each.strip() for each in opt.split(':', 1) ] for opt in self._opts() ]
+        opts = None
+        if self.type.startswith('opts'):
+            if self.type == 'opts':
+                opts = [ [ each.strip() for each in opt.split(':', 1) ] for opt in self._opts1_lines() ]
+            else: # optscat, optscat-all.
+                cat = self.optscat
+                if cat:
+                    if self.type == 'optscat':
+                        opts = cat.children
+                        fn = lambda ecat: ecat.name
+                    else:
+                        opts = cat.get_descendants()
+                        fn = lambda ecat: '%s %s' % (ecat.str_level(diff=cat.level + 1), ecat.name)
+                    opts = [ (str(ecat.id), fn(ecat)) for ecat in opts.all() ]
+        if opts is not None and not self.required:
+            opts.insert(0, ('', '-'))
+        return opts

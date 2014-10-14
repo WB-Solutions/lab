@@ -116,6 +116,13 @@ _admin(Zip, ZipAdmin)
 
 
 
+class GenericCatAdmin(AbstractTreeAdmin):
+    pass
+
+_admin(GenericCat, GenericCatAdmin)
+
+
+
 class UserCatAdmin(AbstractTreeAdmin):
     pass
 
@@ -278,6 +285,6 @@ _admin(Form, FormAdmin)
 
 
 class FormFieldAdmin(AbstractAdmin):
-    list_display = _fields_name + ('description', 'form', 'type', 'default', 'required', 'order', 'opts_')
+    list_display = _fields_name + ('description', 'form', 'type', 'widget', 'default', 'required', 'order', 'opts1_', 'optscat')
 
 _admin(FormField, FormFieldAdmin)

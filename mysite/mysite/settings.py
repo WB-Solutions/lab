@@ -77,15 +77,20 @@ ROOT_URLCONF = 'mysite.urls'
 
 WSGI_APPLICATION = 'mysite.wsgi.application'
 
-db_path = os.path.join(BASE_DIR, '..', '..', 'lab_db', 'db.sqlite3')
-# print 'db_path', db_path
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': db_path,
-    },
-}
+DATABASES = dict(
+    X_default = dict(
+        ENGINE = 'django.db.backends.sqlite3',
+        NAME = os.path.join(BASE_DIR, '..', '..', 'lab_db', 'db.sqlite3'),
+    ),
+    default = dict(
+        ENGINE = 'django.db.backends.postgresql_psycopg2',
+        NAME = 'lab',
+        USER = 'postgres',
+        PASSWORD = 'nube',
+        HOST = 'localhost',
+        PORT = '',
+    ),
+)
 
 # http://www.postgresql.org/docs/8.1/static/datetime-keywords.html#DATETIME-TIMEZONE-SET-TABLE
 # http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -113,7 +118,7 @@ STATICFILES_DIRS = (
 )
 
 REST_FRAMEWORK = {
-    # 'PAGINATE_BY': 10
+    # 'PAGINATE_BY': 3,
 
     # http://www.django-rest-framework.org/api-guide/authentication
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -225,7 +230,7 @@ SUIT_CONFIG = dict(
     MENU = (
         dict(label='Site', icon='icon-cog', models=('account.emailconfirmation', 'account.emailaddress', 'sites.site')),
         dict(label='Geos', icon='icon-cog', app='lab', models=('country', 'state', 'city', 'brick', 'zip')),
-        dict(label='Cats', icon='icon-cog', app='lab', models=('usercat', 'itemcat', 'loccat', 'formcat')),
+        dict(label='Cats', icon='icon-cog', app='lab', models=('usercat', 'itemcat', 'loccat', 'formcat', 'genericcat')),
         dict(label='Lab', icon='icon-cog', app='lab', models=('user', 'forcenode', 'forcevisit', 'item', 'loc', 'form', 'formfield')),
         # dict(label='ALL', icon='icon-cog', app='lab'),
     ),

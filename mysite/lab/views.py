@@ -164,6 +164,7 @@ def _data(config=None):
                         name = field.name,
                         description = field.description,
                         type = field.type or '',
+                        widget = field.widget or '',
                         default = field.default,
                         required = field.required,
                         order = field.order,

@@ -61,7 +61,7 @@ sudo mkdir lab_db
 sudo git clone https://github.com/WB-Solutions/lab.git
 cd lab/mysite
 
-sudo pip install Django==1.6.5
+sudo pip install Django==1.7
 sudo pip install django-suit
 sudo pip install django-extensions
 sudo pip install djangorestframework
