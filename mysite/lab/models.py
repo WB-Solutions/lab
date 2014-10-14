@@ -373,6 +373,8 @@ class ForceVisit(AbstractModel):
 
 class Form(AbstractModel):
     name = _name()
+    start = _datetime()
+    end = _datetime()
     description = _form_description()
     expandable = _form_expandable()
     order = _form_order()
@@ -381,9 +383,12 @@ class Form(AbstractModel):
     repitems = _many(Item, related_name='repforms')
     repitemcats = _many_tree(ItemCat, related_name='repforms')
 
+    users_usercats = _many_tree(UserCat, related_name='users_forms')
+    users_loccats = _many_tree(LocCat, related_name='users_forms')
+
     visits_usercats = _many_tree(UserCat, related_name='visits_forms')
-    visits_itemcats = _many_tree(ItemCat, related_name='visits_forms')
     visits_loccats = _many_tree(LocCat, related_name='visits_forms')
+    visits_itemcats = _many_tree(ItemCat, related_name='visits_forms')
     visits_forcenodes = _many_tree(ForceNode, related_name='visits_forms')
     visits_bricks = _many(Brick, related_name='visits_forms')
 
@@ -394,7 +399,9 @@ class Form(AbstractModel):
         rels = []
         for each in [
             'repitems', 'repitemcats',
-            'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes', 'visits_bricks',
+            'users_usercats', 'users_loccats',
+            'visits_usercats', 'visits_loccats',
+            'visits_itemcats', 'visits_forcenodes', 'visits_bricks',
         ]:
             ev = multiple_(self, each)
             if ev:
@@ -405,9 +412,12 @@ class Form(AbstractModel):
     def repitems_(self): return multiple_(self, 'repitems')
     def repitemcats_(self): return multiple_(self, 'repitemcats')
 
+    def users_usercats_(self): return multiple_(self, 'users_usercats')
+    def users_loccats_(self): return multiple_(self, 'users_loccats')
+
     def visits_usercats_(self): return multiple_(self, 'visits_usercats')
-    def visits_itemcats_(self): return multiple_(self, 'visits_itemcats')
     def visits_loccats_(self): return multiple_(self, 'visits_loccats')
+    def visits_itemcats_(self): return multiple_(self, 'visits_itemcats')
     def visits_forcenodes_(self): return multiple_(self, 'visits_forcenodes')
 
     def visits_bricks_(self): return multiple_(self, 'visits_bricks')

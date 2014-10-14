@@ -378,22 +378,26 @@ class FormSerializer(AbstractSerializer):
     cats_ids = _ids('cats')
     repitems_ids = _ids('repitems')
     repitemcats_ids = _ids('repitemcats')
+    users_usercats_ids = _ids('users_usercats')
+    users_loccats_ids = _ids('users_loccats')
     visits_usercats_ids = _ids('visits_usercats')
-    visits_itemcats_ids = _ids('visits_itemcats')
     visits_loccats_ids = _ids('visits_loccats')
+    visits_itemcats_ids = _ids('visits_itemcats')
     visits_forcenodes_ids = _ids('visits_forcenodes')
     visits_bricks_ids = _ids('visits_bricks')
 
     class Meta:
         model = Form
         fields = _fields_name + (
-            'description', 'expandable', 'order',
+            'start', 'end', 'description', 'expandable', 'order',
             'cats', 'cats_ids',
             'repitems', 'repitems_ids',
             'repitemcats', 'repitemcats_ids',
+            'users_usercats', 'users_usercats_ids',
+            'users_loccats', 'users_loccats_ids',
             'visits_usercats', 'visits_usercats_ids',
-            'visits_itemcats', 'visits_itemcats_ids',
             'visits_loccats', 'visits_loccats_ids',
+            'visits_itemcats', 'visits_itemcats_ids',
             'visits_forcenodes', 'visits_forcenodes_ids',
             'visits_bricks', 'visits_bricks_ids',
         )
