@@ -97,8 +97,8 @@ def _data(config=None):
             items = nodedata.get('items')
             repforms = dict()
             def _doreps(form):
-                reps1 = form.visits_repitems.all()
-                repcats = _nodes_downs(form.visits_repitemcats.all())
+                reps1 = form.repitems.all()
+                repcats = _nodes_downs(form.repitemcats.all())
                 reps2 = _cats_items(repcats)
                 reps = (reps1 | reps2).distinct()
                 # print '_doreps > reps', reps
@@ -159,7 +159,7 @@ def _data(config=None):
                     description = form.description,
                     expandable = form.expandable,
                     order = form.order,
-                    repitems = _ids(form.visits_repitems.all()),
+                    repitems = _ids(form.repitems.all()),
                     fields = _dict(form.fields.all(), lambda field: dict(
                         name = field.name,
                         description = field.description,

@@ -261,8 +261,8 @@ class FormAdmin(AbstractAdmin):
     _h_all.allow_tags = True
 
     list_display = _fields_name + ('expandable', 'order', 'cats_', '_h_all', 'fields_')
-    filter_vertical = ('visits_repitems', 'visits_bricks',)
-    list_filter = ('cats', 'visits_repitemcats', 'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes')
+    filter_vertical = ('repitems', 'visits_bricks',)
+    list_filter = ('cats', 'repitemcats', 'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes')
     inlines = (FormFieldInline,)
 
     '''

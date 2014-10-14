@@ -378,8 +378,8 @@ class Form(AbstractModel):
     order = _form_order()
     cats = _many_tree(FormCat, related_name='forms')
 
-    visits_repitems = _many(Item, related_name='visits_repforms')
-    visits_repitemcats = _many_tree(ItemCat, related_name='visits_repforms')
+    repitems = _many(Item, related_name='repforms')
+    repitemcats = _many_tree(ItemCat, related_name='repforms')
 
     visits_usercats = _many_tree(UserCat, related_name='visits_forms')
     visits_itemcats = _many_tree(ItemCat, related_name='visits_forms')
@@ -393,7 +393,7 @@ class Form(AbstractModel):
     def _h_all(self):
         rels = []
         for each in [
-            'visits_repitems', 'visits_repitemcats',
+            'repitems', 'repitemcats',
             'visits_usercats', 'visits_itemcats', 'visits_loccats', 'visits_forcenodes', 'visits_bricks',
         ]:
             ev = multiple_(self, each)
@@ -402,8 +402,8 @@ class Form(AbstractModel):
         # print 'Form.all_', self, rels
         return '<br>'.join(rels)
 
-    def visits_repitems_(self): return multiple_(self, 'visits_repitems')
-    def visits_repitemcats_(self): return multiple_(self, 'visits_repitemcats')
+    def repitems_(self): return multiple_(self, 'repitems')
+    def repitemcats_(self): return multiple_(self, 'repitemcats')
 
     def visits_usercats_(self): return multiple_(self, 'visits_usercats')
     def visits_itemcats_(self): return multiple_(self, 'visits_itemcats')

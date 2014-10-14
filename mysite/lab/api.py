@@ -376,8 +376,8 @@ _api('locs', LocViewSet)
 
 class FormSerializer(AbstractSerializer):
     cats_ids = _ids('cats')
-    visits_repitems_ids = _ids('visits_repitems')
-    visits_repitemcats_ids = _ids('visits_repitemcats')
+    repitems_ids = _ids('repitems')
+    repitemcats_ids = _ids('repitemcats')
     visits_usercats_ids = _ids('visits_usercats')
     visits_itemcats_ids = _ids('visits_itemcats')
     visits_loccats_ids = _ids('visits_loccats')
@@ -389,8 +389,8 @@ class FormSerializer(AbstractSerializer):
         fields = _fields_name + (
             'description', 'expandable', 'order',
             'cats', 'cats_ids',
-            'visits_repitems', 'visits_repitems_ids',
-            'visits_repitemcats', 'visits_repitemcats_ids',
+            'repitems', 'repitems_ids',
+            'repitemcats', 'repitemcats_ids',
             'visits_usercats', 'visits_usercats_ids',
             'visits_itemcats', 'visits_itemcats_ids',
             'visits_loccats', 'visits_loccats_ids',
