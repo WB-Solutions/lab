@@ -103,7 +103,11 @@ LANGUAGE_CODE = 'en-us' # 'es-mx'
 
 STATIC_URL = '/static/'
 statics = os.path.join(BASE_DIR, 'static')
-# STATIC_ROOT = statics # uncomment for collectstatic, and comment statics in STATICFILES_DIRS below.
+
+if False: # collectstatic.
+    STATIC_ROOT = statics
+else:
+    STATICFILES_DIRS = (statics,)
 
 TEMPLATE_DIRS = (
     os.path.join(BASE_DIR, 'templates'),
@@ -111,10 +115,6 @@ TEMPLATE_DIRS = (
     os.path.join(BASE_DIR, 'allauthdemo', 'templates', 'plain', 'example'),
     os.path.join(BASE_DIR, 'allauthdemo', 'templates', 'allauth'),
     os.path.join(BASE_DIR, 'allauthdemo', 'templates'),
-)
-
-STATICFILES_DIRS = (
-    statics,
 )
 
 REST_FRAMEWORK = {

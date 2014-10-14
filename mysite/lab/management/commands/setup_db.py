@@ -25,6 +25,7 @@ class Command(BaseCommand):
 
             def _new(dbmodel, **kwargs):
                 print '_new', dbmodel, kwargs
+                # kwargs.setdefault('syscode', None)
                 return dbmodel.objects.create(**kwargs)
 
             for ecountry, states in [

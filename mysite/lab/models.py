@@ -57,16 +57,17 @@ def _form_description(**kwargs):
 
 
 # http://bitofpixels.com/blog/unique-on-charfield-when-blanktrue/
-class NullableUniqueField(models.CharField):
+class GoNullableUniqueField(models.CharField):
 
     def to_python(self, value):
-        return value or ''
+        val = super(GoNullableUniqueField, self).to_python(value)
+        return '' if val is None else val
 
     def get_prep_value(self, value):
         return value or None
 
 def _syscode(**kwargs):
-    return NullableUniqueField(**_kw_merge(kwargs, max_length=200, blank=True, null=True, unique=True))
+    return GoNullableUniqueField(**_kw_merge(kwargs, max_length=200, blank=True, null=True, unique=True))
 
 
 class AbstractModel(models.Model):

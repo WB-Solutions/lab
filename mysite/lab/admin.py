@@ -56,11 +56,33 @@ class AbstractAdmin(admin.ModelAdmin):
         return super(AbstractAdmin, self).response_add(request, obj, post_url_continue)
     '''
 
-class AbstractTabularInline(admin.TabularInline):
-    extra = 0
+class AbstractInlineFormSet(forms.models.BaseInlineFormSet):
 
-class AbstractStackedInline(admin.StackedInline):
+    """
+    Necessary in order to NOT generate errors for GoNullableUniqueField types (syscode) during multiple inlines.
+      - Please correct the duplicate data for syscode.
+      - Please correct the duplicate values below.
+    For now HARD-CODED for 'syscode', until we can dynamically detect every GoNullableUniqueField type.
+    http://stackoverflow.com/questions/13526792/validation-of-dependant-inlines-in-django-admin
+    """
+    def clean(self):
+        k = 'syscode' # hard-coded for now.
+        for form in self.forms:
+            d = form.cleaned_data
+            if form.is_valid() and not d['DELETE'] and d.get(k) == '':
+                d[k] = None
+        v = super(AbstractInlineFormSet, self).clean()
+        return v
+
+class AbstractInline(admin.options.InlineModelAdmin):
     extra = 0
+    formset = AbstractInlineFormSet
+
+class AbstractTabularInline(AbstractInline, admin.TabularInline):
+    pass
+
+class AbstractStackedInline(AbstractInline, admin.StackedInline):
+    pass
 
 class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin): # SortableModelAdmin
     # sortable = 'order' # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
