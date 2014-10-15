@@ -1,13 +1,23 @@
 from rest_framework import viewsets, serializers, routers
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
+import django_filters # http://www.django-rest-framework.org/api-guide/filtering#djangofilterbackend
 
 from .models import *
+from . import admin
 import utils
 
 sets = []
 
 router = routers.DefaultRouter()
+
+def _all(model):
+    return model.objects.all()
+
+def _search(_admin):
+    v = _admin.search_fields
+    # print '_search', _admin, v
+    return v
 
 def _api(name, viewset):
     router.register(name, viewset)
@@ -29,6 +39,14 @@ _fields_cat = _fields_name + (
     # using detail_route @ AbstractTreeView instead.
     # 'children_ids', 'allchildren_ids', 'allparents_ids',
 )
+
+_filters_cat = ('order', 'level', 'parent')
+
+def _filter_start(name):
+    return django_filters.DateTimeFilter(name='datetime', lookup_type='gte')
+
+def _filter_end(name):
+    return django_filters.DateTimeFilter(name='datetime', lookup_type='lte')
 
 class AbstractSerializer(serializers.HyperlinkedModelSerializer):
     pass
@@ -131,156 +149,284 @@ class AbstractTreeView(AbstractView):
     def allparents(self, request, pk=None):
         return self._field_value('get_ancestors')
 
+class AbstractFilter(django_filters.FilterSet):
+    pass
 
+'''
+class GoFilter(django_filters.CharFilter):
+
+    def filter(self, qs, value):
+        print 'filter', self, value, len(value)
+        return qs
+'''
+
+class AbstractTreeFilter(AbstractFilter):
+    pass
+
+
+
+model = Country
+search = _search(admin.CountryAdmin)
 
 class CountrySerializer(AbstractSerializer):
 
     class Meta:
-        model = Country
+        model = model
         fields = _fields_name
 
+class CountryFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ()
+
 class CountryViewSet(AbstractView):
-    queryset = Country.objects.all()
+    queryset = _all(model)
     serializer_class = CountrySerializer
+    search_fields = search
+    filter_class = CountryFilter
 
 _api('countries', CountryViewSet)
 
 
 
+model = State
+search = _search(admin.StateAdmin)
+
 class StateSerializer(AbstractSerializer):
     country_id = _id('country')
 
     class Meta:
-        model = State
+        model = model
         fields = _fields_name + (
             'country', 'country_id',
         )
 
+class StateFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('country',)
+
 class StateViewSet(AbstractView):
-    queryset = State.objects.all()
+    queryset = _all(model)
     serializer_class = StateSerializer
+    search_fields = search
+    filter_class = StateFilter
 
 _api('states', StateViewSet)
 
 
 
+model = City
+search = _search(admin.CityAdmin)
+
 class CitySerializer(AbstractSerializer):
     state_id = _id('state')
 
     class Meta:
-        model = City
+        model = model
         fields = _fields_name + (
             'state', 'state_id',
         )
 
+class CityFilter(AbstractFilter):
+    country = django_filters.Filter(name='state__country')
+
+    class Meta:
+        model = model
+        fields = ('state', 'country')
+
 class CityViewSet(AbstractView):
-    queryset = City.objects.all()
+    queryset = _all(model)
     serializer_class = CitySerializer
+    search_fields = search
+    filter_class = CityFilter
 
 _api('cities', CityViewSet)
 
 
 
+model = Brick
+search = _search(admin.BrickAdmin)
+
 class BrickSerializer(AbstractSerializer):
 
     class Meta:
-        model = Brick
+        model = model
         fields = _fields_name
 
+class BrickFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ()
+
 class BrickViewSet(AbstractView):
-    queryset = Brick.objects.all()
+    queryset = _all(model)
     serializer_class = BrickSerializer
+    search_fields = search
+    filter_class = BrickFilter
 
 _api('bricks', BrickViewSet)
 
 
 
+model = Zip
+search = _search(admin.ZipAdmin)
+
 class ZipSerializer(AbstractSerializer):
     brick_id = _id('brick')
 
     class Meta:
-        model = Zip
+        model = model
         fields = _fields_name + (
             'brick', 'brick_id',
         )
 
+class ZipFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('brick',)
+
 class ZipViewSet(AbstractView):
-    queryset = Zip.objects.all()
+    queryset = _all(model)
     serializer_class = ZipSerializer
+    search_fields = search
+    filter_class = ZipFilter
 
 _api('zips', ZipViewSet)
 
 
 
+model = GenericCat
+search = _search(admin.GenericCatAdmin)
+
 class GenericCatSerializer(AbstractTreeSerializer):
 
     class Meta:
-        model = GenericCat
+        model = model
         fields = _fields_cat
 
+class GenericCatFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ()
+
 class GenericCatViewSet(AbstractTreeView):
-    queryset = GenericCat.objects.all()
+    queryset = _all(model)
     serializer_class = GenericCatSerializer
+    search_fields = search
+    filter_class = GenericCatFilter
 
 _api('genericcats', GenericCatViewSet)
 
 
 
+model = UserCat
+search = _search(admin.UserCatAdmin)
+
 class UserCatSerializer(AbstractTreeSerializer):
 
     class Meta:
-        model = UserCat
+        model = model
         fields = _fields_cat
 
+class UserCatFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ()
+
 class UserCatViewSet(AbstractTreeView):
-    queryset = UserCat.objects.all()
+    queryset = _all(model)
     serializer_class = UserCatSerializer
+    search_fields = search
+    filter_class = UserCatFilter
 
 _api('usercats', UserCatViewSet)
 
 
 
+model = ItemCat
+search = _search(admin.ItemCatAdmin)
+
 class ItemCatSerializer(AbstractTreeSerializer):
 
     class Meta:
-        model = ItemCat
+        model = model
         fields = _fields_cat
 
+class ItemCatFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ()
+
 class ItemCatViewSet(AbstractTreeView):
-    queryset = ItemCat.objects.all()
+    queryset = _all(model)
     serializer_class = ItemCatSerializer
+    search_fields = search
+    filter_class = ItemCatFilter
 
 _api('itemcats', ItemCatViewSet)
 
 
 
+model = LocCat
+search = _search(admin.LocCatAdmin)
+
 class LocCatSerializer(AbstractTreeSerializer):
 
     class Meta:
-        model = LocCat
+        model = model
         fields = _fields_cat
 
+class LocCatFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ()
+
 class LocCatViewSet(AbstractTreeView):
-    queryset = LocCat.objects.all()
+    queryset = _all(model)
     serializer_class = LocCatSerializer
+    search_fields = search
+    filter_class = LocCatFilter
 
 _api('loccats', LocCatViewSet)
 
 
 
+model = FormCat
+search = _search(admin.FormCatAdmin)
+
 class FormCatSerializer(AbstractTreeSerializer):
 
     class Meta:
-        model = FormCat
+        model = model
         fields = _fields_cat
 
+class FormCatFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ()
+
 class FormCatViewSet(AbstractTreeView):
-    queryset = FormCat.objects.all()
+    queryset = _all(model)
     serializer_class = FormCatSerializer
+    search_fields = search
+    filter_class = FormCatFilter
 
 _api('formcats', FormCatViewSet)
 
 
+
+model = ForceNode
+search = _search(admin.ForceNodeAdmin)
 
 class ForceNodeSerializer(AbstractTreeSerializer):
     user_id = _id('user')
@@ -291,7 +437,7 @@ class ForceNodeSerializer(AbstractTreeSerializer):
     visits_ids = _ids('visits')
 
     class Meta:
-        model = ForceNode
+        model = model
         fields = _fields_cat + (
             'user', 'user_id',
             'itemcats', 'itemcats_ids',
@@ -300,33 +446,58 @@ class ForceNodeSerializer(AbstractTreeSerializer):
             'visits_ids', # 'visits'
         )
 
+class ForceNodeFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ('user',)
+
 class ForceNodeViewSet(AbstractTreeView):
-    queryset = ForceNode.objects.all()
+    queryset = _all(model)
     serializer_class = ForceNodeSerializer
+    search_fields = search
+    filter_class = ForceNodeFilter
 
 _api('forcenodes', ForceNodeViewSet)
 
 
+
+model = ForceVisit
+search = _search(admin.ForceVisitAdmin)
 
 class ForceVisitSerializer(AbstractSerializer):
     node_id = _id('node')
     loc_id = _id('loc')
 
     class Meta:
-        model = ForceVisit
+        model = model
         fields = _fields + (
             'datetime', 'status', 'accompanied',
             'node', 'node_id',
             'loc', 'loc_id',
+            'observations', 'rec',
         )
 
+class ForceVisitFilter(AbstractFilter):
+    starts = _filter_start('datetime')
+    ends = _filter_end('datetime')
+
+    class Meta:
+        model = model
+        fields = search + ('starts', 'ends', 'node', 'loc', 'status', 'accompanied') # 'observations', 'rec'
+
 class ForceVisitViewSet(AbstractView):
-    queryset = ForceVisit.objects.all()
+    queryset = _all(model)
     serializer_class = ForceVisitSerializer
+    search_fields = search
+    filter_class = ForceVisitFilter
 
 _api('forcevisits', ForceVisitViewSet)
 
 
+
+model = User
+search = _search(admin.UserAdmin)
 
 class UserSerializer(AbstractSerializer):
     cats_ids = _ids('cats')
@@ -336,19 +507,30 @@ class UserSerializer(AbstractSerializer):
     date_joined = serializers.Field(source='date_joined')
 
     class Meta:
-        model = User
+        model = model
         fields = _fields + (
             'email', 'first_name', 'last_name', 'last_login', 'date_joined',
             'cats', 'cats_ids',
         )
 
+class UserFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ()
+
 class UserViewSet(AbstractView):
-    queryset = User.objects.all()
+    queryset = _all(model)
     serializer_class = UserSerializer
+    search_fields = search
+    filter_class = UserFilter
 
 _api('users', UserViewSet)
 
 
+
+model = Item
+search = _search(admin.ItemAdmin)
 
 class ItemSerializer(AbstractSerializer):
     cats_ids = _ids('cats')
@@ -356,7 +538,7 @@ class ItemSerializer(AbstractSerializer):
     visits_loccats_ids = _ids('visits_loccats')
 
     class Meta:
-        model = Item
+        model = model
         fields = _fields_name + (
             'cats', 'cats_ids',
             'visits_description', 'visits_expandable', 'visits_order',
@@ -364,13 +546,24 @@ class ItemSerializer(AbstractSerializer):
             'visits_loccats', 'visits_loccats_ids',
         )
 
+class ItemFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('visits_expandable', 'visits_order')
+
 class ItemViewSet(AbstractView):
-    queryset = Item.objects.all()
+    queryset = _all(model)
     serializer_class = ItemSerializer
+    search_fields = search
+    filter_class = ItemFilter
 
 _api('items', ItemViewSet)
 
 
+
+model = Loc
+search = _search(admin.LocAdmin)
 
 class LocSerializer(AbstractSerializer):
     cats_ids = _ids('cats')
@@ -378,7 +571,7 @@ class LocSerializer(AbstractSerializer):
     user_id = _id('user')
 
     class Meta:
-        model = Loc
+        model = model
         fields = _fields_name + (
             'street', 'unit', 'phone', 'zip', 'city',
             'cats', 'cats_ids',
@@ -386,13 +579,26 @@ class LocSerializer(AbstractSerializer):
             'user', 'user_id',
         )
 
+class LocFilter(AbstractFilter):
+    state = django_filters.Filter(name='city__state')
+    country = django_filters.Filter(name='city__state__country')
+
+    class Meta:
+        model = model
+        fields = search + ('zip', 'city', 'state', 'country', 'at', 'user')
+
 class LocViewSet(AbstractView):
-    queryset = Loc.objects.all()
+    queryset = _all(model)
     serializer_class = LocSerializer
+    search_fields = search
+    filter_class = LocFilter
 
 _api('locs', LocViewSet)
 
 
+
+model = Form
+search = _search(admin.FormAdmin)
 
 class FormSerializer(AbstractSerializer):
     cats_ids = _ids('cats')
@@ -407,7 +613,7 @@ class FormSerializer(AbstractSerializer):
     visits_bricks_ids = _ids('visits_bricks')
 
     class Meta:
-        model = Form
+        model = model
         fields = _fields_name + (
             'start', 'end', 'description', 'expandable', 'order',
             'cats', 'cats_ids',
@@ -422,28 +628,51 @@ class FormSerializer(AbstractSerializer):
             'visits_bricks', 'visits_bricks_ids',
         )
 
+class FormFilter(AbstractFilter):
+    start_starts = _filter_start('start')
+    start_ends = _filter_end('start')
+    end_starts = _filter_start('end')
+    end_ends = _filter_end('end')
+
+    class Meta:
+        model = model
+        fields = search + ('start_starts', 'start_ends', 'end_starts', 'end_ends', 'expandable', 'order')
+
 class FormViewSet(AbstractView):
-    queryset = Form.objects.all()
+    queryset = _all(model)
     serializer_class = FormSerializer
+    search_fields = search
+    filter_class = FormFilter
 
 _api('forms', FormViewSet)
 
 
+
+model = FormField
+search = _search(admin.FormFieldAdmin)
 
 class FormFieldSerializer(AbstractSerializer):
     form_id = _id('form')
     optscat_id = _id('optscat')
 
     class Meta:
-        model = FormField
+        model = model
         fields = _fields_name + (
             'description', 'type', 'widget', 'default', 'required', 'order', 'opts1',
             'optscat', 'optscat_id',
             'form', 'form_id',
         )
 
+class FormFieldFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('form', 'type', 'widget', 'required', 'order')
+
 class FormFieldViewSet(AbstractView):
-    queryset = FormField.objects.all()
+    queryset = _all(model)
     serializer_class = FormFieldSerializer
+    search_fields = search
+    filter_class = FormFieldFilter
 
 _api('formfields', FormFieldViewSet)

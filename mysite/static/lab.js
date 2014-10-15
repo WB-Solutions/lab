@@ -54,30 +54,33 @@ $(function(){
 		var f_form = {}
 		var isbool = ftype == 'boolean'
 		var ftype2 = 'string'
-		if (isbool) {
+		var fwidget2 = ''
+		if (ftype == 'string') {
+		  if (fwidget == 'textarea') {
+			ftype2 = fwidget
+			fwidget2 = fwidget
+		  }
+		}
+		else if (isbool) {
 		  f_form['inlinetitle'] = desc
 		  ftype2 = ftype
-		  fwidget = ''
 		}
-		else {
-		  if (_(ftype).startsWith('opts')) {
-			ftype = 'opts'
-			var opts = field.opts
-			if (!opts || !opts.length) { opts = [ ['','x'] ] }
-			var enums = [] // respect order.
-			var opts = _(opts).collect(function(opt){
-			  var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
-			  enums.push(opt2[0])
-			  return opt2
-			})
-			// _log('modal > each opts', opts)
-			f_form['titleMap'] = _(opts).object()
-			f_schema['enum'] = enums
-			if (fwidget == 'radios') { f_form['type'] = 'radios' }
-			else { fwidget = '' }
-		  }
-		  else if (fwidget == 'textarea') {
-			ftype2 = fwidget
+		else if (_(ftype).startsWith('opts')) {
+		  ftype = 'opts'
+		  var opts = field.opts
+		  if (!opts || !opts.length) { opts = [ ['','x'] ] }
+		  var enums = [] // respect order.
+		  var opts = _(opts).collect(function(opt){
+			var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
+			enums.push(opt2[0])
+			return opt2
+		  })
+		  // _log('modal > each opts', opts)
+		  f_form['titleMap'] = _(opts).object()
+		  f_schema['enum'] = enums
+		  if (fwidget == 'radios') {
+			f_form['type'] = fwidget
+			fwidget2 = fwidget
 		  }
 		}
 		_(f_schema).extend({
@@ -92,7 +95,7 @@ $(function(){
 		  // https://github.com/joshfire/jsonform/issues/63
 		  // such that empty/blank fields are included in the submit values, otherwise form fields could NOT be emptied.
 		  allowEmpty: !req,
-		  htmlClass: _('lab-field-%s%s%s').sprintf(ftype, fwidget ? '-' : '', fwidget)
+		  htmlClass: _('lab-field-%s%s%s').sprintf(ftype, fwidget2 ? '-' : '', fwidget2)
 		})
 		schema2[key] = f_schema
 		return f_form
@@ -144,7 +147,7 @@ $(function(){
 		user_cats: { type: 'string' },
 		loc_name: { type: 'string' },
 		loc_address: { type: 'string' },
-		status: { type: 'string', enum: [ '', 'v', 'n', 'r' ] },
+		status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] },
 		accompanied: { type: 'boolean' },
 		observations: { type: 'string' },
 		rec: {
@@ -158,7 +161,7 @@ $(function(){
 		  type: 'section', // fieldset
 		  title: 'Visit',
 		  items: [
-			{ key: 'status', prepend: 'Status', notitle: true, titleMap: { "": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
+			{ key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
 			{ key: 'datetime', prepend: 'Date/Time', notitle: true, disabled: true },
 			{ key: 'user_name', prepend: 'User', notitle: true, disabled: true },
 			{ key: 'user_email', prepend: 'Email', notitle: true, disabled: true },

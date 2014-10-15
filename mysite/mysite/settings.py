@@ -50,6 +50,8 @@ INSTALLED_APPS = (
     # 'provider', # django-oauth2-provider
     # 'provider.oauth2',
 
+    # 'django_filters', # django-filter ... not necessary to activate here? ... https://django-filter.readthedocs.org/en/latest/install.html
+
     'mptt', # django-mptt
 
     'allauth', # django-allauth
@@ -132,6 +134,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAdminUser', # AllowAny / IsAuthenticated / IsAdminUser / DjangoModelPermissions
     ),
+
+    # http://www.django-rest-framework.org/api-guide/filtering
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework.filters.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+    )
 }
 
 # https://github.com/GetBlimp/django-rest-framework-jwt

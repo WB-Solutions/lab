@@ -66,12 +66,13 @@ sudo pip install django-suit
 sudo pip install django-extensions
 sudo pip install djangorestframework
 sudo pip install djangorestframework-jwt
+sudo pip install django-filter
 # sudo pip install django-oauth2-provider
 sudo pip install django-mptt
 sudo pip install django-allauth
 sudo pip install django-bootstrap3
 
-sudo python manage.py syncdb --noinput
+sudo python manage.py migrate # syncdb --noinput
 
 sudo chmod 777 /home/django/lab_db
 sudo chmod 777 /home/django/lab_db/db.sqlite3

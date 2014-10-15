@@ -9,10 +9,10 @@ from mptt.admin import MPTTModelAdmin
 from .models import *
 from .forms import *
 import utils
-# dbmodels = utils.db_models()
+# models = utils.db_models()
 
-def _admin(dbmodel, dbadmin):
-    admin.site.register(dbmodel, dbadmin)
+def _admin(model, dbadmin):
+    admin.site.register(model, dbadmin)
 
 '''
 from django.forms import CheckboxSelectMultiple
@@ -35,11 +35,12 @@ class GoTree(CheckboxSelectMultiple):
 
 _fields = ('syscodes_',)
 _fields_name = _fields + ('name',)
+_search_name = ('syscode', 'name')
 
 class AbstractAdmin(admin.ModelAdmin):
     list_display = _fields_name
     list_display_links = _fields_name
-    search_fields = ('syscode', 'name')
+    search_fields = _search_name
 
     '''
     # formfield_overrides = dict(GoTreeM2MField=dict(widget=GoTree))
@@ -199,6 +200,7 @@ class ForceVisitAdmin(AbstractAdmin):
     date_hierarchy = 'datetime'
     list_editable = ('status',)
     list_filter = ('datetime', 'status')
+    search_fields = ('syscode', 'observations') # 'rec'
     # radio_fields = dict(status=admin.VERTICAL)
     # raw_id_fields = ('node',)
     # readonly_fields = ('datetime',)
@@ -259,6 +261,7 @@ _admin(User, UserAdmin)
 class ItemAdmin(AbstractAdmin):
     list_display = _fields_name + ('cats_', 'visits_usercats_', 'visits_loccats_', 'visits_expandable', 'visits_order')
     list_filter = ('cats', 'visits_usercats', 'visits_loccats')
+    search_fields = _search_name + ('visits_description',)
 
 _admin(Item, ItemAdmin)
 
@@ -290,6 +293,7 @@ class FormAdmin(AbstractAdmin):
         'visits_usercats', 'visits_loccats',
         'visits_itemcats', 'visits_forcenodes',
     )
+    search_fields = _search_name + ('description',)
     inlines = (FormFieldInline,)
 
     '''
@@ -312,6 +316,7 @@ _admin(Form, FormAdmin)
 
 
 class FormFieldAdmin(AbstractAdmin):
-    list_display = _fields_name + ('description', 'form', 'type', 'widget', 'default', 'required', 'order', 'opts1_', 'optscat')
+    list_display = _fields_name + ('form', 'type', 'widget', 'default', 'required', 'order', 'opts1_', 'optscat')
+    search_fields = _search_name + ('description',)
 
 _admin(FormField, FormFieldAdmin)

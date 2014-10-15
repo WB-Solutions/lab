@@ -31,10 +31,11 @@ def _many(*args, **kwargs):
 def _many_tree(*args, **kwargs):
     return GoTreeM2MField(*args, **_kw_merge(kwargs, blank=True))
 
+# do NOT allow EMPTY / BLANK, otherwise can NOT filter (ignored) in admin & REST.
 def _choices(vmax, choices, **kwargs):
     choices = [ e if isinstance(e, (list, tuple)) else (e, e) for e in choices ]
     # print '_choices', choices
-    return models.CharField(**_kw_merge(kwargs, max_length=vmax, blank=True, default='', choices=choices))
+    return models.CharField(**_kw_merge(kwargs, max_length=vmax, default=choices[0][0], choices=choices))
 
 def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
@@ -356,7 +357,7 @@ class ForceVisit(AbstractModel):
     node = models.ForeignKey(ForceNode, related_name='visits')
     loc = models.ForeignKey(Loc, related_name='visits')
     datetime = models.DateTimeField(default=timezone.now)
-    status = _choices(2, [ ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
+    status = _choices(2, [ ('s', 'Scheduled'), ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
     accompanied = models.BooleanField(default=False)
     observations = _text()
     rec = models.TextField(blank=True)
@@ -432,10 +433,11 @@ class FormField(AbstractModel):
     description = _form_description()
     form = models.ForeignKey(Form, related_name='fields')
     type = _choices(20, [
+        'string',
         'boolean',
         'opts', 'optscat', 'optscat-all', # must start with 'opts', used in lab.js.
     ])
-    widget = _choices(20, [ 'radios', 'textarea' ])
+    widget = _choices(20, [ 'def', 'radios', 'textarea' ])
     default = models.CharField(max_length=200, blank=True)
     required = models.BooleanField(default=False)
     order = _form_order()

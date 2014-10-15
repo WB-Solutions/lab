@@ -21,10 +21,10 @@ def setup(request):
 
 def _data(config=None):
     # print '_data', config
-    def _all(dbmodel):
-        return dbmodel.objects.all()
-    def _list(dbmodel):
-        return [ config.get(dbmodel) ] if config else _all(dbmodel)
+    def _all(model):
+        return model.objects.all()
+    def _list(model):
+        return [ config.get(model) ] if config else _all(model)
     def _datetime(datetime):
         return str(datetime) if datetime else ''
     def _ext(db1, d2):
@@ -145,8 +145,8 @@ def _data(config=None):
                     fields = _dict(form.fields.all(), lambda field: dict(
                         name = field.name,
                         description = field.description,
-                        type = field.type or '',
-                        widget = field.widget or '',
+                        type = field.type,
+                        widget = field.widget,
                         default = field.default,
                         required = field.required,
                         order = field.order,
@@ -184,17 +184,17 @@ def ajax(request):
         pv = pvars.get(key)
         # print '_get', key, pv
         return pv or ('' if default is None else default)
-    def _dbget(dbmodel, dbid):
-        return utils.db_get(dbmodel, dbid)
-    def _ref(key, dbmodel):
+    def _dbget(model, dbid):
+        return utils.db_get(model, dbid)
+    def _ref(key, model):
         pv = _get(key)
-        pv = _dbget(dbmodel, pv) if pv else None
-        # print 'ajax > _ref', key, dbmodel, pv.id if pv else None, pv
+        pv = _dbget(model, pv) if pv else None
+        # print 'ajax > _ref', key, model, pv.id if pv else None, pv
         return pv
     def _get_datetime(key):
         return _get(key) or None
-    def _new(dbmodel, **kwargs):
-        return dbmodel.objects.create(**kwargs)
+    def _new(model, **kwargs):
+        return model.objects.create(**kwargs)
     def _int(string):
         try: v = int(string)
         except: v = None
