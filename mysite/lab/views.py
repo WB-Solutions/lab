@@ -47,34 +47,15 @@ def _data(config=None):
         if nodes is not None: error
         nodes = [visit.node]
     if nodes:
-        def _ups(treenode):
-            return treenode.get_ancestors(include_self=True)
-        def _downs(treenode):
-            return treenode.get_descendants(include_self=True)
-        def _flatten(_fn, _els):
-            # print '_flatten', _els
-            return reduce(list.__add__, [ list(_fn(each)) for each in _els ]) if _els else []
-        def _names(rel):
-            return ', '.join([ each.name for each in rel.all() ])
-        def _ids(rows):
-            return [ row.id for row in rows ]
-        def _any(n1, n2, asdb=True, ups=True):
-            n1 = n1.all() if asdb else n1
-            if ups:
-                n1 = _flatten(lambda ex: _ups(ex), n1)
-            # print '_any', n1, n2
-            return any( [ each for each in n1 if each in n2.all() ] )
-        cached = dict()
-        def _nodes_downs(_cats):
-            return set(_flatten(lambda ecat: _downs(ecat), _cats))
         def _cats_items(_cats):
             return Item.objects.filter(cats__in=_cats).order_by('name').all()
+        cached = dict()
         def _node_data(_node):
             d = cached.get(_node)
             iscached = d is not None
             if not iscached:
-                _upnodes = _ups(_node)
-                _itemcats = _nodes_downs(_flatten(lambda enode: enode.itemcats.all(), _upnodes))
+                _upnodes = utils.tree_ups(_node)
+                _itemcats = utils.tree_all_downs(utils.list_flatten(_upnodes, lambda enode: enode.itemcats.all()))
                 d = dict(
                     upnodes = _upnodes,
                     itemcats = _itemcats,
@@ -84,6 +65,7 @@ def _data(config=None):
             # print '_node_data cached', iscached, _node, d
             return d
         allforms = Form.objects.order_by('order', 'name').all()
+        _any = utils.tree_any
         def _visit(visit, ext=False):
             loc = visit.loc
             loccats = loc.cats
@@ -98,7 +80,7 @@ def _data(config=None):
             repforms = dict()
             def _doreps(form):
                 reps1 = form.repitems.all()
-                repcats = _nodes_downs(form.repitemcats.all())
+                repcats = utils.tree_all_downs(form.repitemcats.all())
                 reps2 = _cats_items(repcats)
                 reps = (reps1 | reps2).distinct()
                 # print '_doreps > reps', reps
@@ -129,10 +111,10 @@ def _data(config=None):
                 observations = visit.observations,
                 user_name = user.fullname(),
                 user_email = user.email,
-                user_cats = _names(user.cats),
+                user_cats = utils.db_names(user.cats),
                 loc_name = loc.name,
                 loc_address = '%s # %s, %s, %s' % (loc.street, loc.unit, loc.city, loc.zip),
-                forms = _ids(forms),
+                forms = utils.db_ids(forms),
                 repforms = repforms,
                 rec = visit.rec_dict(),
             )
@@ -142,7 +124,7 @@ def _data(config=None):
         if visit:
             data = _visit(visit, ext=True)
         else:
-            visits = _flatten(lambda node: node.visits.all(), nodes)
+            visits = utils.list_flatten(nodes, lambda node: node.visits.all())
             # print 'visits', visits
             allitems = _all(Item)
             # print 'allitems', allitems
@@ -159,7 +141,7 @@ def _data(config=None):
                     description = form.description,
                     expandable = form.expandable,
                     order = form.order,
-                    repitems = _ids(form.repitems.all()),
+                    repitems = utils.db_ids(form.repitems.all()),
                     fields = _dict(form.fields.all(), lambda field: dict(
                         name = field.name,
                         description = field.description,
@@ -177,8 +159,6 @@ def _data(config=None):
 
 def agenda(request):
     data = None
-    def _dbget(dbmodel, dbid):
-        return utils.db_get(dbmodel, dbid)
     for name, model in [ ('node', ForceNode), ('user', User), (None, User) ]:
         if name is None:
             user = request.user
@@ -190,7 +170,7 @@ def agenda(request):
         else:
             scope = request.GET.get(name)
         if scope:
-            row = _dbget(model, scope)
+            row = utils.db_get(model, scope)
             if row:
                 # print 'agenda > scope', scope, model, row
                 data = _data({name:row})

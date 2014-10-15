@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
 
 from .models import *
+import utils
 
 sets = []
 
@@ -80,6 +81,25 @@ class AbstractView(viewsets.ModelViewSet):
         v = super(AbstractView, self).get_object(queryset)
         # print 'get_object', self, queryset, v
         return v
+
+    # http://www.django-rest-framework.org/api-guide/filtering
+    def get_queryset(self):
+        qset = super(AbstractView, self).get_queryset()
+        for name, deep in [ ('incats', True), ('cats', False) ]:
+            cats = self.request.QUERY_PARAMS.get(name)
+            if cats:
+                model = qset.model # self.get_serializer().opts.model
+                field = model._meta.get_field('cats')
+                if field:
+                    cats = utils.str_ints(cats)
+                    if cats:
+                        if deep:
+                            target = field.related.parent_model
+                            cats = utils.list_every([ utils.db_get(target, cat) for cat in cats ])
+                            cats = utils.tree_all_downs(cats)
+                        qset = qset.filter(cats__in=cats)
+                        print 'get_queryset', self, type(qset), model, cats
+        return qset
 
 class AbstractTreeView(AbstractView):
 
