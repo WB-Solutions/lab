@@ -50,7 +50,7 @@ INSTALLED_APPS = (
     # 'provider', # django-oauth2-provider
     # 'provider.oauth2',
 
-    # 'django_filters', # django-filter ... not necessary to activate here? ... https://django-filter.readthedocs.org/en/latest/install.html
+    'django_filters', # django-filter
 
     'mptt', # django-mptt
 
