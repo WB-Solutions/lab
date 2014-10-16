@@ -88,7 +88,7 @@ DATABASES = dict(
         ENGINE = 'django.db.backends.postgresql_psycopg2',
         NAME = 'lab',
         USER = 'postgres',
-        PASSWORD = 'nube',
+        PASSWORD = 'lab',
         HOST = 'localhost',
         PORT = '',
     ),
