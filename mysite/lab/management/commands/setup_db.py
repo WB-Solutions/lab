@@ -90,7 +90,7 @@ class Command(BaseCommand):
             nodes = _new_cats(ForceNode, 'Force', isforce=True)
 
             for each in [ 'Item A', 'Item B', 'Item C' ]:
-                item = _new(Item, name=each, visits_description='Description @ %s' % each)
+                item = _new(Item, name=each, forms_description='Description @ %s' % each)
                 item.cats.add(itemcats.pop(0))
                 item.visits_usercats.add(usercat)
 

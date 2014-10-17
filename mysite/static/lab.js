@@ -20,10 +20,11 @@ $(function(){
   var w_nodes = $('#go_nodes')
 
   function modal(z) {
+	_log('modal', z)
 	if (!z) { z = {} }
 	var visit = z.visit
-	if (!visit) { return alert('Error @ modal, NO visit') }
-	_log('modal', visit)
+	var userform = z.userform
+
 	function _ids(source) {
 	  var _v = _(_(source).sortBy('full')).pluck('id')
 	  _log('_ids', _v)
@@ -40,11 +41,31 @@ $(function(){
 		return [ each.order, each.name ]
 	  })
 	}
-	var vjson = _({}).extend(visit)
-	var refvars = { ref_visit: visit.id }
+	var vjson = {}
+	var refvars = {}
+	var rec, zforms, zreps
+
+	var err
+	if (visit) {
+	  if (userform) { err = 'BOTH' }
+	  _(vjson).extend(visit)
+	  _(refvars).extend({ ref_visit: visit.id })
+	  rec = visit.rec
+	  zforms = visit.forms
+	  zreps = visit.repforms
+	}
+	else if (userform) {
+	  rec = {}
+	  zforms = [] // [userform]
+	  var formid = userform.id
+	  zreps = _(_(data.user.repforms[formid]).collect(function(e){
+		return [ e, [formid] ]
+	  })).object()
+	}
+	else { err = 'NO' }
+	if (err) { return alert(_('Error @ modal : %s visit / userform').sprintf(err)) }
 	// _log('modal', z, vjson)
 
-	var rec = visit.rec
 	var schema2 = {}
 	function _do_fields(fields, pre_id) {
 	  // _log('_do_fields', fields)
@@ -109,13 +130,14 @@ $(function(){
 
 	var fieldsets = []
 	function _do_fieldset(forms_ids, item) {
+	  // _log('_do_fieldset', forms_ids, item)
 	  var forms = _(_(forms_ids).collect(function(each){
 		return data.allforms[each]
 	  })).compact() // compact to handle not found.
 	  var fields = _(_(forms).collect(function(form){
 		return _(form.fields).values()
 	  })).flatten()
-	  // _log('modal > fields', forms, fields)
+	  // _log('_do_fieldset > fields', forms, fields)
 	  if (!fields.length) { return }
 	  var source = item || forms[0]
 	  var f_fields = _do_fields(fields, item ? item.id + '_' : '')
@@ -129,17 +151,16 @@ $(function(){
 	  }
 	  fieldsets.push(fset)
 	}
-	_(visit.forms).each(function(form_id){
+	_(zforms).each(function(form_id){
 	  _do_fieldset([form_id])
 	})
 
-	var reps = visit.repforms
-	var repitems = _(_sorted(_(_(reps).keys()).collect(function(item_id){
+	var repitems = _(_sorted(_(_(zreps).keys()).collect(function(item_id){
 	  return data.allitems[item_id]
 	}))).compact() // compact to handle not found.
 	// _log('repitems', repitems)
 	_(repitems).each(function(item){
-	  _do_fieldset(reps[item.id], item)
+	  _do_fieldset(zreps[item.id], item)
 	})
 
 	// _log('modal > vjson', vjson)
@@ -242,16 +263,16 @@ $(function(){
   }
 
   function userform_edit(form_id) {
-	var form = data.forms[form_id]
-	_log('userform_edit', form_id, form)
-	modal({ form: form })
+	var form = data.allforms[form_id]
+	// _log('userform_edit', form_id, form)
+	modal({ userform: form })
   }
 
   function _onclick(sel, fn) {
 	w_doc.on('click', sel, function(){
 	  var w_act = $(this)
 	  var xid = w_act.data('ref')
-	  _log('click', sel, w_act, xid)
+	  // _log('click', sel, w_act, xid)
 	  fn(xid)
 	})
   }
@@ -373,7 +394,7 @@ $(function(){
 	  _(user.repforms).each(function(repitems, formid){
 		userforms.push(_form(formid, repitems))
 	  })
-	  _log('userforms', userforms)
+	  // _log('userforms', userforms)
 	}
 
 	w_count(w_forms, userforms.length)

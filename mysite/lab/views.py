@@ -113,9 +113,9 @@ def _data(config=None):
                 visits = _dict(visits, _visit),
                 allitems = _dict(allitems, lambda item: dict(
                     name = item.name,
-                    description = item.visits_description,
-                    expandable = item.visits_expandable,
-                    order = item.visits_order,
+                    description = item.forms_description,
+                    expandable = item.forms_expandable,
+                    order = item.forms_order,
                 )),
                 allforms = _dict(allforms, lambda form: dict(
                     name = form.name,

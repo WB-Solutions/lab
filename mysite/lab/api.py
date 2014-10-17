@@ -541,7 +541,7 @@ class ItemSerializer(AbstractSerializer):
         model = model
         fields = _fields_name + (
             'cats', 'cats_ids',
-            'visits_description', 'visits_expandable', 'visits_order',
+            'forms_description', 'forms_expandable', 'forms_order',
             'visits_usercats', 'visits_usercats_ids',
             'visits_loccats', 'visits_loccats_ids',
         )
@@ -550,7 +550,7 @@ class ItemFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('visits_expandable', 'visits_order')
+        fields = search + ('forms_expandable', 'forms_order')
 
 class ItemViewSet(AbstractView):
     queryset = _all(model)

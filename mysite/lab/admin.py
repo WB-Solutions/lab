@@ -259,9 +259,9 @@ _admin(User, UserAdmin)
 
 
 class ItemAdmin(AbstractAdmin):
-    list_display = _fields_name + ('cats_', 'visits_usercats_', 'visits_loccats_', 'visits_expandable', 'visits_order')
+    list_display = _fields_name + ('cats_', 'visits_usercats_', 'visits_loccats_', 'forms_expandable', 'forms_order')
     list_filter = ('cats', 'visits_usercats', 'visits_loccats')
-    search_fields = _search_name + ('visits_description',)
+    search_fields = _search_name + ('forms_description',)
 
 _admin(Item, ItemAdmin)
 

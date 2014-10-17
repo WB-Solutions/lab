@@ -310,9 +310,9 @@ class Item(AbstractModel):
     cats = _many_tree(ItemCat, related_name='items')
     visits_usercats = _many_tree(UserCat, related_name='visits_items')
     visits_loccats = _many_tree(LocCat, related_name='visits_items')
-    visits_description = _form_description()
-    visits_expandable = _form_expandable()
-    visits_order = _form_order()
+    forms_description = _form_description()
+    forms_expandable = _form_expandable()
+    forms_order = _form_order()
 
     class Meta:
         ordering = ('name',)
