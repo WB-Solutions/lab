@@ -113,7 +113,7 @@ class AbstractView(viewsets.ModelViewSet):
                     if cats:
                         if deep:
                             target = field.related.parent_model
-                            cats = utils.list_every([ utils.db_get(target, cat) for cat in cats ])
+                            cats = utils.list_compact([ utils.db_get(target, cat) for cat in cats ])
                             cats = utils.tree_all_downs(cats)
                         qset = qset.filter(cats__in=cats)
                         print 'get_queryset', self, type(qset), model, cats
@@ -615,7 +615,7 @@ class FormSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields_name + (
-            'start', 'end', 'description', 'expandable', 'order',
+            'type', 'start', 'end', 'description', 'expandable', 'order',
             'cats', 'cats_ids',
             'repitems', 'repitems_ids',
             'repitemcats', 'repitemcats_ids',
@@ -636,7 +636,7 @@ class FormFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('start_starts', 'start_ends', 'end_starts', 'end_ends', 'expandable', 'order')
+        fields = search + ('type', 'start_starts', 'start_ends', 'end_starts', 'end_ends', 'expandable', 'order')
 
 class FormViewSet(AbstractView):
     queryset = _all(model)

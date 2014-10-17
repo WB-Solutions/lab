@@ -9,6 +9,8 @@ import json
 from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
 
+import utils
+
 
 class GoTreeM2MField(models.ManyToManyField):
     pass
@@ -175,7 +177,10 @@ class UserCat(AbstractTree):
 
 
 class ItemCat(AbstractTree):
-    pass
+
+    @classmethod
+    def get_items(cls, cats):
+        return Item.objects.filter(cats__in=cats).order_by('name').all()
 
 
 
@@ -289,6 +294,15 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
     # def has_perm(self, perm, obj=None): return True # does the user have a specific permission?.
     # def has_module_perms(self, app_label): return True # does the user have permissions to view the app "app_label"?.
 
+    def get_forms_reps(self):
+        locs = self.locs.all()
+        loccats = utils.list_flatten(locs, lambda loc: loc.cats.all())
+        return Form.get_forms_reps(
+            user = self,
+            loccats = loccats,
+            usercats = utils.tree_all_downs(self.cats.all()),
+        )
+
 
 
 class Item(AbstractModel):
@@ -375,6 +389,7 @@ class ForceVisit(AbstractModel):
 
 class Form(AbstractModel):
     name = _name()
+    type = _choices(20, [ 'visits', 'users' ])
     start = _datetime()
     end = _datetime()
     description = _form_description()
@@ -393,6 +408,65 @@ class Form(AbstractModel):
     visits_itemcats = _many_tree(ItemCat, related_name='visits_forms')
     visits_forcenodes = _many_tree(ForceNode, related_name='visits_forms')
     visits_bricks = _many(Brick, related_name='visits_forms')
+
+    @classmethod
+    def get_forms_reps(
+        cls,
+        ids=True,
+        user=None, visit=None, # user or visit.
+        usercats=None, loccats=None, # common.
+        upnodes=None, itemcats=None, items=None, # @ visit.
+    ):
+        # print 'get_forms_reps', user or visit, usercats, loccats
+        if visit if user else not visit: error
+        repforms = dict()
+        _any = utils.tree_any
+        def _doreps(form):
+            reps1 = form.repitems.all()
+            repcats = utils.tree_all_downs(form.repitemcats.all())
+            reps2 = ItemCat.get_items(repcats)
+            reps = (reps1 | reps2).distinct()
+            # print '_doreps > reps', reps
+            # user will get ALL items (reps) without any filtering, as opposed to visit.
+            if reps.exists(): # must check, even if empty after the below filter.
+                reps = reps if user else reps.filter(id__in=items).all()
+                for item in reps:
+                    if user or _any(usercats, item.visits_usercats) or _any(loccats, item.visits_loccats):
+                        '''
+                        repforms:
+                          @ user = dict[form] = items
+                          @ visit = dict[item] = forms
+                        '''
+                        k = form.id if user else item.id
+                        rforms = repforms.get(k) or []
+                        repforms[k] = rforms
+                        rforms.append(item if user else form)
+                return False
+            return True
+        forms = Form.objects.filter(type='users' if user else 'visits')
+        forms = [ form for form in forms
+                  if (
+                      False
+                      or (user and (
+                          False
+                          or _any(usercats, form.users_usercats)
+                          or _any(loccats, form.users_loccats)
+                      ))
+                      or (visit and (
+                          False
+                          or _any(usercats, form.visits_usercats)
+                          or _any(loccats, form.visits_loccats)
+                          or visit.loc.zip.brick in form.visits_bricks.all()
+                          or _any(upnodes, form.visits_forcenodes, ups=False)
+                          or _any(itemcats, form.visits_itemcats)
+                      ))
+                  ) and _doreps(form) ]
+        if ids:
+            forms = utils.db_ids(forms)
+            for eitem, erepforms in repforms.items():
+                erepforms[:] = utils.db_ids(erepforms)
+        print 'get_forms_reps', user or visit, forms, repforms
+        return forms, repforms
 
     class Meta:
         ordering = ('name',)

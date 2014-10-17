@@ -8,10 +8,16 @@ $(function(){
   /* note that w_* properties & variables point to jquery widgets/elements. */
   var w_doc = $(document)
   var w_dt = $('#dt')
+  var w_dt2 = $('#dt2')
   var w_cal = $('#cal')
   var w_modal = $('#modal')
   var w_form = $('#modal-form')
-  // _log('w_*', w_dt, w_cal, w_modal, w_form)
+  // _log('w_*', w_dt2, w_dt, w_cal, w_modal, w_form)
+
+  var w_user = $('#go_user')
+  var w_visits = $('#go_visits')
+  var w_forms = $('#go_forms')
+  var w_nodes = $('#go_nodes')
 
   function modal(z) {
 	if (!z) { z = {} }
@@ -36,7 +42,6 @@ $(function(){
 	}
 	var vjson = _({}).extend(visit)
 	var refvars = { ref_visit: visit.id }
-	var forms = data.forms
 	// _log('modal', z, vjson)
 
 	var rec = visit.rec
@@ -105,7 +110,7 @@ $(function(){
 	var fieldsets = []
 	function _do_fieldset(forms_ids, item) {
 	  var forms = _(_(forms_ids).collect(function(each){
-		return data.forms[each]
+		return data.allforms[each]
 	  })).compact() // compact to handle not found.
 	  var fields = _(_(forms).collect(function(form){
 		return _(form.fields).values()
@@ -130,7 +135,7 @@ $(function(){
 
 	var reps = visit.repforms
 	var repitems = _(_sorted(_(_(reps).keys()).collect(function(item_id){
-	  return data.items[item_id]
+	  return data.allitems[item_id]
 	}))).compact() // compact to handle not found.
 	// _log('repitems', repitems)
 	_(repitems).each(function(item){
@@ -236,12 +241,33 @@ $(function(){
 	modal({ visit: visit })
   }
 
-  w_doc.on('click', '.visit-edit', function(){
-	var w_act = $(this)
-	var visit_id = w_act.data('ref')
-	// _log('click @ visit-edit', w_act, visit_id)
-	visit_edit(visit_id)
+  function userform_edit(form_id) {
+	var form = data.forms[form_id]
+	_log('userform_edit', form_id, form)
+	modal({ form: form })
+  }
+
+  function _onclick(sel, fn) {
+	w_doc.on('click', sel, function(){
+	  var w_act = $(this)
+	  var xid = w_act.data('ref')
+	  _log('click', sel, w_act, xid)
+	  fn(xid)
+	})
+  }
+
+  _onclick('.visit-edit', visit_edit)
+  _onclick('.userform-edit', userform_edit)
+
+  w_dt2.dataTable({
+    columns: [
+	  { title: 'Form', data: 'acts' },
+	  { title: 'Name', data: 'name' },
+	  { title: 'Items', data: 'items' },
+	],
+	data: [],
   })
+  var api2 = w_dt2.api()
 
   w_dt.dataTable({
     // paging: false,
@@ -317,11 +343,49 @@ $(function(){
 	return ev
   }
 
+  function _count(coll) {
+	return _(coll).keys().length
+  }
+
+  function w_count(w, total) {
+	w.html(_('%s').sprintf(total))
+  }
+
   function data_set() {
 	_log('data_set', data)
 
+	var user = data.user
+	var userforms = []
+
+	if (user) {
+	  function _form(formid, repitems) {
+		return {
+		  name: 'name here',
+		  items: _('<ul> %s </ul>').sprintf(_(repitems).collect(function(itemid){
+			return _('<li> %s </li>').sprintf(data.allitems[itemid].name)
+		  }).join('')),
+		  acts: _button(formid, 'primary', 'userform-edit', 'Form'),
+		}
+	  }
+	  _(user.forms).each(function(formid){
+		userforms.push(_form(formid))
+	  })
+	  _(user.repforms).each(function(repitems, formid){
+		userforms.push(_form(formid, repitems))
+	  })
+	  _log('userforms', userforms)
+	}
+
+	w_count(w_forms, userforms.length)
+
+	api2.clear()
+	api2.rows.add(userforms)
+	api2.draw()
+
 	var visits = _(data.visits).values()
-	var events = _(visits).collect(function(visit){ return _visit_prep(visit) })
+	var events = _(visits).collect(function(visit){
+	  return _visit_prep(visit)
+	})
 
 	api.clear()
 	api.rows.add(visits)
@@ -331,6 +395,14 @@ $(function(){
 	  .fullCalendar('removeEvents')
 	  .fullCalendar('addEventSource', events)
 	  .fullCalendar('refetchEvents')
+
+	w_user.html(user ? user.name : 'X')
+	w_count(w_visits, _count(data.visits))
+	var wn = $('<ul></ul>')
+	_(data.nodes).each(function(node){
+	  wn.append(_('<li> %s </li>').sprintf(node.name))
+	})
+	w_nodes.append(wn)
   }
 
   if (data) { data_set() }

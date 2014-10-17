@@ -285,10 +285,10 @@ class FormAdmin(AbstractAdmin):
         return row._h_all()
     _h_all.allow_tags = True
 
-    list_display = _fields_name + ('start', 'end', 'expandable', 'order', 'cats_', '_h_all', 'fields_')
+    list_display = _fields_name + ('type', 'start', 'end', 'expandable', 'order', 'cats_', '_h_all', 'fields_')
     filter_vertical = ('repitems', 'visits_bricks',)
     list_filter = (
-        'cats', 'repitemcats',
+        'type', 'cats', 'repitemcats',
         'users_usercats', 'users_loccats',
         'visits_usercats', 'visits_loccats',
         'visits_itemcats', 'visits_forcenodes',

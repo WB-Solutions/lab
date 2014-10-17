@@ -2,7 +2,7 @@
 
 h1 { margin-bottom: 20px; }
 
-#dt_wrapper { margin-top: 20px; }
+/* #dt_wrapper { margin-top: 20px; } */
 
 #service-form .tab-content { padding-top: 20px; }
 
@@ -24,3 +24,7 @@ fieldset:first-of-type { margin-top: 30px !important; }
 
 .expandable > legend:before { content: '\25B8'; padding-right: 5px; }
 .expanded > legend:before { content: '\25BE'; }
+
+#go_user { font-weight: bold; }
+
+fieldset.expandable { cursor: pointer; }

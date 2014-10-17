@@ -34,21 +34,20 @@ def _data(config=None):
         return dict([ (each.id, _ext(each, fn(each)))
             for each in dbn ])
     data = None
-    nodes = None
-    user = config.get('user')
-    if user:
-        nodes = ForceNode.objects.filter(user=user)
+    go_nodes = None
+    go_user = config.get('user')
+    if go_user:
+        go_nodes = ForceNode.objects.filter(user=go_user)
     else:
-        node = config.get('node')
-        if node:
-            nodes = [node]
+        go_node = config.get('node')
+        if go_node:
+            go_nodes = [go_node]
+            go_user = go_node.user # could be None.
     visit = config.get('visit')
     if visit:
-        if nodes is not None: error
-        nodes = [visit.node]
-    if nodes:
-        def _cats_items(_cats):
-            return Item.objects.filter(cats__in=_cats).order_by('name').all()
+        if go_nodes is not None: error
+        go_nodes = [visit.node]
+    if go_nodes:
         cached = dict()
         def _node_data(_node):
             d = cached.get(_node)
@@ -59,51 +58,21 @@ def _data(config=None):
                 d = dict(
                     upnodes = _upnodes,
                     itemcats = _itemcats,
-                    items = _cats_items(_itemcats),
+                    items = ItemCat.get_items(_itemcats),
                 )
                 cached[_node] = d
             # print '_node_data cached', iscached, _node, d
             return d
-        allforms = Form.objects.order_by('order', 'name').all()
-        _any = utils.tree_any
+
         def _visit(visit, ext=False):
             loc = visit.loc
-            loccats = loc.cats
             user = loc.user
-            usercats = user.cats
-            node = visit.node
-            nodedata = _node_data(node)
-            # print '_visit', visit, ext, user, loc, node, nodedata
-            upnodes = nodedata.get('upnodes')
-            itemcats = nodedata.get('itemcats')
-            items = nodedata.get('items')
-            repforms = dict()
-            def _doreps(form):
-                reps1 = form.repitems.all()
-                repcats = utils.tree_all_downs(form.repitemcats.all())
-                reps2 = _cats_items(repcats)
-                reps = (reps1 | reps2).distinct()
-                # print '_doreps > reps', reps
-                if reps.exists(): # must check, even if empty after the below filter.
-                    reps = reps.filter(id__in=items).all()
-                    for item in reps:
-                        if _any(usercats, item.visits_usercats) or _any(loccats, item.visits_loccats):
-                            k = item.id
-                            rforms = repforms.get(k) or []
-                            repforms[k] = rforms
-                            rforms.append(form.id)
-                    return False
-                return True
-            forms = [ form for form in allforms
-                      if (
-                          False
-                          or loc.zip.brick in form.visits_bricks.all()
-                          or _any(upnodes, form.visits_forcenodes, ups=False)
-                          or _any(usercats, form.visits_usercats)
-                          or _any(itemcats, form.visits_itemcats, asdb=False)
-                          or _any(loccats, form.visits_loccats)
-                      ) and _doreps(form) ]
-            # print 'repforms', repforms
+            forms_ids, repforms_ids = Form.get_forms_reps(
+                visit = visit,
+                usercats = user.cats.all(),
+                loccats = loc.cats.all(),
+                **_node_data(visit.node)
+            )
             v = dict(
                 datetime = _datetime(visit.datetime),
                 status = visit.status,
@@ -114,34 +83,45 @@ def _data(config=None):
                 user_cats = utils.db_names(user.cats),
                 loc_name = loc.name,
                 loc_address = '%s # %s, %s, %s' % (loc.street, loc.unit, loc.city, loc.zip),
-                forms = utils.db_ids(forms),
-                repforms = repforms,
+                forms = forms_ids,
+                repforms = repforms_ids,
                 rec = visit.rec_dict(),
             )
             if ext:
                 _ext(visit, v)
             return v
+
         if visit:
             data = _visit(visit, ext=True)
         else:
-            visits = utils.list_flatten(nodes, lambda node: node.visits.all())
-            # print 'visits', visits
+            visits = utils.list_flatten(go_nodes, lambda node: node.visits.all())
             allitems = _all(Item)
-            # print 'allitems', allitems
+            allforms = Form.objects.order_by('order', 'name').all()
+            user_dict = None
+            if go_user:
+                forms_ids, repforms_ids = go_user.get_forms_reps()
+                user_dict = dict(
+                    name = go_user.fullname(),
+                    forms = forms_ids,
+                    repforms = repforms_ids,
+                )
             data = dict(
+                user = user_dict,
+                nodes = _dict(go_nodes, lambda node: dict(
+                    name = node.name,
+                )),
                 visits = _dict(visits, _visit),
-                items = _dict(allitems, lambda item: dict(
+                allitems = _dict(allitems, lambda item: dict(
                     name = item.name,
                     description = item.visits_description,
                     expandable = item.visits_expandable,
                     order = item.visits_order,
                 )),
-                forms = _dict(allforms, lambda form: dict(
+                allforms = _dict(allforms, lambda form: dict(
                     name = form.name,
                     description = form.description,
                     expandable = form.expandable,
                     order = form.order,
-                    repitems = utils.db_ids(form.repitems.all()),
                     fields = _dict(form.fields.all(), lambda field: dict(
                         name = field.name,
                         description = field.description,

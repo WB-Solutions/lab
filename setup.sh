@@ -70,7 +70,7 @@ sudo pip install django-mptt
 sudo pip install django-allauth
 sudo pip install django-bootstrap3
 
-sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'lab'"
+sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'nube'"
 sudo -u postgres createdb lab
 sudo -u postgres psql -l
 

@@ -2,7 +2,7 @@
 def list_flatten(els, fn):
     return reduce(list.__add__, [ list(fn(each)) for each in els ]) if els else []
 
-def list_every(els):
+def list_compact(els):
     return [ each for each in els if each ]
 
 def str_int(string):
@@ -11,7 +11,7 @@ def str_int(string):
     return v
 
 def str_ints(string, separator=','):
-    return list_every([ str_int(e) for e in string.split(separator) ])
+    return list_compact([ str_int(e) for e in string.split(separator) ])
 
 def db_models():
     from django.db.models import get_app, get_models
@@ -58,8 +58,7 @@ def tree_ups(node):
 def tree_downs(node):
     return node.get_descendants(include_self=True)
 
-def tree_any(n1, n2, asdb=True, ups=True):
-    n1 = n1.all() if asdb else n1
+def tree_any(n1, n2, ups=True):
     if ups:
         n1 = list_flatten(n1, lambda ex: tree_ups(ex))
     # print 'tree_any', n1, n2
