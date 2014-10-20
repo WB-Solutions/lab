@@ -615,7 +615,7 @@ class FormSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields_name + (
-            'type', 'start', 'end', 'description', 'expandable', 'order',
+            'scope', 'start', 'end', 'description', 'expandable', 'order',
             'cats', 'cats_ids',
             'repitems', 'repitems_ids',
             'repitemcats', 'repitemcats_ids',
@@ -636,7 +636,7 @@ class FormFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('type', 'start_starts', 'start_ends', 'end_starts', 'end_ends', 'expandable', 'order')
+        fields = search + ('scope', 'start_starts', 'start_ends', 'end_starts', 'end_ends', 'expandable', 'order')
 
 class FormViewSet(AbstractView):
     queryset = _all(model)

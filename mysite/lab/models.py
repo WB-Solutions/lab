@@ -389,7 +389,7 @@ class ForceVisit(AbstractModel):
 
 class Form(AbstractModel):
     name = _name()
-    type = _choices(20, [ 'visits', 'users' ])
+    scope = _choices(20, [ 'visits', 'users' ])
     start = _datetime()
     end = _datetime()
     description = _form_description()
@@ -443,7 +443,7 @@ class Form(AbstractModel):
                         rforms.append(item if user else form)
                 return False
             return True
-        forms = Form.objects.filter(type='users' if user else 'visits')
+        forms = Form.objects.filter(scope='users' if user else 'visits')
         forms = [ form for form in forms
                   if (
                       False

@@ -53,6 +53,7 @@ $(function(){
 	  rec = visit.rec
 	  zforms = visit.forms
 	  zreps = visit.repforms
+	  label = 'Visit'
 	}
 	else if (userform) {
 	  rec = {}
@@ -61,6 +62,7 @@ $(function(){
 	  zreps = _(_(data.user.repforms[formid]).collect(function(e){
 		return [ e, [formid] ]
 	  })).object()
+	  label = 'Form'
 	}
 	else { err = 'NO' }
 	if (err) { return alert(_('Error @ modal : %s visit / userform').sprintf(err)) }
@@ -185,7 +187,7 @@ $(function(){
 	  form: [
 		{
 		  type: 'section', // fieldset
-		  title: 'Visit',
+		  title: label,
 		  items: [
 			{ key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
 			{ key: 'datetime', prepend: 'Date/Time', notitle: true, disabled: true },
@@ -205,7 +207,7 @@ $(function(){
 			{ key: 'observations', type: 'textarea' },
 		  ],
 		},
-		{ type: 'submit', title: 'Save Visit', htmlClass: 'btn-success center-block' },
+		{ type: 'submit', title: _('Save %s').sprintf(label), htmlClass: 'btn-success center-block' },
 		// isnew ? '' : { type: 'button', title: 'Delete', id: 'X-delete', htmlClass: 'btn-danger btn-xs pull-right' }
 	  ]),
 	  value: vjson,
