@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import ugettext as _ # use ugettext_lazy instead?.
 from django.utils import timezone
@@ -18,26 +19,65 @@ class GoTreeM2MField(models.ManyToManyField):
 def _kw_merge(kwmain, **kwdef):
     return dict(kwdef, **kwmain)
 
+def _char(*args, **kwargs):
+    return models.CharField(*args, **_kw_merge(kwargs, max_length=200))
+
+def _char_blank(*args, **kwargs):
+    return _char(*args, **_kw_merge(kwargs, blank=True))
+
 def _name(**kwargs):
-    return models.CharField(_('name'), **_kw_merge(kwargs, max_length=200, unique=True))
+    return _char(_('name'), **_kw_merge(kwargs, unique=True))
+
+def _text(*args, **kwargs):
+    return models.TextField(*args, **_kw_merge(kwargs, blank=True))
+
+def _boolean(default, *args, **kwargs):
+    return models.BooleanField(*args, **_kw_merge(kwargs, default=default))
+
+def _date(*args, **kwargs):
+    return models.DateField(*args, **kwargs)
+
+def _date_blank(*args, **kwargs):
+    return _date(*args, **_kw_merge(kwargs, blank=True, null=True))
 
 def _datetime(*args, **kwargs):
-    return models.DateTimeField(*args, **_kw_merge(kwargs, blank=True, null=True))
+    return models.DateTimeField(*args, **kwargs)
 
-def _text(**kwargs):
-    return models.TextField(**_kw_merge(kwargs, blank=True))
+def _datetime_now(*args, **kwargs):
+    return _datetime(*args, **_kw_merge(kwargs, default=timezone.now))
+
+def _datetime_blank(*args, **kwargs):
+    return _datetime(*args, **_kw_merge(kwargs, blank=True, null=True))
+
+def _datetime_blank_now(*args, **kwargs):
+    return _datetime_blank(*args, **_kw_merge(kwargs, default=timezone.now))
+
+def _one_one(to, related, **kwargs):
+    return models.OneToOneField(to, related_name=related, **kwargs)
+
+def _one_one_blank(*args, **kwargs):
+    return _one_one(*args, **_kw_merge(kwargs, blank=True, null=True))
+
+def _one(to, related, **kwargs):
+    return models.ForeignKey(to, related_name=related, **kwargs)
+
+def _one_blank(*args, **kwargs):
+    return _one(*args, **_kw_merge(kwargs, blank=True, null=True))
+
+def __base_many(base, to, related, **kwargs):
+    return base(to, **_kw_merge(kwargs, blank=True, related_name=related))
 
 def _many(*args, **kwargs):
-    return models.ManyToManyField(*args, **_kw_merge(kwargs, blank=True))
+    return __base_many(models.ManyToManyField, *args, **kwargs)
 
 def _many_tree(*args, **kwargs):
-    return GoTreeM2MField(*args, **_kw_merge(kwargs, blank=True))
+    return __base_many(GoTreeM2MField, *args, **kwargs)
 
 # do NOT allow EMPTY / BLANK, otherwise can NOT filter (ignored) in admin & REST.
 def _choices(vmax, choices, **kwargs):
     choices = [ e if isinstance(e, (list, tuple)) else (e, e) for e in choices ]
     # print '_choices', choices
-    return models.CharField(**_kw_merge(kwargs, max_length=vmax, default=choices[0][0], choices=choices))
+    return _char(**_kw_merge(kwargs, max_length=vmax, default=choices[0][0], choices=choices))
 
 def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
@@ -48,15 +88,14 @@ def _str(row, tmpl, values):
     # print '_str', v
     return unicode(v)
 
+def _form_expandable():
+    return _boolean(False)
 
-def _form_expandable(**kwargs):
-    return models.BooleanField(**_kw_merge(kwargs, default=False))
+def _form_order():
+    return models.IntegerField(blank=True, null=True, default=0)
 
-def _form_order(**kwargs):
-    return models.IntegerField(**_kw_merge(kwargs, blank=True, null=True, default=0))
-
-def _form_description(**kwargs):
-    return models.TextField(**_kw_merge(kwargs, blank=True))
+def _form_description():
+    return _text()
 
 
 # http://bitofpixels.com/blog/unique-on-charfield-when-blanktrue/
@@ -124,7 +163,7 @@ class Country(AbstractModel):
 
 class State(AbstractModel):
     name = _name()
-    country = models.ForeignKey(Country, related_name='states')
+    country = _one(Country, 'states')
 
     class Meta:
         ordering = ('name',)
@@ -136,7 +175,7 @@ class State(AbstractModel):
 
 class City(AbstractModel):
     name = _name()
-    state = models.ForeignKey(State, related_name='cities')
+    state = _one(State, 'cities')
 
     class Meta:
         ordering = ('name',)
@@ -156,7 +195,7 @@ class Brick(AbstractModel):
 
 class Zip(AbstractModel):
     name = _name()
-    brick = models.ForeignKey(Brick, related_name='zips')
+    brick = _one(Brick, 'zips')
 
     class Meta:
         ordering = ('name',)
@@ -220,14 +259,14 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
     email = models.EmailField(_('email address'), blank=False, unique=True)
-    first_name = models.CharField(_('first name'), max_length=40, blank=True, null=True)
-    last_name = models.CharField(_('last name'), max_length=40, blank=True, null=True)
-    display_name = models.CharField(_('display name'), max_length=14, blank=True, null=True)
-    is_staff = models.BooleanField(_('staff status'), default=False, help_text=_('Designates whether the user can log into this admin site.'))
-    is_active = models.BooleanField(_('active'), default=True, help_text=_('Designates whether this user should be treated as active. Unselect this instead of deleting accounts.'))
-    date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
+    first_name = _char_blank()
+    last_name = _char_blank()
+    display_name = _char_blank()
+    is_staff = _boolean(False, help_text=_('Designates whether the user can log into this admin site.'))
+    is_active = _boolean(True, help_text=_('Designates whether this user should be treated as active. Unselect this instead of deleting accounts.'))
+    date_joined = _datetime_blank_now()
 
-    cats = _many_tree(UserCat, related_name='users')
+    cats = _many_tree(UserCat, 'users')
 
     objects = UserManager()
 
@@ -307,9 +346,9 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
 
 class Item(AbstractModel):
     name = _name()
-    cats = _many_tree(ItemCat, related_name='items')
-    visits_usercats = _many_tree(UserCat, related_name='visits_items')
-    visits_loccats = _many_tree(LocCat, related_name='visits_items')
+    cats = _many_tree(ItemCat, 'items')
+    visits_usercats = _many_tree(UserCat, 'visits_items')
+    visits_loccats = _many_tree(LocCat, 'visits_items')
     forms_description = _form_description()
     forms_expandable = _form_expandable()
     forms_order = _form_order()
@@ -325,17 +364,39 @@ class Item(AbstractModel):
 
 
 
+class Address(AbstractModel):
+    name = _char_blank()
+    street = _char()
+    unit = _char_blank()
+    phone = _char_blank()
+    phone2 = _char_blank()
+    fax = _char_blank()
+    zip = _one(Zip, 'locs')
+    city = _one(City, 'locs')
+    # canplace = _boolean(False)
+
+    class Meta:
+        ordering = ('street',)
+
+    def __unicode__(self):
+        return _str(self, '%s, %s # %s, %s, %s', (self.name, self.street, self.unit, self.zip, self.city))
+
+class Place(AbstractTree):
+    address = _one(Address, 'places')
+    canloc = _boolean(True)
+
+    def clean(self):
+        # print 'Place.clean'
+        for each in [ self.parent, self.children.first() ]:
+            if each and each is not self.address:
+                raise ValidationError('Invalid Address based on Parent / Children.')
+
 class Loc(AbstractModel):
-    name = _name(unique=False, blank=True)
-    user = models.ForeignKey(User, related_name='locs')
-    street = models.CharField(max_length=200)
-    unit = models.CharField(max_length=30, blank=True)
-    phone = models.CharField(max_length=30, blank=True)
-    fax = models.CharField(max_length=30, blank=True)
-    zip = models.ForeignKey(Zip, related_name='locs')
-    city = models.ForeignKey(City, related_name='locs')
-    at = models.ForeignKey('self', blank=True, null=True, related_name='locs')
-    cats = _many_tree(LocCat, related_name='locs')
+    name = _char_blank()
+    user = _one(User, 'locs')
+    address = _one_one_blank(Address, 'loc') # limit_choices_to
+    place = _one_one_blank(Place, 'loc')
+    cats = _many_tree(LocCat, 'locs')
 
     class Meta:
         ordering = ('name',)
@@ -343,15 +404,26 @@ class Loc(AbstractModel):
         # verbose_name_plural = 'Domicilios'
 
     def __unicode__(self):
-        return _str(self, '%s, %s # %s, %s', (self.name, self.street, self.unit, self.zip)) # self.cats_()
+        return _str(self, '%s, %s @ %s', (self.user, self.name, self.address or self.place))
+
+    def delete(self):
+        # print 'Loc.delete'
+        if self.address:
+            self.address.delete()
+        super(Loc, self).delete()
+
+    def clean(self):
+        # print 'Loc.clean'
+        if not (bool(self.address) ^ bool(self.place)): # xor.
+            raise ValidationError('Must select one of Address or Place.')
 
 
 
 class ForceNode(AbstractTree):
-    user = models.ForeignKey(User, blank=True, null=True, related_name='nodes')
-    itemcats = _many_tree(ItemCat, related_name='nodes')
-    bricks = _many(Brick)
-    locs = _many('Loc', through='ForceVisit')
+    user = _one_blank(User, 'nodes')
+    itemcats = _many_tree(ItemCat, 'nodes')
+    bricks = _many(Brick, 'nodes')
+    locs = _many('Loc', 'nodes', through='ForceVisit')
 
     def __unicode__(self):
         return _str(self, '%s %s: %s', (self.str_level(), self.name, self.user))
@@ -368,13 +440,13 @@ class ForceNode(AbstractTree):
 
 
 class ForceVisit(AbstractModel):
-    node = models.ForeignKey(ForceNode, related_name='visits')
-    loc = models.ForeignKey(Loc, related_name='visits')
-    datetime = models.DateTimeField(default=timezone.now)
+    node = _one(ForceNode, 'visits')
+    loc = _one(Loc, 'visits')
+    datetime = _datetime_now()
     status = _choices(2, [ ('s', 'Scheduled'), ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
-    accompanied = models.BooleanField(default=False)
+    accompanied = _boolean(False)
     observations = _text()
-    rec = models.TextField(blank=True)
+    rec = _text()
 
     class Meta:
         ordering = ('-datetime',)
@@ -390,24 +462,24 @@ class ForceVisit(AbstractModel):
 class Form(AbstractModel):
     name = _name()
     scope = _choices(20, [ 'visits', 'users' ])
-    start = _datetime()
-    end = _datetime()
+    start = _datetime_blank()
+    end = _datetime_blank()
     description = _form_description()
     expandable = _form_expandable()
     order = _form_order()
-    cats = _many_tree(FormCat, related_name='forms')
+    cats = _many_tree(FormCat, 'forms')
 
-    repitems = _many(Item, related_name='repforms')
-    repitemcats = _many_tree(ItemCat, related_name='repforms')
+    repitems = _many(Item, 'repforms')
+    repitemcats = _many_tree(ItemCat, 'repforms')
 
-    users_usercats = _many_tree(UserCat, related_name='users_forms')
-    users_loccats = _many_tree(LocCat, related_name='users_forms')
+    users_usercats = _many_tree(UserCat, 'users_forms')
+    users_loccats = _many_tree(LocCat, 'users_forms')
 
-    visits_usercats = _many_tree(UserCat, related_name='visits_forms')
-    visits_loccats = _many_tree(LocCat, related_name='visits_forms')
-    visits_itemcats = _many_tree(ItemCat, related_name='visits_forms')
-    visits_forcenodes = _many_tree(ForceNode, related_name='visits_forms')
-    visits_bricks = _many(Brick, related_name='visits_forms')
+    visits_usercats = _many_tree(UserCat, 'visits_forms')
+    visits_loccats = _many_tree(LocCat, 'visits_forms')
+    visits_itemcats = _many_tree(ItemCat, 'visits_forms')
+    visits_forcenodes = _many_tree(ForceNode, 'visits_forms')
+    visits_bricks = _many(Brick, 'visits_forms')
 
     @classmethod
     def get_forms_reps(
@@ -505,18 +577,18 @@ class Form(AbstractModel):
 class FormField(AbstractModel):
     name = _name(unique=False)
     description = _form_description()
-    form = models.ForeignKey(Form, related_name='fields')
+    form = _one(Form, 'fields')
     type = _choices(20, [
         'string',
         'boolean',
         'opts', 'optscat', 'optscat-all', # must start with 'opts', used in lab.js.
     ])
     widget = _choices(20, [ 'def', 'radios', 'textarea' ])
-    default = models.CharField(max_length=200, blank=True)
-    required = models.BooleanField(default=False)
+    default = _char_blank()
+    required = _boolean(False)
     order = _form_order()
-    opts1 = models.TextField(blank=True, help_text=_('Each option in a separate line with format Value:Label'))
-    optscat = models.ForeignKey(GenericCat, blank=True, null=True, related_name='fields')
+    opts1 = _text(help_text=_('Each option in a separate line with format Value:Label'))
+    optscat = _one_blank(GenericCat, 'fields')
 
     class Meta:
         unique_together = ('form', 'name')
@@ -549,3 +621,15 @@ class FormField(AbstractModel):
         if opts is not None and not self.required:
             opts.insert(0, ('', '-'))
         return opts
+
+
+
+class Period(AbstractModel):
+    name = _name()
+    end = _date()
+
+    class Meta:
+        ordering = ('-end',)
+
+    def __unicode__(self):
+        return _str(self, 'Period: %s @ %s', (self.name, self.end))

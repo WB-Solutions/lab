@@ -35,7 +35,8 @@ class GoTree(CheckboxSelectMultiple):
 
 _fields = ('syscodes_',)
 _fields_name = _fields + ('name',)
-_search_name = ('syscode', 'name')
+_search = ('syscode',)
+_search_name = _search  + ('name',)
 
 class AbstractAdmin(admin.ModelAdmin):
     list_display = _fields_name
@@ -70,7 +71,8 @@ class AbstractInlineFormSet(forms.models.BaseInlineFormSet):
         k = 'syscode' # hard-coded for now.
         for form in self.forms:
             d = form.cleaned_data
-            if form.is_valid() and not d['DELETE'] and d.get(k) == '':
+            print 'XXX', d
+            if form.is_valid() and not d.get('DELETE') and d.get(k) == '':
                 d[k] = None
         v = super(AbstractInlineFormSet, self).clean()
         return v
@@ -200,7 +202,7 @@ class ForceVisitAdmin(AbstractAdmin):
     date_hierarchy = 'datetime'
     list_editable = ('status',)
     list_filter = ('datetime', 'status')
-    search_fields = ('syscode', 'observations') # 'rec'
+    search_fields = _search  + ('observations',) # 'rec'
     # radio_fields = dict(status=admin.VERTICAL)
     # raw_id_fields = ('node',)
     # readonly_fields = ('datetime',)
@@ -223,6 +225,9 @@ class LocInline(AbstractStackedInline):
 class UserAdmin(_UserAdmin, AbstractAdmin):
     #readonly_fields = ('private_uuid', 'public_id')
 
+    class Media:
+        js = ('loc.js',)
+
     def _agenda(self, row):
         return utils._agenda('user', row)
     _agenda.allow_tags = True
@@ -244,7 +249,7 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
     )
     list_display = _fields + ('email', 'first_name', 'last_name', 'last_login', 'date_joined', 'cats_', '_agenda')
     list_display_links = _fields + ('email',)
-    search_fields = ('syscode', 'email', 'first_name', 'last_name')
+    search_fields = _search  + ('email', 'first_name', 'last_name')
     ordering = ('email',)
 
     list_filter = ('cats',)
@@ -267,10 +272,37 @@ _admin(Item, ItemAdmin)
 
 
 
-class LocAdmin(AbstractAdmin):
-    list_display = _fields_name + ('street', 'unit', 'phone', 'zip', 'city', 'at', 'user', 'cats_')
+class AddressAdmin(AbstractAdmin):
+    list_display = _fields_name + ('street', 'unit', 'phone', 'zip', 'city')
     list_display_links = _fields_name + ('street',)
+
+_admin(Address, AddressAdmin)
+
+class PlaceAdmin(AbstractTreeAdmin):
+    list_display = _fields_name + ('order', 'address', 'canloc')
+
+_admin(Place, PlaceAdmin)
+
+'''
+https://github.com/charettes/django-admin-enhancer
+https://github.com/charettes/django-admin-enhancer/blob/master/admin_enhancer/tests/admin.py
+    admin_enhancer @ settings.
+    from admin_enhancer import admin as enhanced_admin
+    class LocAdmin(enhanced_admin.EnhancedModelAdminMixin, AbstractAdmin):
+'''
+
+class LocAdmin(AbstractAdmin):
+    list_display = _fields_name + ('address', 'place', 'user', 'cats_')
     list_filter = ('cats',)
+    # show_change_link = True
+
+    '''
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        print 'formfield_for_foreignkey', db_field, kwargs
+        if db_field.name == "address":
+            kwargs["queryset"] = Address.objects.filter(id=0)
+        return super(LocAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+    '''
 
 _admin(Loc, LocAdmin)
 
@@ -320,3 +352,13 @@ class FormFieldAdmin(AbstractAdmin):
     search_fields = _search_name + ('description',)
 
 _admin(FormField, FormFieldAdmin)
+
+
+
+class PeriodAdmin(AbstractAdmin):
+    list_display = _fields_name + ('end',)
+    date_hierarchy = 'end'
+    list_editable = ('end',)
+
+_admin(Period, PeriodAdmin)
+

@@ -84,7 +84,8 @@ class Command(BaseCommand):
                 user = _new(User, first_name=each, last_name=each, email=_email(each))
                 users[each] = user
                 user.cats.add(usercats.pop(0))
-                loc = _new(Loc, name=each, street=each, user=user, city=_at(City, ei), zip=_at(Zip, ei))
+                address = _new(Address, name=each, street=each, city=_at(City, ei), zip=_at(Zip, ei))
+                loc = _new(Loc, name=each, user=user, address=address)
                 loc.cats.add(loccats.pop(0))
 
             nodes = _new_cats(ForceNode, 'Force', isforce=True)

@@ -562,20 +562,77 @@ _api('items', ItemViewSet)
 
 
 
-model = Loc
-search = _search(admin.LocAdmin)
+model = Place
+search = _search(admin.PlaceAdmin)
 
-class LocSerializer(AbstractSerializer):
-    cats_ids = _ids('cats')
-    at_id = _id('at')
-    user_id = _id('user')
+class PlaceSerializer(AbstractTreeSerializer):
+    address_id = _id('address')
+
+    class Meta:
+        model = model
+        fields = _fields_cat + (
+            'address', 'address_id',
+            'canloc',
+        )
+
+class PlaceFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ('address', 'canloc')
+
+class PlaceViewSet(AbstractTreeView):
+    queryset = _all(model)
+    serializer_class = PlaceSerializer
+    search_fields = search
+    filter_class = PlaceFilter
+
+_api('places', PlaceViewSet)
+
+
+model = Address
+search = _search(admin.PlaceAdmin)
+
+class AddressSerializer(AbstractSerializer):
 
     class Meta:
         model = model
         fields = _fields_name + (
             'street', 'unit', 'phone', 'zip', 'city',
+        )
+
+class AddressFilter(AbstractFilter):
+    state = django_filters.Filter(name='city__state')
+    country = django_filters.Filter(name='city__state__country')
+
+    class Meta:
+        model = model
+        fields = search + ('zip', 'city', 'state', 'country')
+
+class AddressViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = AddressSerializer
+    search_fields = search
+    filter_class = AddressFilter
+
+_api('addresses', AddressViewSet)
+
+
+model = Loc
+search = _search(admin.LocAdmin)
+
+class LocSerializer(AbstractSerializer):
+    cats_ids = _ids('cats')
+    address_id = _id('address')
+    place_id = _id('place')
+    user_id = _id('user')
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
             'cats', 'cats_ids',
-            'at', 'at_id',
+            'address', 'address_id',
+            'place', 'place_id',
             'user', 'user_id',
         )
 
@@ -585,7 +642,7 @@ class LocFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('zip', 'city', 'state', 'country', 'at', 'user')
+        fields = search + ('address', 'place', 'user')
 
 class LocViewSet(AbstractView):
     queryset = _all(model)
@@ -676,3 +733,30 @@ class FormFieldViewSet(AbstractView):
     filter_class = FormFieldFilter
 
 _api('formfields', FormFieldViewSet)
+
+
+
+model = Period
+search = _search(admin.PeriodAdmin)
+
+class PeriodSerializer(AbstractSerializer):
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
+            'end',
+        )
+
+class PeriodFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('end',)
+
+class PeriodViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = PeriodSerializer
+    search_fields = search
+    filter_class = PeriodFilter
+
+_api('periods', PeriodViewSet)
