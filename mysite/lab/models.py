@@ -34,6 +34,12 @@ def _text(*args, **kwargs):
 def _boolean(default, *args, **kwargs):
     return models.BooleanField(*args, **_kw_merge(kwargs, default=default))
 
+def _time(*args, **kwargs):
+    return models.TimeField(*args, **kwargs)
+
+def _time_blank(*args, **kwargs):
+    return _time(*args, **_kw_merge(kwargs, blank=True, null=True))
+
 def _date(*args, **kwargs):
     return models.DateField(*args, **kwargs)
 
@@ -414,8 +420,7 @@ class Loc(AbstractModel):
 
     def clean(self):
         # print 'Loc.clean'
-        if not (bool(self.address) ^ bool(self.place)): # xor.
-            raise ValidationError('Must select one of Address or Place.')
+        utils.validate_xor(self.address, self.place, 'Must select ONE of Address or Place.')
 
 
 
@@ -633,3 +638,60 @@ class Period(AbstractModel):
 
     def __unicode__(self):
         return _str(self, 'Period: %s @ %s', (self.name, self.end))
+
+
+
+import datetime
+class TimeConfig(AbstractModel):
+    name = _char_blank()
+    start = _time(choices=(
+        (datetime.time(13,59), 'PENDING'),
+    ))
+    end = _time()
+
+    class Meta:
+        ordering = ('start', 'end')
+
+    def __unicode__(self):
+        return _str(self, '%s: %s - %s', (self.name, self.start, self.end))
+
+
+
+class DayConfig(AbstractModel):
+    name = _char()
+    times = _many(TimeConfig, 'days')
+
+    class Meta:
+        ordering = ('name',)
+
+
+
+class WeekConfig(AbstractModel):
+    name = _char()
+    mon = _one(DayConfig, 'weeks_mon')
+    tue = _one(DayConfig, 'weeks_tue')
+    wed = _one(DayConfig, 'weeks_wed')
+    thu = _one(DayConfig, 'weeks_thu')
+    fri = _one(DayConfig, 'weeks_fri')
+    sat = _one(DayConfig, 'weeks_sat')
+    sun = _one(DayConfig, 'weeks_sun')
+
+    class Meta:
+        ordering = ('name',)
+
+
+
+class VisitBuilder(AbstractModel):
+    name = _char()
+    datetime = _datetime_now(editable=False)
+    period = _one_blank(Period, 'builders')
+    date = _date_blank()
+    node = _one(ForceNode, 'builders')
+    locs = _many(Loc, 'builders')
+
+    class Meta:
+        ordering = ('name',)
+
+    def clean(self):
+        # print 'VisitBuilder.clean'
+        utils.validate_xor(self.period, self.date, 'Must select ONE of Period or Date.')

@@ -273,8 +273,9 @@ _admin(Item, ItemAdmin)
 
 
 class AddressAdmin(AbstractAdmin):
-    list_display = _fields_name + ('street', 'unit', 'phone', 'zip', 'city')
+    list_display = _fields_name + ('street', 'unit', 'phone', 'phone2', 'fax', 'zip', 'city')
     list_display_links = _fields_name + ('street',)
+    search_fields = _search_name + ('street', 'unit')
 
 _admin(Address, AddressAdmin)
 
@@ -361,4 +362,34 @@ class PeriodAdmin(AbstractAdmin):
     list_editable = ('end',)
 
 _admin(Period, PeriodAdmin)
+
+
+
+class TimeConfigAdmin(AbstractAdmin):
+    list_display = _fields_name + ('start', 'end')
+
+_admin(TimeConfig, TimeConfigAdmin)
+
+
+
+class DayConfigAdmin(AbstractAdmin):
+    pass
+
+_admin(DayConfig, DayConfigAdmin)
+
+
+
+class WeekConfigAdmin(AbstractAdmin):
+    list_display = _fields_name + ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
+
+_admin(WeekConfig, WeekConfigAdmin)
+
+
+
+class VisitBuilderAdmin(AbstractAdmin):
+    list_display = _fields_name + ('period', 'date')
+    date_hierarchy = 'datetime'
+    filter_horizontal = ('locs',)
+
+_admin(VisitBuilder, VisitBuilderAdmin)
 

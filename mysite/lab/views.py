@@ -73,6 +73,7 @@ def _data(config=None):
                 loccats = loc.cats.all(),
                 **_node_data(visit.node)
             )
+            addr = loc.address or loc.place.address
             v = dict(
                 datetime = _datetime(visit.datetime),
                 status = visit.status,
@@ -82,7 +83,7 @@ def _data(config=None):
                 user_email = user.email,
                 user_cats = utils.db_names(user.cats),
                 loc_name = loc.name,
-                loc_address = '%s # %s, %s, %s' % (loc.street, loc.unit, loc.city, loc.zip),
+                loc_address = '%s # %s, %s, %s' % (addr.street, addr.unit, addr.city, addr.zip),
                 forms = forms_ids,
                 repforms = repforms_ids,
                 rec = visit.rec_dict(),
@@ -201,6 +202,7 @@ def ajax(request):
             dbvars = dict(
                 # sched = _get_datetime('sched'),
                 status = _get('status'),
+                accompanied = _get('accompanied'),
                 observations = _get('observations'),
                 rec = json.dumps(rec),
             )

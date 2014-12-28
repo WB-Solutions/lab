@@ -66,3 +66,8 @@ def tree_any(n1, n2, ups=True):
 
 def tree_all_downs(cats):
     return set(list_flatten(cats, lambda ecat: tree_downs(ecat)))
+
+def validate_xor(val1, val2, msg):
+    from django.core.exceptions import ValidationError
+    if not (bool(val1) ^ bool(val2)): # xor.
+        raise ValidationError(msg)

@@ -562,6 +562,34 @@ _api('items', ItemViewSet)
 
 
 
+model = Address
+search = _search(admin.PlaceAdmin)
+
+class AddressSerializer(AbstractSerializer):
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
+            'street', 'unit', 'phone', 'phone2', 'fax', 'zip', 'city',
+        )
+
+class AddressFilter(AbstractFilter):
+    state = django_filters.Filter(name='city__state')
+    country = django_filters.Filter(name='city__state__country')
+
+    class Meta:
+        model = model
+        fields = search + ('zip', 'city', 'state', 'country')
+
+class AddressViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = AddressSerializer
+    search_fields = search
+    filter_class = AddressFilter
+
+_api('addresses', AddressViewSet)
+
+
 model = Place
 search = _search(admin.PlaceAdmin)
 
@@ -590,59 +618,29 @@ class PlaceViewSet(AbstractTreeView):
 _api('places', PlaceViewSet)
 
 
-model = Address
-search = _search(admin.PlaceAdmin)
-
-class AddressSerializer(AbstractSerializer):
-
-    class Meta:
-        model = model
-        fields = _fields_name + (
-            'street', 'unit', 'phone', 'zip', 'city',
-        )
-
-class AddressFilter(AbstractFilter):
-    state = django_filters.Filter(name='city__state')
-    country = django_filters.Filter(name='city__state__country')
-
-    class Meta:
-        model = model
-        fields = search + ('zip', 'city', 'state', 'country')
-
-class AddressViewSet(AbstractView):
-    queryset = _all(model)
-    serializer_class = AddressSerializer
-    search_fields = search
-    filter_class = AddressFilter
-
-_api('addresses', AddressViewSet)
-
-
 model = Loc
 search = _search(admin.LocAdmin)
 
 class LocSerializer(AbstractSerializer):
     cats_ids = _ids('cats')
+    user_id = _id('user')
     address_id = _id('address')
     place_id = _id('place')
-    user_id = _id('user')
 
     class Meta:
         model = model
         fields = _fields_name + (
             'cats', 'cats_ids',
+            'user', 'user_id',
             'address', 'address_id',
             'place', 'place_id',
-            'user', 'user_id',
         )
 
 class LocFilter(AbstractFilter):
-    state = django_filters.Filter(name='city__state')
-    country = django_filters.Filter(name='city__state__country')
 
     class Meta:
         model = model
-        fields = search + ('address', 'place', 'user')
+        fields = search + ('user', 'address', 'place')
 
 class LocViewSet(AbstractView):
     queryset = _all(model)
