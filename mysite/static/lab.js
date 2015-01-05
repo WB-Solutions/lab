@@ -360,9 +360,11 @@ $(function(){
 	  id: visit.id,
 	  allDay: false,
 	  start: visit.datetime,
+	  end: visit.end,
 	  title: visit.user_name,
 	  color: _stat('#357ebd', '#4cae4c', '#eea236', '#d43f3a'),
 	}
+	// _log('ev @ _visit_prep', visit, ev)
 	return ev
   }
 

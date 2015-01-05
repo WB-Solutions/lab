@@ -34,11 +34,11 @@ def db_get(model, dbid=None, **kwargs):
     # print 'db_get', model, v
     return v
 
-def db_update(model, **kwargs):
+def db_update(model, save_kwargs=None, **kwargs):
     # print 'utils.db_update', model, kwargs
     for dbk, dbv in kwargs.items():
         setattr(model, dbk, dbv)
-    model.save()
+    model.save(**save_kwargs or dict())
 
 def db_names(rel):
     return ', '.join([ each.name for each in rel.all() ])
@@ -96,3 +96,8 @@ def validate_start_end(start, end, required=True):
             cond = end > start
         if not cond:
             raise ValidationError('End must be %s than Start.' % msg)
+
+def datetime_plus(dt, duration=None):
+    if duration:
+        return dt + datetime.timedelta(hours=duration.hour, minutes=duration.minute)
+    error

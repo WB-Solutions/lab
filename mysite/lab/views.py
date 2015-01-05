@@ -74,8 +74,10 @@ def _data(config=None):
                 **_node_data(visit.node)
             )
             addr = loc.address or loc.place.address
+            dt = visit.datetime
             v = dict(
-                datetime = _datetime(visit.datetime),
+                datetime = _datetime(dt),
+                end = _datetime(utils.datetime_plus(dt, duration=visit.duration)),
                 status = visit.status,
                 accompanied = visit.accompanied,
                 observations = visit.observations,

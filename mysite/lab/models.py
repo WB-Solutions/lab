@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import ugettext as _ # use ugettext_lazy instead?.
@@ -13,6 +13,11 @@ from mptt.models import MPTTModel
 
 import utils
 
+def _time_choice(h, m):
+    t = datetime.time(h, m)
+    return (t, t.strftime('%H:%M'))
+
+time_choices = reduce(lambda x, y: x + [ _time_choice(y, 0), _time_choice(y, 30) ], range(24), [])
 
 class GoTreeM2MField(models.ManyToManyField):
     pass
@@ -46,6 +51,9 @@ def _time(*args, **kwargs):
 
 def _time_blank(*args, **kwargs):
     return _time(*args, **_kw_merge(kwargs, blank=True, null=True))
+
+def _duration(*args, **kwargs):
+    return _time(choices=time_choices[1:7], default=time_choices[2][0])
 
 def _date(*args, **kwargs):
     return models.DateField(*args, **kwargs)
@@ -467,6 +475,7 @@ class ForceVisit(AbstractModel):
     node = _one(ForceNode, 'visits')
     loc = _one(Loc, 'visits')
     datetime = _datetime_now()
+    duration = _duration()
     status = _choices(2, [ ('s', 'Scheduled'), ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
     accompanied = _boolean(False)
     observations = _text()
@@ -676,12 +685,6 @@ class DayConfig(AbstractModel):
 
 
 
-def _time_choice(h, m):
-    t = datetime.time(h, m)
-    return (t, t.strftime('%H:%M'))
-
-time_choices = reduce(lambda x, y: x + [ _time_choice(y, 0), _time_choice(y, 30) ], range(24), [])
-
 class TimeConfig(AbstractModel):
     name = _char_blank()
     day = _one(DayConfig, 'times')
@@ -716,18 +719,14 @@ class WeekConfig(AbstractModel):
 
 
 
-def _every(val, opts):
-    return _int(default=val, choices=[ (e, str(e)) for e in opts ])
-
 class VisitBuilder(AbstractModel):
     datetime = _datetime_now(editable=False)
-    qty = _int(editable=False)
+    qty = _int(editable=False, default=None) # builder already processed (and therefore read-only) if not None.
 
     name = _char()
     node = _one(ForceNode, 'builders')
     week = _one(WeekConfig, 'builders')
-    every_hours = _every(1, [ 0, 1, 2, 3 ])
-    every_minutes = _every(0, [ 0, 15, 30, 45 ])
+    duration = _duration()
 
     period = _one_blank(Period, 'builders')
     start = _date_blank()
@@ -749,51 +748,46 @@ class VisitBuilder(AbstractModel):
         ordering = ('name',)
 
     def clean(self):
-        if self.id: # update.
-            print 'clean as UPDATE, do NOT validate !!'
-            return
-        p = self.period
-        if not self.every_hours and not self.every_minutes:
-            raise ValidationError('Can NOT be zero for both hours & minutes.')
-        utils.validate_xor(p, self.start, 'Must select ONE of Period or Start/End.')
-        utils.validate_start_end(self.start, self.end, required=False)
+        if self.qty is None: # create.
+            utils.validate_xor(self.period, self.start, 'Must select ONE of Period or Start/End.')
+            utils.validate_start_end(self.start, self.end, required=False)
+        else:
+            raise ValidationError('NOT allowed to update.')
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('INVALID delete.')
 
     def save(self, *args, **kwargs):
-        dbid = self.id
-        super(VisitBuilder, self).save(*args, **kwargs)
-        if dbid:
-            print 'save as UPDATE, do NOT generate !!'
-            return
-        dbvars = dict()
-        def _delta(**kw):
-            return datetime.timedelta(**kw)
-        p = self.period
-        if p:
-            p0 = p.prev()
-            datefrom = p0.end + _delta(days=1) if p0 else p.end
-            dateto = p.end
-            dbvars.update(start=datefrom, end=dateto)
-        else:
-            datefrom = self.start
-            dateto = self.end
-        currdate = datefrom
-        qty = 0
-        while currdate <= dateto:
-            print 'DATE @ VisitBuilder', currdate
-            day = getattr(self.week, utils.weekdays[currdate.weekday()])
-            if day:
-                def _datetime(_time): # can't use _delta with simple times.
-                    return datetime.datetime.combine(currdate, _time)
-                for etime in day.times.all():
-                    dt = _datetime(etime.start)
-                    while dt < _datetime(etime.end):
-                        print 'TIME @ VisitBuilder', dt
-                        qty += 1
-                        ForceVisit.objects.create(
-                            node = self.node,
-                            loc = Loc.objects.get(pk=1), # PENDING !!
-                            datetime = dt,
-                        )
-                        dt = dt + _delta(hours=self.every_hours, minutes=self.every_minutes)
-            currdate += _delta(days=1)
-        utils.db_update(self, qty=qty, **dbvars)
+        if self.qty is not None: # update.
+            raise ValidationError('INVALID save.') # must have been previously caught by clean, for both: admin & api.
+        with transaction.atomic():
+            def _delta(**kw):
+                return datetime.timedelta(**kw)
+            p = self.period
+            if p:
+                p0 = p.prev()
+                self.start = p0.end + _delta(days=1) if p0 else p.end
+                self.end = p.end
+            currdate = self.start
+            qty = 0
+            while currdate <= self.end:
+                print 'DATE @ VisitBuilder', currdate
+                day = getattr(self.week, utils.weekdays[currdate.weekday()])
+                if day:
+                    def _datetime(_time): # can't use _delta with simple times.
+                        return datetime.datetime.combine(currdate, _time)
+                    for etime in day.times.all():
+                        dt = _datetime(etime.start)
+                        while dt < _datetime(etime.end):
+                            print 'TIME @ VisitBuilder', dt
+                            qty += 1
+                            ForceVisit.objects.create(
+                                node = self.node,
+                                loc = Loc.objects.get(pk=1), # PENDING !!
+                                datetime = dt,
+                                duration = self.duration,
+                            )
+                            dt = utils.datetime_plus(dt, duration=self.duration)
+                currdate += _delta(days=1)
+            self.qty = qty
+            super(VisitBuilder, self).save(*args, **kwargs)

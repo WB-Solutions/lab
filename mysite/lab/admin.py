@@ -213,7 +213,7 @@ _admin(ForceNode, ForceNodeAdmin)
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = _fields + ('datetime', 'status', 'accompanied', 'node', 'loc') # 'observations', 'rec'
+    list_display = _fields + ('datetime', 'duration', 'status', 'accompanied', 'node', 'loc') # 'observations', 'rec'
     list_display_links = _fields + ('datetime',)
     date_hierarchy = 'datetime'
     list_editable = ('status',)
@@ -412,17 +412,13 @@ _admin(WeekConfig, WeekConfigAdmin)
 _geos = ('regions', 'cities', 'states', 'countries', 'zips', 'bricks')
 
 class VisitBuilderAdmin(AbstractAdmin):
-    def _every(self, row):
-        return '%s:%s' % (row.every_hours, row.every_minutes or '00')
-    # _every.allow_tags = True
-
-    list_display = _fields_name + ('node', 'week', 'period', 'start', 'end', '_every', 'datetime', 'qty')
+    list_display = _fields_name + ('node', 'week', 'period', 'start', 'end', 'duration', 'datetime', 'qty')
     # date_hierarchy = 'datetime'
     filter_horizontal = _geos
     list_filter = ('period',)
 
     fieldsets = (
-        (None, dict(fields=('syscode', 'name', 'node', 'week', 'every_hours', 'every_minutes'))),
+        (None, dict(fields=('syscode', 'name', 'node', 'week', 'duration'))),
         # ('Generated', dict(fields=('datetime', 'qty'))),
         ('Period', dict(fields=('period', 'start', 'end'))),
         ('Users', dict(fields=('usercats', 'loccats') + _geos))

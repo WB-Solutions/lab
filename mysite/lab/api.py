@@ -505,7 +505,7 @@ class ForceVisitSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields + (
-            'datetime', 'status', 'accompanied',
+            'datetime', 'duration', 'status', 'accompanied',
             'node', 'node_id',
             'loc', 'loc_id',
             'observations', 'rec',
@@ -900,7 +900,8 @@ class VisitBuilderSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields_name + (
-            'every_hours', 'every_minutes', 'start', 'end',
+            'duration', 'start', 'end',
+            'datetime', 'qty', # editable=False.
 
             'node', 'node_id',
             'week', 'week_id',
@@ -923,12 +924,15 @@ class VisitBuilderFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('node', 'week', 'every_hours', 'every_minutes', 'period', 'start', 'end')
+        fields = search + ('node', 'week', 'duration', 'period', 'start', 'end')
 
 class VisitBuilderViewSet(AbstractView):
     queryset = _all(model)
     serializer_class = VisitBuilderSerializer
     search_fields = search
     filter_class = VisitBuilderFilter
+
+    def destroy(self, request, pk=None):
+        return Response('Delete NOT Allowed', status=405)
 
 _api('visitbuilders', VisitBuilderViewSet)
