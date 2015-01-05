@@ -2,6 +2,7 @@ from django.contrib import admin
 from django import forms
 from django.utils.html import format_html
 from django.utils.translation import ugettext as _
+from django.contrib.admin.util import flatten_fieldsets
 
 from suit.admin import SortableModelAdmin
 from mptt.admin import MPTTModelAdmin
@@ -116,9 +117,16 @@ _admin(State, StateAdmin)
 
 
 
+# Shared.
+class RegionInline(AbstractTabularInline):
+    model = Region
+
+
+
 class CityAdmin(AbstractAdmin):
     list_display = _fields_name + ('state',)
     list_filter = ('state', 'state__country')
+    inlines = (RegionInline,)
 
 _admin(City, CityAdmin)
 
@@ -136,8 +144,16 @@ _admin(Brick, BrickAdmin)
 
 class ZipAdmin(AbstractAdmin):
     list_display = _fields_name + ('brick',)
+    inlines = (RegionInline,)
 
 _admin(Zip, ZipAdmin)
+
+
+
+class RegionAdmin(AbstractAdmin):
+    list_display = _fields_name + ('city', 'zip')
+
+_admin(Region, RegionAdmin)
 
 
 
@@ -225,28 +241,31 @@ class LocInline(AbstractStackedInline):
 class UserAdmin(_UserAdmin, AbstractAdmin):
     #readonly_fields = ('private_uuid', 'public_id')
 
+    '''
     class Media:
         js = ('loc.js',)
+    '''
 
     def _agenda(self, row):
         return utils._agenda('user', row)
     _agenda.allow_tags = True
 
     fieldsets = (
-        (None, {'fields': ('email', 'first_name', 'last_name', 'syscode')}),
-        # (_('Personal info'), {'fields': ('first_name', 'last_name', 'display_name')}),
-        (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser')}), # 'groups', 'user_permissions'
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
-        (_('Cats'), {'fields': ('cats',)}),
-        #(_('Ids'), {'fields': ('private_uuid', 'public_id')}),
+        (None, dict(fields=('email', 'first_name', 'last_name', 'syscode'))),
+        # (_('Personal info'), dict(fields=('first_name', 'last_name', 'display_name'))),
+        (_('Permissions'), dict(fields=('is_active', 'is_staff', 'is_superuser'))), # 'groups', 'user_permissions'
+        (_('Important dates'), dict(fields=('last_login', 'date_joined'))),
+        (_('Cats'), dict(fields=('cats',))),
+        #(_('Ids'), dict(fields=('private_uuid', 'public_id'))),
     )
 
     add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'password1', 'password2', 'cats', 'syscode')}
-        ),
+        (None, dict(
+            classes = ('wide',),
+            fields = ('email', 'first_name', 'last_name', 'password1', 'password2', 'cats', 'syscode'),
+        )),
     )
+
     list_display = _fields + ('email', 'first_name', 'last_name', 'last_login', 'date_joined', 'cats_', '_agenda')
     list_display_links = _fields + ('email',)
     search_fields = _search  + ('email', 'first_name', 'last_name')
@@ -273,9 +292,9 @@ _admin(Item, ItemAdmin)
 
 
 class AddressAdmin(AbstractAdmin):
-    list_display = _fields_name + ('street', 'unit', 'phone', 'phone2', 'fax', 'zip', 'city')
-    list_display_links = _fields_name + ('street',)
-    search_fields = _search_name + ('street', 'unit')
+    list_display = _fields + ('street', 'unit', 'phone', 'phone2', 'fax', 'region')
+    list_display_links = _fields + ('street',)
+    search_fields = _search + ('street', 'unit')
 
 _admin(Address, AddressAdmin)
 
@@ -366,30 +385,56 @@ _admin(Period, PeriodAdmin)
 
 
 class TimeConfigAdmin(AbstractAdmin):
-    list_display = _fields_name + ('start', 'end')
+    list_display = _fields_name + ('start', 'end', 'day')
+    list_filter = ('day',)
 
 _admin(TimeConfig, TimeConfigAdmin)
 
 
 
+class TimeInline(AbstractStackedInline):
+    model = TimeConfig
+
 class DayConfigAdmin(AbstractAdmin):
-    pass
+    inlines = (TimeInline,)
 
 _admin(DayConfig, DayConfigAdmin)
 
 
 
 class WeekConfigAdmin(AbstractAdmin):
-    list_display = _fields_name + ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
+    list_display = _fields_name + utils.weekdays
 
 _admin(WeekConfig, WeekConfigAdmin)
 
 
 
+_geos = ('regions', 'cities', 'states', 'countries', 'zips', 'bricks')
+
 class VisitBuilderAdmin(AbstractAdmin):
-    list_display = _fields_name + ('period', 'date')
-    date_hierarchy = 'datetime'
-    filter_horizontal = ('locs',)
+    def _every(self, row):
+        return '%s:%s' % (row.every_hours, row.every_minutes or '00')
+    # _every.allow_tags = True
+
+    list_display = _fields_name + ('node', 'week', 'period', 'start', 'end', '_every', 'datetime', 'qty')
+    # date_hierarchy = 'datetime'
+    filter_horizontal = _geos
+    list_filter = ('period',)
+
+    fieldsets = (
+        (None, dict(fields=('syscode', 'name', 'node', 'week', 'every_hours', 'every_minutes'))),
+        # ('Generated', dict(fields=('datetime', 'qty'))),
+        ('Period', dict(fields=('period', 'start', 'end'))),
+        ('Users', dict(fields=('usercats', 'loccats') + _geos))
+    )
+
+    def get_readonly_fields(self, request, obj=None):
+        # print 'get_readonly_fields', obj
+        return flatten_fieldsets(self.declared_fieldsets) if obj else []
+
+    def has_delete_permission(self, request, obj=None):
+        # print 'has_delete_permission', obj
+        return False
 
 _admin(VisitBuilder, VisitBuilderAdmin)
 

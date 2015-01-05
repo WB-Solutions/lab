@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from lab.models import *
+import datetime
 # from lab import utils
 
 # https://docs.djangoproject.com/en/1.6/howto/custom-management-commands/
@@ -29,7 +30,9 @@ class Command(BaseCommand):
             def _new(model, **kwargs):
                 print '_new', model, kwargs
                 # kwargs.setdefault('syscode', None)
-                return model.objects.create(**kwargs)
+                inst = model.objects.create(**kwargs)
+                # print '_new inst', inst
+                return inst
 
             for ecountry, states in [
                 ('Mexico', [
@@ -38,7 +41,7 @@ class Command(BaseCommand):
                     ('Jalisco', [ 'Guadalajara' ]),
                 ]),
                 ('USA', [
-                    ('Texas', [ 'Houston', 'Dallas', 'San Antonio' ]),
+                    ('Texas', [ 'Houston', 'Dallas', 'Austin' ]),
                 ]),
             ]:
                 country = _new(Country, name=ecountry)
@@ -46,14 +49,9 @@ class Command(BaseCommand):
                     state = _new(State, country=country, name=estate)
                     for ecity in cities:
                         city = _new(City, state=state, name=ecity)
-
-            for ebrick, zips in [
-                ('Brick Tampico', [ '89000', '89440' ]),
-                ('Brick Monterrey', [ 'mont01', 'mont02', 'mont03' ]),
-            ]:
-                brick = _new(Brick, name=ebrick)
-                for ezip in zips:
-                    zip = _new(Zip, brick=brick, name=ezip)
+                        brick = _new(Brick, name='%s-brick' % ecity)
+                        zip = _new(Zip, brick=brick, name='%s-zip' % ecity)
+                        region = _new(Region, city=city, zip=zip, name='%s-region' % ecity)
 
             def _new_cats(model, pre, isforce=False):
                 def _cat(name, parent, **kw):
@@ -84,7 +82,7 @@ class Command(BaseCommand):
                 user = _new(User, first_name=each, last_name=each, email=_email(each))
                 users[each] = user
                 user.cats.add(usercats.pop(0))
-                address = _new(Address, name=each, street=each, city=_at(City, ei), zip=_at(Zip, ei))
+                address = _new(Address, street=each, region=_at(Region, ei)) # city=_at(City, ei), zip=_at(Zip, ei)
                 loc = _new(Loc, name=each, user=user, address=address)
                 loc.cats.add(loccats.pop(0))
 
@@ -104,6 +102,20 @@ class Command(BaseCommand):
                     ename = 'Field %s %s' % (each, ei)
                     field = _new(FormField, form=form, name=ename, description='Description @ %s' % ename, default=ename, required=True)
             form.repitems.add(_first(Item), _last(Item)) # last form.
+
+            def _daytime(vday, vfrom, vto): # tuples.
+                def _time(vtuple):
+                    return datetime.time(*vtuple)
+                _new(TimeConfig, day=vday, start=_time(vfrom), end=_time(vto))
+
+            day = _new(DayConfig, name='Full Day')
+            _daytime(day, (9,0), (15,0))
+            _daytime(day, (17,0), (19,0))
+
+            halfday = _new(DayConfig, name='Half Day')
+            _daytime(halfday, (10,30), (14,30))
+
+            week = _new(WeekConfig, name='Work Week', mon=day, tue=day, wed=day, thu=day, fri=day, sat=halfday, sun=None)
 
         err = None
         if User.objects.exists():

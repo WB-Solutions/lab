@@ -5,6 +5,7 @@ from django.utils.translation import ugettext as _ # use ugettext_lazy instead?.
 from django.utils import timezone
 
 from decimal import Decimal
+import datetime
 import json
 
 from mptt.fields import TreeForeignKey
@@ -33,6 +34,12 @@ def _text(*args, **kwargs):
 
 def _boolean(default, *args, **kwargs):
     return models.BooleanField(*args, **_kw_merge(kwargs, default=default))
+
+def _int(*args, **kwargs):
+    return models.IntegerField(*args, **_kw_merge(kwargs, default=0))
+
+def _int_blank(*args, **kwargs):
+    return _int(*args, **_kw_merge(kwargs, blank=True, null=True))
 
 def _time(*args, **kwargs):
     return models.TimeField(*args, **kwargs)
@@ -98,7 +105,7 @@ def _form_expandable():
     return _boolean(False)
 
 def _form_order():
-    return models.IntegerField(blank=True, null=True, default=0)
+    return _int_blank()
 
 def _form_description():
     return _text()
@@ -208,6 +215,19 @@ class Zip(AbstractModel):
 
     def __unicode__(self):
         return _str(self, '%s @ %s', (self.name, self.brick))
+
+
+
+class Region(AbstractModel):
+    name = _name()
+    city = _one(City, 'regions')
+    zip = _one(Zip, 'regions')
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s @ %s @ %s', (self.name, self.city, self.zip))
 
 
 
@@ -371,28 +391,29 @@ class Item(AbstractModel):
 
 
 class Address(AbstractModel):
-    name = _char_blank()
+    # name = _char_blank()
     street = _char()
     unit = _char_blank()
     phone = _char_blank()
     phone2 = _char_blank()
     fax = _char_blank()
-    zip = _one(Zip, 'locs')
-    city = _one(City, 'locs')
     # canplace = _boolean(False)
+
+    region= _one(Region, 'addresses')
+    # zip = _one(Zip, 'addresses')
+    # city = _one(City, 'addresses')
 
     class Meta:
         ordering = ('street',)
 
     def __unicode__(self):
-        return _str(self, '%s, %s # %s, %s, %s', (self.name, self.street, self.unit, self.zip, self.city))
+        return _str(self, '%s # %s, %s', (self.street, self.unit, self.region))
 
 class Place(AbstractTree):
     address = _one(Address, 'places')
     canloc = _boolean(True)
 
     def clean(self):
-        # print 'Place.clean'
         for each in [ self.parent, self.children.first() ]:
             if each and each is not self.address:
                 raise ValidationError('Invalid Address based on Parent / Children.')
@@ -413,13 +434,11 @@ class Loc(AbstractModel):
         return _str(self, '%s, %s @ %s', (self.user, self.name, self.address or self.place))
 
     def delete(self):
-        # print 'Loc.delete'
         if self.address:
             self.address.delete()
         super(Loc, self).delete()
 
     def clean(self):
-        # print 'Loc.clean'
         utils.validate_xor(self.address, self.place, 'Must select ONE of Address or Place.')
 
 
@@ -459,6 +478,11 @@ class ForceVisit(AbstractModel):
     def __unicode__(self):
         return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.node, self.loc))
 
+    def clean(self):
+        if self.rec:
+            try: json.loads(self.rec)
+            except: raise ValidationError('Invalid JSON @ rec')
+
     def rec_dict(self):
         return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()
 
@@ -485,6 +509,9 @@ class Form(AbstractModel):
     visits_itemcats = _many_tree(ItemCat, 'visits_forms')
     visits_forcenodes = _many_tree(ForceNode, 'visits_forms')
     visits_bricks = _many(Brick, 'visits_forms')
+
+    class Meta:
+        ordering = ('name',)
 
     @classmethod
     def get_forms_reps(
@@ -544,9 +571,6 @@ class Form(AbstractModel):
                 erepforms[:] = utils.db_ids(erepforms)
         print 'get_forms_reps', user or visit, forms, repforms
         return forms, repforms
-
-    class Meta:
-        ordering = ('name',)
 
     def _h_all(self):
         rels = []
@@ -639,15 +663,30 @@ class Period(AbstractModel):
     def __unicode__(self):
         return _str(self, 'Period: %s @ %s', (self.name, self.end))
 
+    def prev(self):
+        return Period.objects.order_by('end').filter(end__lt=self.end).first()
 
 
-import datetime
+
+class DayConfig(AbstractModel):
+    name = _char()
+
+    class Meta:
+        ordering = ('name',)
+
+
+
+def _time_choice(h, m):
+    t = datetime.time(h, m)
+    return (t, t.strftime('%H:%M'))
+
+time_choices = reduce(lambda x, y: x + [ _time_choice(y, 0), _time_choice(y, 30) ], range(24), [])
+
 class TimeConfig(AbstractModel):
     name = _char_blank()
-    start = _time(choices=(
-        (datetime.time(13,59), 'PENDING'),
-    ))
-    end = _time()
+    day = _one(DayConfig, 'times')
+    start = _time(choices=time_choices)
+    end = _time(choices=time_choices)
 
     class Meta:
         ordering = ('start', 'end')
@@ -655,43 +694,106 @@ class TimeConfig(AbstractModel):
     def __unicode__(self):
         return _str(self, '%s: %s - %s', (self.name, self.start, self.end))
 
-
-
-class DayConfig(AbstractModel):
-    name = _char()
-    times = _many(TimeConfig, 'days')
-
-    class Meta:
-        ordering = ('name',)
+    def clean(self):
+        utils.validate_start_end(self.start, self.end)
 
 
 
 class WeekConfig(AbstractModel):
     name = _char()
-    mon = _one(DayConfig, 'weeks_mon')
-    tue = _one(DayConfig, 'weeks_tue')
-    wed = _one(DayConfig, 'weeks_wed')
-    thu = _one(DayConfig, 'weeks_thu')
-    fri = _one(DayConfig, 'weeks_fri')
-    sat = _one(DayConfig, 'weeks_sat')
-    sun = _one(DayConfig, 'weeks_sun')
+
+    # @ utils.weekdays.
+    mon = _one_blank(DayConfig, 'weeks_mon')
+    tue = _one_blank(DayConfig, 'weeks_tue')
+    wed = _one_blank(DayConfig, 'weeks_wed')
+    thu = _one_blank(DayConfig, 'weeks_thu')
+    fri = _one_blank(DayConfig, 'weeks_fri')
+    sat = _one_blank(DayConfig, 'weeks_sat')
+    sun = _one_blank(DayConfig, 'weeks_sun')
 
     class Meta:
         ordering = ('name',)
 
 
 
+def _every(val, opts):
+    return _int(default=val, choices=[ (e, str(e)) for e in opts ])
+
 class VisitBuilder(AbstractModel):
-    name = _char()
     datetime = _datetime_now(editable=False)
-    period = _one_blank(Period, 'builders')
-    date = _date_blank()
+    qty = _int(editable=False)
+
+    name = _char()
     node = _one(ForceNode, 'builders')
-    locs = _many(Loc, 'builders')
+    week = _one(WeekConfig, 'builders')
+    every_hours = _every(1, [ 0, 1, 2, 3 ])
+    every_minutes = _every(0, [ 0, 15, 30, 45 ])
+
+    period = _one_blank(Period, 'builders')
+    start = _date_blank()
+    end = _date_blank()
+
+    usercats = _many_tree(UserCat, 'builders')
+    loccats = _many_tree(LocCat, 'builders')
+    # locs = _many(Loc, 'builders')
+
+    regions = _many(Region, 'builders')
+    cities = _many(City, 'builders')
+    states = _many(State, 'builders')
+    countries = _many(Country, 'builders')
+
+    zips = _many(Zip, 'builders')
+    bricks = _many(Brick, 'builders')
 
     class Meta:
         ordering = ('name',)
 
     def clean(self):
-        # print 'VisitBuilder.clean'
-        utils.validate_xor(self.period, self.date, 'Must select ONE of Period or Date.')
+        if self.id: # update.
+            print 'clean as UPDATE, do NOT validate !!'
+            return
+        p = self.period
+        if not self.every_hours and not self.every_minutes:
+            raise ValidationError('Can NOT be zero for both hours & minutes.')
+        utils.validate_xor(p, self.start, 'Must select ONE of Period or Start/End.')
+        utils.validate_start_end(self.start, self.end, required=False)
+
+    def save(self, *args, **kwargs):
+        dbid = self.id
+        super(VisitBuilder, self).save(*args, **kwargs)
+        if dbid:
+            print 'save as UPDATE, do NOT generate !!'
+            return
+        dbvars = dict()
+        def _delta(**kw):
+            return datetime.timedelta(**kw)
+        p = self.period
+        if p:
+            p0 = p.prev()
+            datefrom = p0.end + _delta(days=1) if p0 else p.end
+            dateto = p.end
+            dbvars.update(start=datefrom, end=dateto)
+        else:
+            datefrom = self.start
+            dateto = self.end
+        currdate = datefrom
+        qty = 0
+        while currdate <= dateto:
+            print 'DATE @ VisitBuilder', currdate
+            day = getattr(self.week, utils.weekdays[currdate.weekday()])
+            if day:
+                def _datetime(_time): # can't use _delta with simple times.
+                    return datetime.datetime.combine(currdate, _time)
+                for etime in day.times.all():
+                    dt = _datetime(etime.start)
+                    while dt < _datetime(etime.end):
+                        print 'TIME @ VisitBuilder', dt
+                        qty += 1
+                        ForceVisit.objects.create(
+                            node = self.node,
+                            loc = Loc.objects.get(pk=1), # PENDING !!
+                            datetime = dt,
+                        )
+                        dt = dt + _delta(hours=self.every_hours, minutes=self.every_minutes)
+            currdate += _delta(days=1)
+        utils.db_update(self, qty=qty, **dbvars)

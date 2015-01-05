@@ -83,7 +83,7 @@ def _data(config=None):
                 user_email = user.email,
                 user_cats = utils.db_names(user.cats),
                 loc_name = loc.name,
-                loc_address = '%s # %s, %s, %s' % (addr.street, addr.unit, addr.city, addr.zip),
+                loc_address = '%s # %s, %s' % (addr.street, addr.unit, addr.region),
                 forms = forms_ids,
                 repforms = repforms_ids,
                 rec = visit.rec_dict(),
@@ -189,11 +189,6 @@ def ajax(request):
     errors = []
     try:
         with transaction.atomic():
-            def _update(_obj, _dbvars):
-                # print '_update', _obj, _dbvars
-                for dbk, dbv in _dbvars.items():
-                    setattr(_obj, dbk, dbv)
-                _obj.save()
             rec = visit.rec_dict()
             rec2 = pvars.get('rec')
             if rec2: # could be None.
@@ -207,7 +202,7 @@ def ajax(request):
                 rec = json.dumps(rec),
             )
             # print 'dbvars', dbvars
-            _update(visit, dbvars)
+            utils.db_update(visit, dbvars)
     except IntegrityError as e:
         errors.append('Not unique, invalid.')
         # raise(e)

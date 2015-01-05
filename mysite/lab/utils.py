@@ -1,3 +1,7 @@
+from django.core.exceptions import ValidationError
+import datetime
+
+weekdays = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
 
 def list_flatten(els, fn):
     return reduce(list.__add__, [ list(fn(each)) for each in els ]) if els else []
@@ -29,6 +33,12 @@ def db_get(model, dbid=None, **kwargs):
         v = None
     # print 'db_get', model, v
     return v
+
+def db_update(model, **kwargs):
+    # print 'utils.db_update', model, kwargs
+    for dbk, dbv in kwargs.items():
+        setattr(model, dbk, dbv)
+    model.save()
 
 def db_names(rel):
     return ', '.join([ each.name for each in rel.all() ])
@@ -67,7 +77,22 @@ def tree_any(n1, n2, ups=True):
 def tree_all_downs(cats):
     return set(list_flatten(cats, lambda ecat: tree_downs(ecat)))
 
-def validate_xor(val1, val2, msg):
-    from django.core.exceptions import ValidationError
-    if not (bool(val1) ^ bool(val2)): # xor.
+def validate_xor(v1, v2, msg):
+    def _val(v): # pending to support v as list.
+        return bool(v)
+    if not (_val(v1) ^ _val(v2)): # xor.
         raise ValidationError(msg)
+
+# datetime, date, time.
+def validate_start_end(start, end, required=True):
+    if required and not (start and end):
+        raise ValidationError('Start and End are required.')
+    if start and end:
+        if isinstance(start, datetime.date):
+            msg = 'greater or equal'
+            cond = end >= start
+        else:
+            msg = 'greater'
+            cond = end > start
+        if not cond:
+            raise ValidationError('End must be %s than Start.' % msg)

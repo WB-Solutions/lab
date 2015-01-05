@@ -300,6 +300,39 @@ _api('zips', ZipViewSet)
 
 
 
+model = Region
+search = _search(admin.RegionAdmin)
+
+class RegionSerializer(AbstractSerializer):
+    city_id = _id('city')
+    zip_id = _id('zip')
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
+            'city', 'city_id',
+            'zip', 'zip_id',
+        )
+
+class RegionFilter(AbstractFilter):
+    state = django_filters.Filter(name='city__state')
+    country = django_filters.Filter(name='city__state__country')
+    brick = django_filters.Filter(name='zip__brick')
+
+    class Meta:
+        model = model
+        fields = search + ('city', 'state', 'country', 'zip', 'brick')
+
+class RegionViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = RegionSerializer
+    search_fields = search
+    filter_class = RegionFilter
+
+_api('regions', RegionViewSet)
+
+
+
 model = GenericCat
 search = _search(admin.GenericCatAdmin)
 
@@ -563,23 +596,26 @@ _api('items', ItemViewSet)
 
 
 model = Address
-search = _search(admin.PlaceAdmin)
+search = _search(admin.AddressAdmin)
 
 class AddressSerializer(AbstractSerializer):
 
     class Meta:
         model = model
-        fields = _fields_name + (
-            'street', 'unit', 'phone', 'phone2', 'fax', 'zip', 'city',
+        fields = _fields + (
+            'street', 'unit', 'phone', 'phone2', 'fax', 'region',
         )
 
 class AddressFilter(AbstractFilter):
-    state = django_filters.Filter(name='city__state')
-    country = django_filters.Filter(name='city__state__country')
+    city = django_filters.Filter(name='region__city')
+    state = django_filters.Filter(name='region__city__state')
+    country = django_filters.Filter(name='region__city__state__country')
+    zip = django_filters.Filter(name='region__zip')
+    brick = django_filters.Filter(name='region__zip__brick')
 
     class Meta:
         model = model
-        fields = search + ('zip', 'city', 'state', 'country')
+        fields = search + ('city', 'state', 'country', 'zip', 'brick')
 
 class AddressViewSet(AbstractView):
     queryset = _all(model)
@@ -758,3 +794,141 @@ class PeriodViewSet(AbstractView):
     filter_class = PeriodFilter
 
 _api('periods', PeriodViewSet)
+
+
+
+model = WeekConfig
+search = _search(admin.WeekConfigAdmin)
+
+class WeekConfigSerializer(AbstractSerializer):
+
+    class Meta:
+        model = model
+        fields = _fields_name + utils.weekdays + (
+        )
+
+class WeekConfigFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ()
+
+class WeekConfigViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = WeekConfigSerializer
+    search_fields = search
+    filter_class = WeekConfigFilter
+
+_api('weekconfigs', WeekConfigViewSet)
+
+
+
+model = DayConfig
+search = _search(admin.DayConfigAdmin)
+
+class DayConfigSerializer(AbstractSerializer):
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
+        )
+
+class DayConfigFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ()
+
+class DayConfigViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = DayConfigSerializer
+    search_fields = search
+    filter_class = DayConfigFilter
+
+_api('dayconfigs', DayConfigViewSet)
+
+
+
+model = TimeConfig
+search = _search(admin.TimeConfigAdmin)
+
+class TimeConfigSerializer(AbstractSerializer):
+    day_id = _id('day')
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
+            'start', 'end',
+            'day', 'day_id',
+        )
+
+class TimeConfigFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('day', 'start', 'end')
+
+class TimeConfigViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = TimeConfigSerializer
+    search_fields = search
+    filter_class = TimeConfigFilter
+
+_api('timeconfigs', TimeConfigViewSet)
+
+
+
+model = VisitBuilder
+search = _search(admin.VisitBuilderAdmin)
+
+class VisitBuilderSerializer(AbstractSerializer):
+    node_id = _id('node')
+    week_id = _id('week')
+    period_id = _id('period')
+
+    usercats_ids = _ids('usercats')
+    loccats_ids = _ids('loccats')
+
+    regions_ids = _ids('regions')
+    cities_ids = _ids('cities')
+    states_ids = _ids('states')
+    countries_ids = _ids('countries')
+
+    zips_ids = _ids('zips')
+    bricks_ids = _ids('bricks')
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
+            'every_hours', 'every_minutes', 'start', 'end',
+
+            'node', 'node_id',
+            'week', 'week_id',
+            'period', 'period_id',
+
+            'usercats', 'usercats_ids',
+            'loccats', 'loccats_ids',
+
+            'regions', 'regions_ids',
+            'cities', 'cities_ids',
+            'states', 'states_ids',
+            'countries', 'countries_ids',
+
+            'zips', 'zips_ids',
+            'bricks', 'bricks_ids',
+
+        )
+
+class VisitBuilderFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('node', 'week', 'every_hours', 'every_minutes', 'period', 'start', 'end')
+
+class VisitBuilderViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = VisitBuilderSerializer
+    search_fields = search
+    filter_class = VisitBuilderFilter
+
+_api('visitbuilders', VisitBuilderViewSet)
