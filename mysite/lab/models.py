@@ -164,6 +164,13 @@ class AbstractTree(MPTTModel, AbstractModel):
     def __unicode__(self):
         return _str(self, '%s %s', (self.str_level(), self.name))
 
+    els_field = 'name'
+
+    @classmethod
+    def els_get(cls, cats):
+        elsmodel = globals().get(cls.els_model)
+        return elsmodel.objects.filter(cats__in=cats).order_by(cls.els_field).all()
+
     def str_level(self, diff=0):
         return ' -- ' * ((self.level or 0) - diff)
 
@@ -245,25 +252,23 @@ class GenericCat(AbstractTree):
 
 
 class UserCat(AbstractTree):
-    pass
+    els_model = 'User'
+    els_field = 'email'
 
 
 
 class ItemCat(AbstractTree):
-
-    @classmethod
-    def get_items(cls, cats):
-        return Item.objects.filter(cats__in=cats).order_by('name').all()
+    els_model = 'Item'
 
 
 
 class LocCat(AbstractTree):
-    pass
+    els_model = 'Loc'
 
 
 
 class FormCat(AbstractTree):
-    pass
+    els_model = 'Form'
 
 
 
@@ -537,7 +542,7 @@ class Form(AbstractModel):
         def _doreps(form):
             reps1 = form.repitems.all()
             repcats = utils.tree_all_downs(form.repitemcats.all())
-            reps2 = ItemCat.get_items(repcats)
+            reps2 = ItemCat.els_get(repcats)
             reps = (reps1 | reps2).distinct()
             # print '_doreps > reps', reps
             # user will get ALL items (reps) without any filtering, as opposed to visit.
@@ -720,8 +725,9 @@ class WeekConfig(AbstractModel):
 
 
 class VisitBuilder(AbstractModel):
-    datetime = _datetime_now(editable=False)
-    qty = _int(editable=False, default=None) # builder already processed (and therefore read-only) if not None.
+    qty = _int_blank(default=None, editable=False)
+    generated = _datetime_blank(editable=False)
+    generate = _boolean(False)
 
     name = _char()
     node = _one(ForceNode, 'builders')
@@ -747,47 +753,67 @@ class VisitBuilder(AbstractModel):
     class Meta:
         ordering = ('name',)
 
-    def clean(self):
-        if self.qty is None: # create.
-            utils.validate_xor(self.period, self.start, 'Must select ONE of Period or Start/End.')
-            utils.validate_start_end(self.start, self.end, required=False)
-        else:
-            raise ValidationError('NOT allowed to update.')
-
     def delete(self, *args, **kwargs):
-        raise ValidationError('INVALID delete.')
+        if self.generated:
+            raise ValidationError('INVALID delete.')
+
+    def clean(self):
+        if self.generated:
+            raise ValidationError('NOT allowed to update, already generated.')
+        utils.validate_xor(self.period, self.start, 'Must select ONE of Period or Start/End.')
+        utils.validate_start_end(self.start, self.end, required=False)
 
     def save(self, *args, **kwargs):
-        if self.qty is not None: # update.
+        if self.generated:
             raise ValidationError('INVALID save.') # must have been previously caught by clean, for both: admin & api.
+        if self.generate and self.qty is not None: # in progress.
+            self.generated = datetime.datetime.now()
+        super(VisitBuilder, self).save(*args, **kwargs)
+
+    def _generate_check(self):
+        if self.generate:
+            self._generate()
+
+    def _generate(self):
+        print '_generate', self
+
+        '''
+        users = UserCat.els_get(self.usercats.all())
+        locs = LocCat.els_get(self.loccats.all())
+        self.regions.all()
+        self.cities.all()
+        self.states.all()
+        self.countries.all()
+        self.zips.all()
+        self.bricks.all()
+        '''
+
         with transaction.atomic():
-            def _delta(**kw):
-                return datetime.timedelta(**kw)
             p = self.period
             if p:
                 p0 = p.prev()
-                self.start = p0.end + _delta(days=1) if p0 else p.end
+                self.start = p0.end + datetime.timedelta(days=1) if p0 else p.end
                 self.end = p.end
             currdate = self.start
             qty = 0
             while currdate <= self.end:
-                print 'DATE @ VisitBuilder', currdate
+                print '_generate > DATE @ VisitBuilder', currdate
                 day = getattr(self.week, utils.weekdays[currdate.weekday()])
                 if day:
-                    def _datetime(_time): # can't use _delta with simple times.
+                    def _datetime(_time): # can't use timedelta with simple times.
                         return datetime.datetime.combine(currdate, _time)
                     for etime in day.times.all():
                         dt = _datetime(etime.start)
                         while dt < _datetime(etime.end):
-                            print 'TIME @ VisitBuilder', dt
+                            print '_generate > TIME @ VisitBuilder', dt
                             qty += 1
                             ForceVisit.objects.create(
                                 node = self.node,
-                                loc = Loc.objects.get(pk=1), # PENDING !!
+                                loc = Loc.objects.first(), # PENDING !!
                                 datetime = dt,
                                 duration = self.duration,
                             )
                             dt = utils.datetime_plus(dt, duration=self.duration)
-                currdate += _delta(days=1)
+                currdate += datetime.timedelta(days=1)
             self.qty = qty
-            super(VisitBuilder, self).save(*args, **kwargs)
+            self.save()

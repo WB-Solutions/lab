@@ -412,25 +412,29 @@ _admin(WeekConfig, WeekConfigAdmin)
 _geos = ('regions', 'cities', 'states', 'countries', 'zips', 'bricks')
 
 class VisitBuilderAdmin(AbstractAdmin):
-    list_display = _fields_name + ('node', 'week', 'period', 'start', 'end', 'duration', 'datetime', 'qty')
-    # date_hierarchy = 'datetime'
+    list_display = _fields_name + ('node', 'week', 'period', 'start', 'end', 'duration', 'generated', 'qty')
     filter_horizontal = _geos
     list_filter = ('period',)
 
     fieldsets = (
         (None, dict(fields=('syscode', 'name', 'node', 'week', 'duration'))),
-        # ('Generated', dict(fields=('datetime', 'qty'))),
+        ('Generate', dict(fields=('generate',))), # generated, qty.
         ('Period', dict(fields=('period', 'start', 'end'))),
         ('Users', dict(fields=('usercats', 'loccats') + _geos))
     )
 
     def get_readonly_fields(self, request, obj=None):
         # print 'get_readonly_fields', obj
-        return flatten_fieldsets(self.declared_fieldsets) if obj else []
+        return flatten_fieldsets(self.declared_fieldsets) if obj and obj.generated else []
 
     def has_delete_permission(self, request, obj=None):
         # print 'has_delete_permission', obj
         return False
+
+    def save_related(self, request, form, formsets, change):
+        builder = form.instance
+        super(VisitBuilderAdmin, self).save_related(request, form, formsets, change)
+        builder._generate_check()
 
 _admin(VisitBuilder, VisitBuilderAdmin)
 

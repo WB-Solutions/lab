@@ -900,8 +900,8 @@ class VisitBuilderSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields_name + (
-            'duration', 'start', 'end',
-            'datetime', 'qty', # editable=False.
+            'duration', 'start', 'end', 'generate',
+            'generated', 'qty', # editable=False.
 
             'node', 'node_id',
             'week', 'week_id',
@@ -934,5 +934,8 @@ class VisitBuilderViewSet(AbstractView):
 
     def destroy(self, request, pk=None):
         return Response('Delete NOT Allowed', status=405)
+
+    def post_save(self, obj, created):
+        obj._generate_check()
 
 _api('visitbuilders', VisitBuilderViewSet)

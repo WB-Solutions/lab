@@ -58,7 +58,7 @@ def _data(config=None):
                 d = dict(
                     upnodes = _upnodes,
                     itemcats = _itemcats,
-                    items = ItemCat.get_items(_itemcats),
+                    items = ItemCat.els_get(_itemcats),
                 )
                 cached[_node] = d
             # print '_node_data cached', iscached, _node, d

@@ -117,6 +117,29 @@ class Command(BaseCommand):
 
             week = _new(WeekConfig, name='Work Week', mon=day, tue=day, wed=day, thu=day, fri=day, sat=halfday, sun=None)
 
+            p0 = _new(Period, name='start', end=datetime.date(2015, 01, 01))
+            period = _new(Period, name='january', end=datetime.date(2015, 01, 31))
+
+            builder = _new(
+                VisitBuilder,
+                name = 'Demo',
+                node = nodes[0],
+                week = week,
+                period = period,
+            )
+
+            for fname, model in [
+                ('usercats', UserCat),
+                ('loccats', LocCat),
+                ('regions', Region),
+                ('cities', City),
+                ('states', State),
+                ('countries', Country),
+                ('zips', Zip),
+                ('bricks', Brick),
+            ]:
+                getattr(builder, fname).add(_first(model), _last(model))
+
         err = None
         if User.objects.exists():
             err = 'db already setup'
