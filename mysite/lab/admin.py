@@ -412,15 +412,15 @@ _admin(WeekConfig, WeekConfigAdmin)
 _geos = ('regions', 'cities', 'states', 'countries', 'zips', 'bricks')
 
 class VisitBuilderAdmin(AbstractAdmin):
-    list_display = _fields_name + ('node', 'week', 'period', 'start', 'end', 'duration', 'generated', 'qty')
+    list_display = _fields_name + ('node', 'week', 'period', 'duration', 'start', 'end', 'generated', 'qty_slots', 'qty_locs', 'qty_visits')
     filter_horizontal = _geos
-    list_filter = ('period',)
+    list_filter = ('node', 'week', 'period')
 
     fieldsets = (
         (None, dict(fields=('syscode', 'name', 'node', 'week', 'duration'))),
-        ('Generate', dict(fields=('generate',))), # generated, qty.
+        ('Generate', dict(fields=('generate',))), # generated, qty_slots, qty_locs, qty_visits.
         ('Period', dict(fields=('period', 'start', 'end'))),
-        ('Users', dict(fields=('usercats', 'loccats') + _geos))
+        ('Locs / Users', dict(fields=('orderby', 'isand', 'usercats', 'loccats') + _geos))
     )
 
     def get_readonly_fields(self, request, obj=None):

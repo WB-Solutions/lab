@@ -724,8 +724,13 @@ class WeekConfig(AbstractModel):
 
 
 
+def _qty():
+    return _int_blank(default=None, editable=False)
+
 class VisitBuilder(AbstractModel):
-    qty = _int_blank(default=None, editable=False)
+    qty_slots = _qty()
+    qty_locs = _qty()
+    qty_visits = _qty()
     generated = _datetime_blank(editable=False)
     generate = _boolean(False)
 
@@ -737,6 +742,9 @@ class VisitBuilder(AbstractModel):
     period = _one_blank(Period, 'builders')
     start = _date_blank()
     end = _date_blank()
+
+    orderby = _choices(20, [ 'region', 'city', 'state', 'country', 'zip', 'brick' ])
+    isand = _boolean(True, help_text='Check to use [AND] among groups; note that [OR] is implicit within each group.')
 
     usercats = _many_tree(UserCat, 'builders')
     loccats = _many_tree(LocCat, 'builders')
@@ -766,7 +774,7 @@ class VisitBuilder(AbstractModel):
     def save(self, *args, **kwargs):
         if self.generated:
             raise ValidationError('INVALID save.') # must have been previously caught by clean, for both: admin & api.
-        if self.generate and self.qty is not None: # in progress.
+        if self.generate and self.qty_slots is not None: # in progress.
             self.generated = datetime.datetime.now()
         super(VisitBuilder, self).save(*args, **kwargs)
 
@@ -774,19 +782,62 @@ class VisitBuilder(AbstractModel):
         if self.generate:
             self._generate()
 
+    # must be executed AFTER save, in order to have access to m2m relationships.
     def _generate(self):
         print '_generate', self
 
-        '''
-        users = UserCat.els_get(self.usercats.all())
-        locs = LocCat.els_get(self.loccats.all())
-        self.regions.all()
-        self.cities.all()
-        self.states.all()
-        self.countries.all()
-        self.zips.all()
-        self.bricks.all()
-        '''
+        qn = []
+        def _q(_fname, _mrel):
+            print '_q', _fname, _mrel.count()
+            return models.Q(**{_fname: _mrel.all()})
+        def _qn_and(_qn):
+            print '_qn_and', len(_qn)
+            return reduce(lambda x, y: x & y, _qn)
+        def _qn_or(_qn):
+            print '_qn_or', len(_qn)
+            return reduce(lambda x, y: x | y, _qn)
+
+        # cats.
+        # PENDING to support ALL CHILDREN for selected User/Loc cats !!
+        for fname, mrel in [
+            ('cats__in', self.loccats),
+            ('user__cats__in', self.usercats),
+        ]:
+            if mrel.exists():
+                qn.append(_q(fname, mrel))
+
+        # addresses.
+        tmpl = 'address__%s__in'
+        for suffix, mrel in [
+            ('region', self.regions),
+            ('region__city', self.cities),
+            ('region__city__state', self.states),
+            ('region__city__state__country', self.countries),
+            ('region__zip', self.zips),
+            ('region__zip__brick', self.bricks),
+        ]:
+            if mrel.exists():
+                qn.append(_qn_or([ _q('%saddress__%s__in' % (prefix, suffix), mrel) for prefix in [ '', 'place__' ] ]))
+
+        locs = Loc.objects.filter(_qn_and(qn) if self.isand else _qn_or(qn)) if qn else []
+        print 'locs', len(locs), locs
+        # print 'query', locs.query
+
+        XXX
+
+
+
+
+
+
+        # orderby
+
+        # utils.tree_all_downs(utils.list_flatten(_upnodes, lambda enode: enode.itemcats.all()))
+
+
+
+
+
 
         with transaction.atomic():
             p = self.period
@@ -796,6 +847,7 @@ class VisitBuilder(AbstractModel):
                 self.end = p.end
             currdate = self.start
             qty = 0
+            visits = []
             while currdate <= self.end:
                 print '_generate > DATE @ VisitBuilder', currdate
                 day = getattr(self.week, utils.weekdays[currdate.weekday()])
@@ -807,13 +859,14 @@ class VisitBuilder(AbstractModel):
                         while dt < _datetime(etime.end):
                             print '_generate > TIME @ VisitBuilder', dt
                             qty += 1
-                            ForceVisit.objects.create(
+                            visits.append(ForceVisit.objects.create(
                                 node = self.node,
                                 loc = Loc.objects.first(), # PENDING !!
                                 datetime = dt,
                                 duration = self.duration,
-                            )
+                            ))
                             dt = utils.datetime_plus(dt, duration=self.duration)
                 currdate += datetime.timedelta(days=1)
-            self.qty = qty
+            self.qty_slots = qty
+            self.qty_visits = len(visits)
             self.save()

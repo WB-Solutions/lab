@@ -900,8 +900,8 @@ class VisitBuilderSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields_name + (
-            'duration', 'start', 'end', 'generate',
-            'generated', 'qty', # editable=False.
+            'duration', 'start', 'end', 'orderby', 'isand', 'generate',
+            'generated', 'qty_slots', 'qty_locs', 'qty_visits', # editable=False.
 
             'node', 'node_id',
             'week', 'week_id',
