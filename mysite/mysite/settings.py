@@ -255,4 +255,7 @@ try:
 except ImportError:
     pass
 
+# http://www.graphviz.org/Download_windows.php
+# add to PATH environment varible: C:\Program Files (x86)\Graphviz2.38\bin
+# pip install pydot2
 # \lab\mysite> python manage.py graph_models lab -g -o models_lab.png
