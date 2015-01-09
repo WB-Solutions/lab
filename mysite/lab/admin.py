@@ -213,11 +213,11 @@ _admin(ForceNode, ForceNodeAdmin)
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = _fields + ('datetime', 'duration', 'status', 'accompanied', 'node', 'loc') # 'observations', 'rec'
+    list_display = _fields + ('datetime', 'duration', 'status', 'accompanied', 'node', 'loc', 'builder') # 'observations', 'rec'
     list_display_links = _fields + ('datetime',)
     date_hierarchy = 'datetime'
     list_editable = ('status',)
-    list_filter = ('datetime', 'status')
+    list_filter = ('datetime', 'status', 'accompanied', 'builder')
     search_fields = _search  + ('observations',) # 'rec'
     # radio_fields = dict(status=admin.VERTICAL)
     # raw_id_fields = ('node',)
@@ -412,13 +412,16 @@ _admin(WeekConfig, WeekConfigAdmin)
 _geos = ('regions', 'cities', 'states', 'countries', 'zips', 'bricks')
 
 class VisitBuilderAdmin(AbstractAdmin):
-    list_display = _fields_name + ('node', 'week', 'period', 'duration', 'start', 'end', 'generated', 'qty_slots', 'qty_locs', 'qty_visits')
+    list_display = _fields_name + (
+        'node', 'week', 'period', 'duration', 'start', 'end', 'generate', 'generated',
+        'qty_slots', 'qty_slots_skips', 'qty_locs', 'qty_locs_skips', 'qty_node_skips', 'qty_visits',
+    )
     filter_horizontal = _geos
-    list_filter = ('node', 'week', 'period')
+    list_filter = ('node', 'week', 'period', 'generate')
 
     fieldsets = (
         (None, dict(fields=('syscode', 'name', 'node', 'week', 'duration'))),
-        ('Generate', dict(fields=('generate',))), # generated, qty_slots, qty_locs, qty_visits.
+        ('Generate', dict(fields=('generate',))), # generated, qty_slots, qty_slots_skips, qty_locs, qty_locs_skips, qty_node_skips, qty_visits.
         ('Period', dict(fields=('period', 'start', 'end'))),
         ('Locs / Users', dict(fields=('orderby', 'isand', 'usercats', 'loccats') + _geos))
     )

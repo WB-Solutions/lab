@@ -485,6 +485,7 @@ class ForceVisit(AbstractModel):
     accompanied = _boolean(False)
     observations = _text()
     rec = _text()
+    builder = _one_blank('VisitBuilder', 'visits')
 
     class Meta:
         ordering = ('-datetime',)
@@ -729,12 +730,15 @@ def _qty():
 
 class VisitBuilder(AbstractModel):
     qty_slots = _qty()
+    qty_slots_skips = _qty()
     qty_locs = _qty()
+    qty_locs_skips = _qty()
+    qty_node_skips = _qty()
     qty_visits = _qty()
     generated = _datetime_blank(editable=False)
     generate = _boolean(False)
 
-    name = _char()
+    name = _name()
     node = _one(ForceNode, 'builders')
     week = _one(WeekConfig, 'builders')
     duration = _duration()
@@ -743,7 +747,7 @@ class VisitBuilder(AbstractModel):
     start = _date_blank()
     end = _date_blank()
 
-    orderby = _choices(20, [ 'region', 'city', 'state', 'country', 'zip', 'brick' ])
+    orderby = _choices(20, [ 'region', 'city', 'state', 'country', 'zip', 'brick' ], default='zip')
     isand = _boolean(True, help_text='Check to use [AND] among groups; note that [OR] is implicit within each group.')
 
     usercats = _many_tree(UserCat, 'builders')
@@ -785,11 +789,13 @@ class VisitBuilder(AbstractModel):
     # must be executed AFTER save, in order to have access to m2m relationships.
     def _generate(self):
         print '_generate', self
+        none = True
 
         qn = []
-        def _q(_fname, _mrel):
-            print '_q', _fname, _mrel.count()
-            return models.Q(**{_fname: _mrel.all()})
+        def _q(_fname, _rels):
+            _rels = list(_rels)
+            print '_q', _fname, len(_rels)
+            return models.Q(**{_fname: _rels})
         def _qn_and(_qn):
             print '_qn_and', len(_qn)
             return reduce(lambda x, y: x & y, _qn)
@@ -798,12 +804,13 @@ class VisitBuilder(AbstractModel):
             return reduce(lambda x, y: x | y, _qn)
 
         # cats.
-        # PENDING to support ALL CHILDREN for selected User/Loc cats !!
         for fname, mrel in [
             ('cats__in', self.loccats),
             ('user__cats__in', self.usercats),
         ]:
             if mrel.exists():
+                none = False
+                mrel = utils.tree_all_downs(mrel.all())
                 qn.append(_q(fname, mrel))
 
         # addresses.
@@ -817,28 +824,46 @@ class VisitBuilder(AbstractModel):
             ('region__zip__brick', self.bricks),
         ]:
             if mrel.exists():
-                qn.append(_qn_or([ _q('%saddress__%s__in' % (prefix, suffix), mrel) for prefix in [ '', 'place__' ] ]))
+                none = False
+                qn.append(_qn_or([ _q('%saddress__%s__in' % (prefix, suffix), mrel.all()) for prefix in [ '', 'place__' ] ]))
 
-        locs = Loc.objects.filter(_qn_and(qn) if self.isand else _qn_or(qn)) if qn else []
+        if not any ([ getattr(self, e).exists() for e in 'usercats loccats regions cities states countries zips bricks'.split() ]):
+            # raise ValidationError('Must select at least one condition for Users / Locs.')
+            self.generate = False
+            self.save()
+            return # revert generate an ABORT, so we do NOT waste this builder.
+
+        if qn:
+            locs = Loc.objects.filter(_qn_and(qn) if self.isand else _qn_or(qn))
+            print 'query', locs.query
+            locs = list(locs)
+        else:
+            locs = []
+
+        def _sortkey(eloc):
+            addr = eloc.address or eloc.place.address
+            by = self.orderby
+            def _val():
+                v = addr.region
+                if by == 'region': return v
+                if by in [ 'zip', 'brick' ]:
+                    v = v.zip
+                    return v if by == 'zip' else v.brick
+                v = v.city
+                if by == 'city': return v
+                v = v.state
+                if by == 'state': return v
+                v = v.country
+                if by == 'country': return v
+                error
+            val = _val().name
+            print '_sortkey', by, val, eloc
+            return val
+
+        locs = sorted(locs, key=_sortkey)
         print 'locs', len(locs), locs
-        # print 'query', locs.query
 
-        XXX
-
-
-
-
-
-
-        # orderby
-
-        # utils.tree_all_downs(utils.list_flatten(_upnodes, lambda enode: enode.itemcats.all()))
-
-
-
-
-
-
+        mgr = ForceVisit.objects
         with transaction.atomic():
             p = self.period
             if p:
@@ -846,7 +871,12 @@ class VisitBuilder(AbstractModel):
                 self.start = p0.end + datetime.timedelta(days=1) if p0 else p.end
                 self.end = p.end
             currdate = self.start
-            qty = 0
+            self.qty_slots = 0
+            self.qty_slots_skips = 0
+            self.qty_locs = len(locs)
+            self.qty_locs_skips = 0
+            self.qty_node_skips = 0
+            nodeskips = 0
             visits = []
             while currdate <= self.end:
                 print '_generate > DATE @ VisitBuilder', currdate
@@ -857,16 +887,30 @@ class VisitBuilder(AbstractModel):
                     for etime in day.times.all():
                         dt = _datetime(etime.start)
                         while dt < _datetime(etime.end):
-                            print '_generate > TIME @ VisitBuilder', dt
-                            qty += 1
-                            visits.append(ForceVisit.objects.create(
-                                node = self.node,
-                                loc = Loc.objects.first(), # PENDING !!
-                                datetime = dt,
-                                duration = self.duration,
-                            ))
+                            self.qty_slots += 1
+                            qv = mgr.filter(datetime=dt)
+                            if qv.exists():
+                                self.qty_slots_skips += 1
+                                print '_generate > SKIP slot', dt
+                            elif qv.filter(node=self.node).exists():
+                                self.qty_node_skips += 1
+                                print '_generate > SKIP node', dt
+                            else:
+                                loc = locs.pop(0) if locs else None
+                                print '_generate > TIME @ VisitBuilder', dt, loc
+                                if loc:
+                                    if mgr.filter(loc=loc, datetime__range=(self.start, self.end)):
+                                        self.qty_locs_skips += 1
+                                        print '_generate > SKIP loc', loc
+                                    else:
+                                        visits.append(mgr.create(
+                                            builder = self,
+                                            node = self.node,
+                                            loc = loc,
+                                            datetime = dt,
+                                            duration = self.duration,
+                                        ))
                             dt = utils.datetime_plus(dt, duration=self.duration)
                 currdate += datetime.timedelta(days=1)
-            self.qty_slots = qty
             self.qty_visits = len(visits)
             self.save()

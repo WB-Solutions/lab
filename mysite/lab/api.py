@@ -501,6 +501,7 @@ search = _search(admin.ForceVisitAdmin)
 class ForceVisitSerializer(AbstractSerializer):
     node_id = _id('node')
     loc_id = _id('loc')
+    builder_id = _id('builder')
 
     class Meta:
         model = model
@@ -508,6 +509,7 @@ class ForceVisitSerializer(AbstractSerializer):
             'datetime', 'duration', 'status', 'accompanied',
             'node', 'node_id',
             'loc', 'loc_id',
+            'builder', 'builder_id',
             'observations', 'rec',
         )
 
@@ -901,7 +903,7 @@ class VisitBuilderSerializer(AbstractSerializer):
         model = model
         fields = _fields_name + (
             'duration', 'start', 'end', 'orderby', 'isand', 'generate',
-            'generated', 'qty_slots', 'qty_locs', 'qty_visits', # editable=False.
+            'generated', 'qty_slots', 'qty_slots_skips', 'qty_locs', 'qty_locs_skips', 'qty_node_skips', 'qty_visits', # editable=False.
 
             'node', 'node_id',
             'week', 'week_id',
