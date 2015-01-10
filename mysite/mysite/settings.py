@@ -108,7 +108,7 @@ LANGUAGE_CODE = 'en-us' # 'es-mx'
 STATIC_URL = '/static/'
 statics = os.path.join(BASE_DIR, 'static')
 
-if False: # collectstatic.
+if True: # collectstatic.
     STATIC_ROOT = statics
 else:
     STATICFILES_DIRS = (statics,)
