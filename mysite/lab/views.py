@@ -77,7 +77,7 @@ def _data(config=None):
             dt = visit.datetime
             v = dict(
                 datetime = _datetime(dt),
-                end = _datetime(utils.datetime_plus(dt, duration=visit.duration)),
+                end = _datetime(utils.datetime_plus(dt, visit.duration)),
                 status = visit.status,
                 accompanied = visit.accompanied,
                 observations = visit.observations,
@@ -85,7 +85,7 @@ def _data(config=None):
                 user_email = user.email,
                 user_cats = utils.db_names(user.cats),
                 loc_name = loc.name,
-                loc_address = '%s # %s, %s' % (addr.street, addr.unit, addr.region),
+                loc_address = '%s # %s, %s' % (addr.street, addr.unit, addr.area),
                 forms = forms_ids,
                 repforms = repforms_ids,
                 rec = visit.rec_dict(),

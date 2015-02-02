@@ -17,7 +17,7 @@ def _time_choice(h, m):
     t = datetime.time(h, m)
     return (t, t.strftime('%H:%M'))
 
-time_choices = reduce(lambda x, y: x + [ _time_choice(y, 0), _time_choice(y, 30) ], range(24), [])
+time_choices = reduce(lambda x, y: x + [ _time_choice(y, e) for e in [ 0, 15, 30, 45 ] ], range(24), [])
 
 class GoTreeM2MField(models.ManyToManyField):
     pass
@@ -32,7 +32,10 @@ def _char_blank(*args, **kwargs):
     return _char(*args, **_kw_merge(kwargs, blank=True))
 
 def _name(**kwargs):
-    return _char(_('name'), **_kw_merge(kwargs, unique=True))
+    return _char(_('name'), **kwargs)
+
+def _name_unique(**kwargs):
+    return _name(**_kw_merge(kwargs, unique=True))
 
 def _text(*args, **kwargs):
     return models.TextField(*args, **_kw_merge(kwargs, blank=True))
@@ -52,8 +55,11 @@ def _time(*args, **kwargs):
 def _time_blank(*args, **kwargs):
     return _time(*args, **_kw_merge(kwargs, blank=True, null=True))
 
-def _duration(*args, **kwargs):
-    return _time(choices=time_choices[1:7], default=time_choices[2][0])
+def _duration(hrs=0, mins=45):
+    return _time(
+        choices = time_choices[1:7],
+        default = datetime.time(hrs, mins),
+    )
 
 def _date(*args, **kwargs):
     return models.DateField(*args, **kwargs)
@@ -151,7 +157,7 @@ class AbstractModel(models.Model):
 
 # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
 class AbstractTree(MPTTModel, AbstractModel):
-    name = _name(unique=False)
+    name = _name()
     parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
     order = _form_order()
 
@@ -182,7 +188,7 @@ class AbstractTree(MPTTModel, AbstractModel):
 
 
 class Country(AbstractModel):
-    name = _name()
+    name = _name_unique()
 
     class Meta:
         ordering = ('name',)
@@ -194,6 +200,7 @@ class State(AbstractModel):
     country = _one(Country, 'states')
 
     class Meta:
+        unique_together = ('country', 'name')
         ordering = ('name',)
 
     def __unicode__(self):
@@ -206,6 +213,7 @@ class City(AbstractModel):
     state = _one(State, 'cities')
 
     class Meta:
+        unique_together = ('state', 'name')
         ordering = ('name',)
 
     def __unicode__(self):
@@ -214,7 +222,7 @@ class City(AbstractModel):
 
 
 class Brick(AbstractModel):
-    name = _name()
+    name = _name_unique()
 
     class Meta:
         ordering = ('name',)
@@ -222,7 +230,7 @@ class Brick(AbstractModel):
 
 
 class Zip(AbstractModel):
-    name = _name()
+    name = _name_unique()
     brick = _one(Brick, 'zips')
 
     class Meta:
@@ -233,12 +241,13 @@ class Zip(AbstractModel):
 
 
 
-class Region(AbstractModel):
+class Area(AbstractModel):
     name = _name()
-    city = _one(City, 'regions')
-    zip = _one(Zip, 'regions')
+    city = _one(City, 'areas')
+    zip = _one(Zip, 'areas')
 
     class Meta:
+        unique_together = ('city', 'name')
         ordering = ('name',)
 
     def __unicode__(self):
@@ -248,6 +257,11 @@ class Region(AbstractModel):
 
 class GenericCat(AbstractTree):
     pass
+
+
+
+class PeriodCat(AbstractTree):
+    els_model = 'Period'
 
 
 
@@ -384,7 +398,7 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
 
 
 class Item(AbstractModel):
-    name = _name()
+    name = _name_unique()
     cats = _many_tree(ItemCat, 'items')
     visits_usercats = _many_tree(UserCat, 'visits_items')
     visits_loccats = _many_tree(LocCat, 'visits_items')
@@ -412,7 +426,7 @@ class Address(AbstractModel):
     fax = _char_blank()
     # canplace = _boolean(False)
 
-    region= _one(Region, 'addresses')
+    area = _one(Area, 'addresses')
     # zip = _one(Zip, 'addresses')
     # city = _one(City, 'addresses')
 
@@ -420,16 +434,21 @@ class Address(AbstractModel):
         ordering = ('street',)
 
     def __unicode__(self):
-        return _str(self, '%s # %s, %s', (self.street, self.unit, self.region))
+        return _str(self, '%s # %s, %s', (self.street, self.unit, self.area))
 
 class Place(AbstractTree):
-    address = _one(Address, 'places')
-    canloc = _boolean(True)
+    address = _one_blank(Address, 'places') # must be blank & null to be able to set & validate in clean below.
+    # canloc = _boolean(True)
 
     def clean(self):
-        for each in [ self.parent, self.children.first() ]:
-            if each and each is not self.address:
-                raise ValidationError('Invalid Address based on Parent / Children.')
+        if self.address:
+            for each in [ self.parent, self.children.first() ]:
+                if each and each.address != self.address:
+                    raise ValidationError('Invalid Address based on Parent / Children.')
+        elif self.parent:
+            self.address = self.parent.address
+        else:
+            raise ValidationError(dict(address='Address is required for root elements.'))
 
 class Loc(AbstractModel):
     name = _char_blank()
@@ -504,7 +523,7 @@ class ForceVisit(AbstractModel):
 
 
 class Form(AbstractModel):
-    name = _name()
+    name = _name_unique()
     scope = _choices(20, [ 'visits', 'users' ])
     start = _datetime_blank()
     end = _datetime_blank()
@@ -619,7 +638,7 @@ class Form(AbstractModel):
 
 
 class FormField(AbstractModel):
-    name = _name(unique=False)
+    name = _name()
     description = _form_description()
     form = _one(Form, 'fields')
     type = _choices(20, [
@@ -669,8 +688,9 @@ class FormField(AbstractModel):
 
 
 class Period(AbstractModel):
-    name = _name()
+    name = _name_unique()
     end = _date()
+    cats = _many_tree(PeriodCat, 'periods')
 
     class Meta:
         ordering = ('-end',)
@@ -738,23 +758,27 @@ class VisitBuilder(AbstractModel):
     generated = _datetime_blank(editable=False)
     generate = _boolean(False)
 
-    name = _name()
+    name = _name_unique()
     node = _one(ForceNode, 'builders')
+    skipbricks = _boolean(True)
+
     week = _one(WeekConfig, 'builders')
     duration = _duration()
+    gap = _duration(mins=15)
 
-    period = _one_blank(Period, 'builders')
+    periods = _many(Period, 'builders')
+    periodcats = _many_tree(PeriodCat, 'builders')
     start = _date_blank()
     end = _date_blank()
 
-    orderby = _choices(20, [ 'region', 'city', 'state', 'country', 'zip', 'brick' ], default='zip')
+    orderby = _choices(20, [ 'area', 'city', 'state', 'country', 'zip', 'brick' ], default='zip')
     isand = _boolean(True, help_text='Check to use [AND] among groups; note that [OR] is implicit within each group.')
 
     usercats = _many_tree(UserCat, 'builders')
     loccats = _many_tree(LocCat, 'builders')
     # locs = _many(Loc, 'builders')
 
-    regions = _many(Region, 'builders')
+    areas = _many(Area, 'builders')
     cities = _many(City, 'builders')
     states = _many(State, 'builders')
     countries = _many(Country, 'builders')
@@ -772,7 +796,7 @@ class VisitBuilder(AbstractModel):
     def clean(self):
         if self.generated:
             raise ValidationError('NOT allowed to update, already generated.')
-        utils.validate_xor(self.period, self.start, 'Must select ONE of Period or Start/End.')
+        # utils.validate_xor(self.period, self.start, 'Must select ONE of Period or Start/End.')
         utils.validate_start_end(self.start, self.end, required=False)
 
     def save(self, *args, **kwargs):
@@ -816,18 +840,18 @@ class VisitBuilder(AbstractModel):
         # addresses.
         tmpl = 'address__%s__in'
         for suffix, mrel in [
-            ('region', self.regions),
-            ('region__city', self.cities),
-            ('region__city__state', self.states),
-            ('region__city__state__country', self.countries),
-            ('region__zip', self.zips),
-            ('region__zip__brick', self.bricks),
+            ('area', self.areas),
+            ('area__city', self.cities),
+            ('area__city__state', self.states),
+            ('area__city__state__country', self.countries),
+            ('area__zip', self.zips),
+            ('area__zip__brick', self.bricks),
         ]:
             if mrel.exists():
                 none = False
                 qn.append(_qn_or([ _q('%saddress__%s__in' % (prefix, suffix), mrel.all()) for prefix in [ '', 'place__' ] ]))
 
-        if not any ([ getattr(self, e).exists() for e in 'usercats loccats regions cities states countries zips bricks'.split() ]):
+        if not any ([ getattr(self, e).exists() for e in 'usercats loccats areas cities states countries zips bricks'.split() ]):
             # raise ValidationError('Must select at least one condition for Users / Locs.')
             self.generate = False
             self.save()
@@ -844,8 +868,8 @@ class VisitBuilder(AbstractModel):
             addr = eloc.address or eloc.place.address
             by = self.orderby
             def _val():
-                v = addr.region
-                if by == 'region': return v
+                v = addr.area
+                if by == 'area': return v
                 if by in [ 'zip', 'brick' ]:
                     v = v.zip
                     return v if by == 'zip' else v.brick
@@ -865,11 +889,13 @@ class VisitBuilder(AbstractModel):
 
         mgr = ForceVisit.objects
         with transaction.atomic():
+            '''
             p = self.period
             if p:
                 p0 = p.prev()
                 self.start = p0.end + datetime.timedelta(days=1) if p0 else p.end
                 self.end = p.end
+            '''
             currdate = self.start
             self.qty_slots = 0
             self.qty_slots_skips = 0
@@ -910,7 +936,7 @@ class VisitBuilder(AbstractModel):
                                             datetime = dt,
                                             duration = self.duration,
                                         ))
-                            dt = utils.datetime_plus(dt, duration=self.duration)
+                            dt = utils.datetime_plus(dt, self.duration, self.gap)
                 currdate += datetime.timedelta(days=1)
             self.qty_visits = len(visits)
             self.save()

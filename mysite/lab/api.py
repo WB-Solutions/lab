@@ -300,10 +300,10 @@ _api('zips', ZipViewSet)
 
 
 
-model = Region
-search = _search(admin.RegionAdmin)
+model = Area
+search = _search(admin.AreaAdmin)
 
-class RegionSerializer(AbstractSerializer):
+class AreaSerializer(AbstractSerializer):
     city_id = _id('city')
     zip_id = _id('zip')
 
@@ -314,7 +314,7 @@ class RegionSerializer(AbstractSerializer):
             'zip', 'zip_id',
         )
 
-class RegionFilter(AbstractFilter):
+class AreaFilter(AbstractFilter):
     state = django_filters.Filter(name='city__state')
     country = django_filters.Filter(name='city__state__country')
     brick = django_filters.Filter(name='zip__brick')
@@ -323,13 +323,13 @@ class RegionFilter(AbstractFilter):
         model = model
         fields = search + ('city', 'state', 'country', 'zip', 'brick')
 
-class RegionViewSet(AbstractView):
+class AreaViewSet(AbstractView):
     queryset = _all(model)
-    serializer_class = RegionSerializer
+    serializer_class = AreaSerializer
     search_fields = search
-    filter_class = RegionFilter
+    filter_class = AreaFilter
 
-_api('regions', RegionViewSet)
+_api('areas', AreaViewSet)
 
 
 
@@ -355,6 +355,31 @@ class GenericCatViewSet(AbstractTreeView):
     filter_class = GenericCatFilter
 
 _api('genericcats', GenericCatViewSet)
+
+
+
+model = PeriodCat
+search = _search(admin.PeriodCatAdmin)
+
+class PeriodCatSerializer(AbstractTreeSerializer):
+
+    class Meta:
+        model = model
+        fields = _fields_cat
+
+class PeriodCatFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ()
+
+class PeriodCatViewSet(AbstractTreeView):
+    queryset = _all(model)
+    serializer_class = PeriodCatSerializer
+    search_fields = search
+    filter_class = PeriodCatFilter
+
+_api('periodcats', PeriodCatViewSet)
 
 
 
@@ -605,15 +630,15 @@ class AddressSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields + (
-            'street', 'unit', 'phone', 'phone2', 'fax', 'region',
+            'street', 'unit', 'phone', 'phone2', 'fax', 'area',
         )
 
 class AddressFilter(AbstractFilter):
-    city = django_filters.Filter(name='region__city')
-    state = django_filters.Filter(name='region__city__state')
-    country = django_filters.Filter(name='region__city__state__country')
-    zip = django_filters.Filter(name='region__zip')
-    brick = django_filters.Filter(name='region__zip__brick')
+    city = django_filters.Filter(name='area__city')
+    state = django_filters.Filter(name='area__city__state')
+    country = django_filters.Filter(name='area__city__state__country')
+    zip = django_filters.Filter(name='area__zip')
+    brick = django_filters.Filter(name='area__zip__brick')
 
     class Meta:
         model = model
@@ -638,14 +663,13 @@ class PlaceSerializer(AbstractTreeSerializer):
         model = model
         fields = _fields_cat + (
             'address', 'address_id',
-            'canloc',
         )
 
 class PlaceFilter(AbstractTreeFilter):
 
     class Meta:
         model = model
-        fields = search + _filters_cat + ('address', 'canloc')
+        fields = search + _filters_cat + ('address',)
 
 class PlaceViewSet(AbstractTreeView):
     queryset = _all(model)
@@ -776,11 +800,13 @@ model = Period
 search = _search(admin.PeriodAdmin)
 
 class PeriodSerializer(AbstractSerializer):
+    cats_ids = _ids('cats')
 
     class Meta:
         model = model
         fields = _fields_name + (
             'end',
+            'cats', 'cats_ids',
         )
 
 class PeriodFilter(AbstractFilter):
@@ -886,12 +912,13 @@ search = _search(admin.VisitBuilderAdmin)
 class VisitBuilderSerializer(AbstractSerializer):
     node_id = _id('node')
     week_id = _id('week')
-    period_id = _id('period')
+    periods_ids = _ids('periods')
+    periodcats_ids = _ids('periodcats')
 
     usercats_ids = _ids('usercats')
     loccats_ids = _ids('loccats')
 
-    regions_ids = _ids('regions')
+    areas_ids = _ids('areas')
     cities_ids = _ids('cities')
     states_ids = _ids('states')
     countries_ids = _ids('countries')
@@ -907,12 +934,14 @@ class VisitBuilderSerializer(AbstractSerializer):
 
             'node', 'node_id',
             'week', 'week_id',
-            'period', 'period_id',
+
+            'periods', 'periods_ids',
+            'periodcats', 'periodcats_ids',
 
             'usercats', 'usercats_ids',
             'loccats', 'loccats_ids',
 
-            'regions', 'regions_ids',
+            'areas', 'areas_ids',
             'cities', 'cities_ids',
             'states', 'states_ids',
             'countries', 'countries_ids',
@@ -926,7 +955,7 @@ class VisitBuilderFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('node', 'week', 'duration', 'period', 'start', 'end')
+        fields = search + ('node', 'week', 'duration', 'gap', 'generated') # 'start', 'end'
 
 class VisitBuilderViewSet(AbstractView):
     queryset = _all(model)

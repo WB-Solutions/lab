@@ -51,7 +51,7 @@ class Command(BaseCommand):
                         city = _new(City, state=state, name=ecity)
                         brick = _new(Brick, name='%s-brick' % ecity)
                         zip = _new(Zip, brick=brick, name='%s-zip' % ecity)
-                        region = _new(Region, city=city, zip=zip, name='%s-region' % ecity)
+                        area = _new(Area, city=city, zip=zip, name='%s-area' % ecity)
 
             def _new_cats(model, pre, isforce=False):
                 def _cat(name, parent, **kw):
@@ -74,6 +74,7 @@ class Command(BaseCommand):
             itemcats = _new_cats(ItemCat, 'Item')
             loccats = _new_cats(LocCat, 'Loc')
             formcats = _new_cats(FormCat, 'Form')
+            periodcats = _new_cats(PeriodCat, 'Period')
 
             usercat = _first(UserCat) # root.
 
@@ -82,7 +83,7 @@ class Command(BaseCommand):
                 user = _new(User, first_name=each, last_name=each, email=_email(each))
                 users[each] = user
                 user.cats.add(usercats.pop(0))
-                address = _new(Address, street=each, region=_at(Region, ei)) # city=_at(City, ei), zip=_at(Zip, ei)
+                address = _new(Address, street=each, area=_at(Area, ei)) # city=_at(City, ei), zip=_at(Zip, ei)
                 loc = _new(Loc, name=each, user=user, address=address)
                 loc.cats.add(loccats.pop(0))
 
@@ -117,21 +118,29 @@ class Command(BaseCommand):
 
             week = _new(WeekConfig, name='Work Week', mon=day, tue=day, wed=day, thu=day, fri=day, sat=halfday, sun=None)
 
+            pcat = periodcats.pop(0)
             p0 = _new(Period, name='start', end=datetime.date(2015, 01, 01))
-            period = _new(Period, name='january', end=datetime.date(2015, 01, 31))
+            def _period(vname, vdate):
+                p = _new(Period, name=vname, end=datetime.date(*vdate))
+                p.cats.add(pcat)
+                return p
+            _period('Jan', (2015, 01, 31))
+            _period('Feb', (2015, 02, 28))
+            _period('Mar', (2015, 03, 31))
 
             builder = _new(
                 VisitBuilder,
                 name = 'Demo',
                 node = nodes[0],
                 week = week,
-                period = period,
             )
+
+            builder.periodcats.add(pcat)
 
             for fname, model in [
                 ('usercats', UserCat),
                 ('loccats', LocCat),
-                ('regions', Region),
+                ('areas', Area),
                 ('cities', City),
                 ('states', State),
                 ('countries', Country),

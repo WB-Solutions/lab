@@ -97,7 +97,10 @@ def validate_start_end(start, end, required=True):
         if not cond:
             raise ValidationError('End must be %s than Start.' % msg)
 
-def datetime_plus(dt, duration=None):
-    if duration:
-        return dt + datetime.timedelta(hours=duration.hour, minutes=duration.minute)
-    error
+def datetime_plus(dt, *durations):
+    def _sum(attr):
+        return sum([ getattr(e, attr) for e in durations ])
+    return dt + datetime.timedelta(
+        hours = _sum('hour'),
+        minutes = _sum('minute'),
+    )

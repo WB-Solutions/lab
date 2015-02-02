@@ -118,15 +118,15 @@ _admin(State, StateAdmin)
 
 
 # Shared.
-class RegionInline(AbstractTabularInline):
-    model = Region
+class AreaInline(AbstractTabularInline):
+    model = Area
 
 
 
 class CityAdmin(AbstractAdmin):
     list_display = _fields_name + ('state',)
     list_filter = ('state', 'state__country')
-    inlines = (RegionInline,)
+    inlines = (AreaInline,)
 
 _admin(City, CityAdmin)
 
@@ -144,16 +144,16 @@ _admin(Brick, BrickAdmin)
 
 class ZipAdmin(AbstractAdmin):
     list_display = _fields_name + ('brick',)
-    inlines = (RegionInline,)
+    inlines = (AreaInline,)
 
 _admin(Zip, ZipAdmin)
 
 
 
-class RegionAdmin(AbstractAdmin):
+class AreaAdmin(AbstractAdmin):
     list_display = _fields_name + ('city', 'zip')
 
-_admin(Region, RegionAdmin)
+_admin(Area, AreaAdmin)
 
 
 
@@ -161,6 +161,13 @@ class GenericCatAdmin(AbstractTreeAdmin):
     pass
 
 _admin(GenericCat, GenericCatAdmin)
+
+
+
+class PeriodCatAdmin(AbstractTreeAdmin):
+    pass
+
+_admin(PeriodCat, PeriodCatAdmin)
 
 
 
@@ -292,14 +299,14 @@ _admin(Item, ItemAdmin)
 
 
 class AddressAdmin(AbstractAdmin):
-    list_display = _fields + ('street', 'unit', 'phone', 'phone2', 'fax', 'region')
+    list_display = _fields + ('street', 'unit', 'phone', 'phone2', 'fax', 'area')
     list_display_links = _fields + ('street',)
     search_fields = _search + ('street', 'unit')
 
 _admin(Address, AddressAdmin)
 
 class PlaceAdmin(AbstractTreeAdmin):
-    list_display = _fields_name + ('order', 'address', 'canloc')
+    list_display = _fields_name + ('order', 'address')
 
 _admin(Place, PlaceAdmin)
 
@@ -376,9 +383,10 @@ _admin(FormField, FormFieldAdmin)
 
 
 class PeriodAdmin(AbstractAdmin):
-    list_display = _fields_name + ('end',)
+    list_display = _fields_name + ('end', 'cats_')
     date_hierarchy = 'end'
     list_editable = ('end',)
+    list_filter = ('cats',)
 
 _admin(Period, PeriodAdmin)
 
@@ -409,20 +417,22 @@ _admin(WeekConfig, WeekConfigAdmin)
 
 
 
-_geos = ('regions', 'cities', 'states', 'countries', 'zips', 'bricks')
+_geos = ('areas', 'cities', 'states', 'countries', 'zips', 'bricks')
 
 class VisitBuilderAdmin(AbstractAdmin):
     list_display = _fields_name + (
-        'node', 'week', 'period', 'duration', 'start', 'end', 'generate', 'generated',
+        'node', 'week', 'duration', 'gap',
+        'start', 'end', # 'periods', 'periodcats',
+        'generate', 'generated',
         'qty_slots', 'qty_slots_skips', 'qty_locs', 'qty_locs_skips', 'qty_node_skips', 'qty_visits',
     )
     filter_horizontal = _geos
-    list_filter = ('node', 'week', 'period', 'generate')
+    list_filter = ('node', 'week', 'generate')
 
     fieldsets = (
-        (None, dict(fields=('syscode', 'name', 'node', 'week', 'duration'))),
+        (None, dict(fields=('syscode', 'name', 'node', 'week', 'duration', 'gap'))),
         ('Generate', dict(fields=('generate',))), # generated, qty_slots, qty_slots_skips, qty_locs, qty_locs_skips, qty_node_skips, qty_visits.
-        ('Period', dict(fields=('period', 'start', 'end'))),
+        ('Dates', dict(fields=('periodcats', 'periods', 'start', 'end'))),
         ('Locs / Users', dict(fields=('orderby', 'isand', 'usercats', 'loccats') + _geos))
     )
 
