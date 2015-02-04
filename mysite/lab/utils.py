@@ -77,16 +77,18 @@ def tree_any(n1, n2, ups=True):
 def tree_all_downs(cats):
     return set(list_flatten(cats, lambda ecat: tree_downs(ecat)))
 
-def validate_xor(v1, v2, msg):
+def validate_xor(v1, v2, msg, reverse=False):
+    print 'validate_xor', v1, v2, msg
     def _val(v): # pending to support v as list.
-        return bool(v)
-    if not (_val(v1) ^ _val(v2)): # xor.
+        _v = bool(v)
+        print 'validate_xor._val', v, _v
+        return _v
+    xor = _val(v1) ^ _val(v2)
+    if xor if reverse else not xor:
         raise ValidationError(msg)
 
 # datetime, date, time.
 def validate_start_end(start, end, required=True):
-    if required and not (start and end):
-        raise ValidationError('Start and End are required.')
     if start and end:
         if isinstance(start, datetime.date):
             msg = 'greater or equal'
@@ -96,6 +98,10 @@ def validate_start_end(start, end, required=True):
             cond = end > start
         if not cond:
             raise ValidationError('End must be %s than Start.' % msg)
+    elif required:
+        raise ValidationError('Start and End are required.')
+    else:
+        validate_xor(start, end, 'Start and End must both be either blank or entered', reverse=True)
 
 def datetime_plus(dt, *durations):
     def _sum(attr):

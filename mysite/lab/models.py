@@ -701,6 +701,13 @@ class Period(AbstractModel):
     def prev(self):
         return Period.objects.order_by('end').filter(end__lt=self.end).first()
 
+    def dates(self):
+        p0 = self.prev()
+        return (
+            p0.end + datetime.timedelta(days=1) if p0 else self.end,
+            self.end,
+        )
+
 
 
 class DayConfig(AbstractModel):
@@ -859,7 +866,7 @@ class VisitBuilder(AbstractModel):
 
         if qn:
             locs = Loc.objects.filter(_qn_and(qn) if self.isand else _qn_or(qn))
-            print 'query', locs.query
+            # print 'query', locs.query
             locs = list(locs)
         else:
             locs = []
@@ -887,16 +894,25 @@ class VisitBuilder(AbstractModel):
         locs = sorted(locs, key=_sortkey)
         print 'locs', len(locs), locs
 
-        mgr = ForceVisit.objects
+        pcats = utils.tree_all_downs(self.periodcats.all())
+        ranges = []
+        for pn in [
+            PeriodCat.els_get(pcats),
+            self.periods.all(),
+        ]:
+            ranges.extend([ ep.dates() for ep in pn ])
+        if self.start:
+            ranges.append((self.start, self.end))
+        dates = set()
+        for d1, d2 in ranges:
+            delta = d2 - d1
+            for i in range(delta.days + 1):
+                dates.add(d1 + datetime.timedelta(days=i))
+        dates = sorted(dates)
+        print 'dates', dates
+
         with transaction.atomic():
-            '''
-            p = self.period
-            if p:
-                p0 = p.prev()
-                self.start = p0.end + datetime.timedelta(days=1) if p0 else p.end
-                self.end = p.end
-            '''
-            currdate = self.start
+            mgr = ForceVisit.objects
             self.qty_slots = 0
             self.qty_slots_skips = 0
             self.qty_locs = len(locs)
@@ -904,12 +920,12 @@ class VisitBuilder(AbstractModel):
             self.qty_node_skips = 0
             nodeskips = 0
             visits = []
-            while currdate <= self.end:
-                print '_generate > DATE @ VisitBuilder', currdate
-                day = getattr(self.week, utils.weekdays[currdate.weekday()])
+            for edate in dates:
+                print '_generate > DATE @ VisitBuilder', edate
+                day = getattr(self.week, utils.weekdays[edate.weekday()])
                 if day:
                     def _datetime(_time): # can't use timedelta with simple times.
-                        return datetime.datetime.combine(currdate, _time)
+                        return datetime.datetime.combine(edate, _time)
                     for etime in day.times.all():
                         dt = _datetime(etime.start)
                         while dt < _datetime(etime.end):
@@ -920,12 +936,12 @@ class VisitBuilder(AbstractModel):
                                 print '_generate > SKIP slot', dt
                             elif qv.filter(node=self.node).exists():
                                 self.qty_node_skips += 1
-                                print '_generate > SKIP node', dt
+                                print '_generate > SKIP node', dt, self.node
                             else:
                                 loc = locs.pop(0) if locs else None
                                 print '_generate > TIME @ VisitBuilder', dt, loc
                                 if loc:
-                                    if mgr.filter(loc=loc, datetime__range=(self.start, self.end)):
+                                    if mgr.filter(loc=loc, datetime__in=dates):
                                         self.qty_locs_skips += 1
                                         print '_generate > SKIP loc', loc
                                     else:
@@ -937,6 +953,6 @@ class VisitBuilder(AbstractModel):
                                             duration = self.duration,
                                         ))
                             dt = utils.datetime_plus(dt, self.duration, self.gap)
-                currdate += datetime.timedelta(days=1)
             self.qty_visits = len(visits)
+            xxx
             self.save()
