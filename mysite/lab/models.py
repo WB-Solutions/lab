@@ -86,6 +86,7 @@ def _one_one_blank(*args, **kwargs):
     return _one_one(*args, **_kw_merge(kwargs, blank=True, null=True))
 
 def _one(to, related, **kwargs):
+    # print '_one', to, related, kwargs
     return models.ForeignKey(to, related_name=related, **kwargs)
 
 def _one_blank(*args, **kwargs):
@@ -504,7 +505,7 @@ class ForceVisit(AbstractModel):
     accompanied = _boolean(False)
     observations = _text()
     rec = _text()
-    builder = _one_blank('VisitBuilder', 'visits')
+    builder = _one_blank('VisitBuilder', 'visits') # on_delete=models.SET_NULL
 
     class Meta:
         ordering = ('-datetime',)
@@ -814,6 +815,7 @@ class VisitBuilder(AbstractModel):
         super(VisitBuilder, self).save(*args, **kwargs)
 
     def _generate_check(self):
+        print '_generate_check', self.generate
         if self.generate:
             self._generate()
 
@@ -954,5 +956,4 @@ class VisitBuilder(AbstractModel):
                                         ))
                             dt = utils.datetime_plus(dt, self.duration, self.gap)
             self.qty_visits = len(visits)
-            xxx
             self.save()
