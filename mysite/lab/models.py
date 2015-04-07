@@ -152,6 +152,11 @@ class AbstractModel(models.Model):
     def syscodes_(self):
         return ' : '.join([ str(each) for each in [ self.id, self.syscode ] if each ])
 
+    def onoffperiod_visited_(self): return multiple_(self, 'onoffperiod_visited')
+    def onoffperiod_visit_(self): return multiple_(self, 'onoffperiod_visit')
+    def onofftime_visited_(self): return multiple_(self, 'onofftime_visited')
+    def onofftime_visit_(self): return multiple_(self, 'onofftime_visit')
+
     def cats_(self):
         return multiple_(self, 'cats')
 
@@ -287,6 +292,52 @@ class FormCat(AbstractTree):
 
 
 
+class DayConfig(AbstractModel):
+    name = _char()
+
+    class Meta:
+        ordering = ('name',)
+
+
+
+class TimeConfig(AbstractModel):
+    name = _char_blank()
+    day = _one(DayConfig, 'times')
+    start = _time(choices=time_choices)
+    end = _time(choices=time_choices)
+
+    class Meta:
+        ordering = ('start', 'end')
+
+    def __unicode__(self):
+        return _str(self, '%s: %s - %s', (self.name, self.start, self.end))
+
+    def clean(self):
+        utils.validate_start_end(self.start, self.end)
+
+
+
+class WeekConfig(AbstractModel):
+    name = _char()
+
+    # @ utils.weekdays.
+    mon = _one_blank(DayConfig, 'weeks_mon')
+    tue = _one_blank(DayConfig, 'weeks_tue')
+    wed = _one_blank(DayConfig, 'weeks_wed')
+    thu = _one_blank(DayConfig, 'weeks_thu')
+    fri = _one_blank(DayConfig, 'weeks_fri')
+    sat = _one_blank(DayConfig, 'weeks_sat')
+    sun = _one_blank(DayConfig, 'weeks_sun')
+
+    class Meta:
+        ordering = ('name',)
+
+    def clean(self):
+        if self.sys_user_visit or self.sys_user_visited or self.sys_period:
+            raise ValidationError('Sys - can NOT be deleted.')
+
+
+
 # https://docs.djangoproject.com/en/1.6/topics/auth/customizing/#auth-custom-user
 
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
@@ -320,6 +371,8 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
     is_active = _boolean(True, help_text=_('Designates whether this user should be treated as active. Unselect this instead of deleting accounts.'))
     date_joined = _datetime_blank_now()
 
+    week_visit = _one_blank(WeekConfig, 'users_visit')
+    week_visited = _one_blank(WeekConfig, 'users_visited')
     cats = _many_tree(UserCat, 'users')
 
     objects = UserManager()
@@ -454,6 +507,8 @@ class Place(AbstractTree):
 class Loc(AbstractModel):
     name = _char_blank()
     user = _one(User, 'locs')
+    week = _one_blank(WeekConfig, 'locs')
+
     address = _one_one_blank(Address, 'loc') # limit_choices_to
     place = _one_one_blank(Place, 'loc')
     cats = _many_tree(LocCat, 'locs')
@@ -691,6 +746,7 @@ class FormField(AbstractModel):
 class Period(AbstractModel):
     name = _name_unique()
     end = _date()
+    week = _one_blank(WeekConfig, 'periods')
     cats = _many_tree(PeriodCat, 'periods')
 
     class Meta:
@@ -711,48 +767,6 @@ class Period(AbstractModel):
 
 
 
-class DayConfig(AbstractModel):
-    name = _char()
-
-    class Meta:
-        ordering = ('name',)
-
-
-
-class TimeConfig(AbstractModel):
-    name = _char_blank()
-    day = _one(DayConfig, 'times')
-    start = _time(choices=time_choices)
-    end = _time(choices=time_choices)
-
-    class Meta:
-        ordering = ('start', 'end')
-
-    def __unicode__(self):
-        return _str(self, '%s: %s - %s', (self.name, self.start, self.end))
-
-    def clean(self):
-        utils.validate_start_end(self.start, self.end)
-
-
-
-class WeekConfig(AbstractModel):
-    name = _char()
-
-    # @ utils.weekdays.
-    mon = _one_blank(DayConfig, 'weeks_mon')
-    tue = _one_blank(DayConfig, 'weeks_tue')
-    wed = _one_blank(DayConfig, 'weeks_wed')
-    thu = _one_blank(DayConfig, 'weeks_thu')
-    fri = _one_blank(DayConfig, 'weeks_fri')
-    sat = _one_blank(DayConfig, 'weeks_sat')
-    sun = _one_blank(DayConfig, 'weeks_sun')
-
-    class Meta:
-        ordering = ('name',)
-
-
-
 def _qty():
     return _int_blank(default=None, editable=False)
 
@@ -768,16 +782,13 @@ class VisitBuilder(AbstractModel):
 
     name = _name_unique()
     node = _one(ForceNode, 'builders')
-    skipbricks = _boolean(True)
+    forcebricks = _boolean(True)
 
-    week = _one(WeekConfig, 'builders')
     duration = _duration()
     gap = _duration(mins=15)
 
     periods = _many(Period, 'builders')
     periodcats = _many_tree(PeriodCat, 'builders')
-    start = _date_blank()
-    end = _date_blank()
 
     orderby = _choices(20, [ 'area', 'city', 'state', 'country', 'zip', 'brick' ], default='zip')
     isand = _boolean(True, help_text='Check to use [AND] among groups; note that [OR] is implicit within each group.')
@@ -797,6 +808,9 @@ class VisitBuilder(AbstractModel):
     class Meta:
         ordering = ('name',)
 
+    def __unicode__(self):
+        return _str(self, 'Builder: %s > %s', (self.name, self.generated))
+
     def delete(self, *args, **kwargs):
         if self.generated:
             raise ValidationError('INVALID delete.')
@@ -805,7 +819,7 @@ class VisitBuilder(AbstractModel):
         if self.generated:
             raise ValidationError('NOT allowed to update, already generated.')
         # utils.validate_xor(self.period, self.start, 'Must select ONE of Period or Start/End.')
-        utils.validate_start_end(self.start, self.end, required=False)
+        # utils.validate_start_end(self.start, self.end, required=False)
 
     def save(self, *args, **kwargs):
         if self.generated:
@@ -957,3 +971,64 @@ class VisitBuilder(AbstractModel):
                             dt = utils.datetime_plus(dt, self.duration, self.gap)
             self.qty_visits = len(visits)
             self.save()
+
+
+
+class AbstractOnOff(AbstractModel):
+    on = _boolean(False)
+
+    # https://docs.djangoproject.com/en/1.7/topics/db/models/#model-inheritance
+
+    visit_user = _one_blank(User, '%(class)s_visit', editable=False)
+    visited_user = _one_blank(User, '%(class)s_visited', editable=False)
+
+    visited_loc = _one_blank(Loc, '%(class)s_visited', editable=False)
+
+    visit_node = _one_blank(ForceNode, '%(class)s_visit', editable=False)
+
+    class Meta:
+        abstract = True
+
+    def __unicode__(self):
+        return _str(self, '%s : %s - %s %s', ('on' if self.on else 'off', self.start, self.end, self._str_extra()))
+
+    def _str_extra(self):
+        return ''
+
+    def clean(self):
+        utils.validate_start_end(self.start, self.end)
+        utils.validate_one(
+            [ self.visit_user, self.visited_user, self.visited_loc, self.visit_node ],
+            'Must select ONE of visit/visited.'
+        )
+
+
+class OnOffPeriod(AbstractOnOff):
+    start = _date()
+    end = _date()
+
+
+class OnOffTime(AbstractOnOff):
+    start = _time(choices=time_choices)
+    end = _time(choices=time_choices)
+    date = _date_blank()
+
+    def _str_extra(self):
+        return '@ %s' % self.date
+
+
+
+class Sys(AbstractModel):
+    week_user_visit = _one(WeekConfig, 'sys_user_visit')
+    week_user_visited = _one(WeekConfig, 'sys_user_visited')
+    week_period = _one(WeekConfig, 'sys_period')
+
+    def __unicode__(self):
+        return _str(self, 'Sys', ())
+
+    def clean(self):
+        if not self.id and Sys.objects.count():
+            raise ValidationError('Singleton - can create only ONE instance.')
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Singleton - can NOT be deleted.')

@@ -77,8 +77,13 @@ def tree_any(n1, n2, ups=True):
 def tree_all_downs(cats):
     return set(list_flatten(cats, lambda ecat: tree_downs(ecat)))
 
+def validate_one(list, msg):
+    # print 'validate_one', list, msg
+    if sum([ int(bool(each)) for each in list ]) != 1:
+        raise ValidationError(msg)
+
 def validate_xor(v1, v2, msg, reverse=False):
-    print 'validate_xor', v1, v2, msg
+    # print 'validate_xor', v1, v2, msg, reverse
     def _val(v): # pending to support v as list.
         _v = bool(v)
         print 'validate_xor._val', v, _v

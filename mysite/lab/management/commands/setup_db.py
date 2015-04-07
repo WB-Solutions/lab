@@ -118,6 +118,8 @@ class Command(BaseCommand):
 
             week = _new(WeekConfig, name='Work Week', mon=day, tue=day, wed=day, thu=day, fri=day, sat=halfday, sun=None)
 
+            sys = _new(Sys, week_user_visit=week, week_user_visited=week, week_period=week)
+
             pcat = periodcats.pop(0)
             p0 = _new(Period, name='start', end=datetime.date(2015, 01, 01))
             def _period(vname, vdate):
@@ -132,7 +134,6 @@ class Command(BaseCommand):
                 VisitBuilder,
                 name = 'Demo',
                 node = nodes[0],
-                week = week,
             )
 
             builder.periodcats.add(pcat)

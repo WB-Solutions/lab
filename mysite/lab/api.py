@@ -560,6 +560,8 @@ model = User
 search = _search(admin.UserAdmin)
 
 class UserSerializer(AbstractSerializer):
+    week_visit_id = _id('week_visit')
+    week_visited_id = _id('week_visited')
     cats_ids = _ids('cats')
 
     # read-only via Field.
@@ -570,6 +572,8 @@ class UserSerializer(AbstractSerializer):
         model = model
         fields = _fields + (
             'email', 'first_name', 'last_name', 'last_login', 'date_joined',
+            'week_visit', 'week_visit_id',
+            'week_visited', 'week_visited_id',
             'cats', 'cats_ids',
         )
 
@@ -684,16 +688,18 @@ model = Loc
 search = _search(admin.LocAdmin)
 
 class LocSerializer(AbstractSerializer):
-    cats_ids = _ids('cats')
     user_id = _id('user')
+    week_id = _id('week')
+    cats_ids = _ids('cats')
     address_id = _id('address')
     place_id = _id('place')
 
     class Meta:
         model = model
         fields = _fields_name + (
-            'cats', 'cats_ids',
             'user', 'user_id',
+            'week', 'week_id',
+            'cats', 'cats_ids',
             'address', 'address_id',
             'place', 'place_id',
         )
@@ -702,7 +708,7 @@ class LocFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('user', 'address', 'place')
+        fields = search + ('user', 'week', 'address', 'place')
 
 class LocViewSet(AbstractView):
     queryset = _all(model)
@@ -800,12 +806,14 @@ model = Period
 search = _search(admin.PeriodAdmin)
 
 class PeriodSerializer(AbstractSerializer):
+    week_id = _id('week')
     cats_ids = _ids('cats')
 
     class Meta:
         model = model
         fields = _fields_name + (
             'end',
+            'week', 'week_id',
             'cats', 'cats_ids',
         )
 
@@ -813,7 +821,7 @@ class PeriodFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('end',)
+        fields = search + ('end', 'week')
 
 class PeriodViewSet(AbstractView):
     queryset = _all(model)
@@ -911,7 +919,6 @@ search = _search(admin.VisitBuilderAdmin)
 
 class VisitBuilderSerializer(AbstractSerializer):
     node_id = _id('node')
-    week_id = _id('week')
     periods_ids = _ids('periods')
     periodcats_ids = _ids('periodcats')
 
@@ -929,11 +936,10 @@ class VisitBuilderSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields_name + (
-            'duration', 'start', 'end', 'orderby', 'isand', 'generate',
+            'duration', 'orderby', 'isand', 'generate',
             'generated', 'qty_slots', 'qty_slots_skips', 'qty_locs', 'qty_locs_skips', 'qty_node_skips', 'qty_visits', # editable=False.
 
             'node', 'node_id',
-            'week', 'week_id',
 
             'periods', 'periods_ids',
             'periodcats', 'periodcats_ids',
@@ -955,7 +961,7 @@ class VisitBuilderFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('node', 'week', 'duration', 'gap', 'generated') # 'start', 'end'
+        fields = search + ('node', 'duration', 'gap', 'forcebricks', 'generated')
 
 class VisitBuilderViewSet(AbstractView):
     queryset = _all(model)
@@ -970,3 +976,93 @@ class VisitBuilderViewSet(AbstractView):
         obj._generate_check()
 
 _api('visitbuilders', VisitBuilderViewSet)
+
+
+
+model = OnOffPeriod
+search = _search(admin.OnOffPeriodAdmin)
+
+class OnOffPeriodSerializer(AbstractSerializer):
+
+    class Meta:
+        model = model
+        fields = _fields + (
+            'on', 'start', 'end',
+        )
+
+class OnOffPeriodFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('start', 'end')
+
+class OnOffPeriodViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = OnOffPeriodSerializer
+    search_fields = search
+    filter_class = OnOffPeriodFilter
+
+_api('onoffperiods', OnOffPeriodViewSet)
+
+
+
+model = OnOffTime
+search = _search(admin.OnOffTimeAdmin)
+
+class OnOffTimeSerializer(AbstractSerializer):
+    date_id = _id('date')
+
+    class Meta:
+        model = model
+        fields = _fields + (
+            'on', 'start', 'end',
+            'date', 'date_id',
+        )
+
+class OnOffTimeFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('start', 'end', 'date')
+
+class OnOffTimeViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = OnOffTimeSerializer
+    search_fields = search
+    filter_class = OnOffTimeFilter
+
+_api('onofftimes', OnOffTimeViewSet)
+
+
+
+model = Sys
+search = _search(admin.SysAdmin)
+
+class SysSerializer(AbstractSerializer):
+    week_user_visit_id = _id('week_user_visit')
+    week_user_visited_id = _id('week_user_visited')
+    week_period_id = _id('week_period')
+
+    class Meta:
+        model = model
+        fields = _fields + (
+            'week_user_visit', 'week_user_visit_id',
+            'week_user_visited', 'week_user_visited_id',
+            'week_period', 'week_period_id',
+        )
+
+class SysFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search + ('week_user_visit', 'week_user_visited', 'week_period')
+
+class SysViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = SysSerializer
+    search_fields = search
+    filter_class = SysFilter
+
+_api('sys', SysViewSet)
+
+

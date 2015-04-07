@@ -95,6 +95,28 @@ class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin): # SortableModelAdmin
 
 
 
+class AbstractOnOffVisitPeriodInline(AbstractStackedInline):
+    model = OnOffPeriod
+    verbose_name_plural = 'On/Off Periods @ Visit'
+    verbose_name = 'On/Off Period @ Visit'
+
+class AbstractOnOffVisitTimeInline(AbstractStackedInline):
+    model = OnOffTime
+    verbose_name_plural = 'On/Off Times @ Visit'
+    verbose_name = 'On/Off Time @ Visit'
+
+class AbstractOnOffVisitedPeriodInline(AbstractStackedInline):
+    model = OnOffPeriod
+    verbose_name_plural = 'On/Off Periods @ Visited'
+    verbose_name = 'On/Off Period @ Visited'
+
+class AbstractOnOffVisitedTimeInline(AbstractStackedInline):
+    model = OnOffTime
+    verbose_name_plural = 'On/Off Times @ Visited'
+    verbose_name = 'On/Off Time @ Visited'
+
+
+
 class StateInline(AbstractTabularInline):
     model = State
 
@@ -204,15 +226,21 @@ class ForceVisitInline(AbstractTabularInline):
     model = ForceVisit
     exclude = ('observations', 'rec')
 
+class OnOffVisitPeriodNodeInline(AbstractOnOffVisitPeriodInline):
+    fk_name = 'visit_node'
+
+class OnOffVisitTimeNodeInline(AbstractOnOffVisitTimeInline):
+    fk_name = 'visit_node'
+
 class ForceNodeAdmin(AbstractTreeAdmin):
     def _agenda(self, row):
         return utils._agenda('node', row)
     _agenda.allow_tags = True
 
-    list_display = _fields_name + ('order', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
+    list_display = _fields_name + ('order', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda', 'onoffperiod_visit_', 'onofftime_visit_')
     list_filter = ('itemcats', 'bricks',)
     filter_vertical = ('bricks',)
-    inlines = (ForceVisitInline,)
+    inlines = (ForceVisitInline, OnOffVisitPeriodNodeInline, OnOffVisitTimeNodeInline)
 
 _admin(ForceNode, ForceNodeAdmin)
 
@@ -245,6 +273,18 @@ from django.contrib.auth.admin import UserAdmin as _UserAdmin
 class LocInline(AbstractStackedInline):
     model = Loc
 
+class OnOffVisitPeriodUserInline(AbstractOnOffVisitPeriodInline):
+    fk_name = 'visit_user'
+
+class OnOffVisitTimeUserInline(AbstractOnOffVisitTimeInline):
+    fk_name = 'visit_user'
+
+class OnOffVisitedPeriodUserInline(AbstractOnOffVisitedPeriodInline):
+    fk_name = 'visited_user'
+
+class OnOffVisitedTimeUserInline(AbstractOnOffVisitedTimeInline):
+    fk_name = 'visited_user'
+
 class UserAdmin(_UserAdmin, AbstractAdmin):
     #readonly_fields = ('private_uuid', 'public_id')
 
@@ -258,7 +298,7 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
     _agenda.allow_tags = True
 
     fieldsets = (
-        (None, dict(fields=('email', 'first_name', 'last_name', 'syscode'))),
+        (None, dict(fields=('email', 'first_name', 'last_name', 'week_visit', 'week_visited', 'syscode'))),
         # (_('Personal info'), dict(fields=('first_name', 'last_name', 'display_name'))),
         (_('Permissions'), dict(fields=('is_active', 'is_staff', 'is_superuser'))), # 'groups', 'user_permissions'
         (_('Important dates'), dict(fields=('last_login', 'date_joined'))),
@@ -273,17 +313,22 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
         )),
     )
 
-    list_display = _fields + ('email', 'first_name', 'last_name', 'last_login', 'date_joined', 'cats_', '_agenda')
+    list_display = _fields + (
+        'email', 'first_name', 'last_name', 'last_login', 'date_joined',
+        'week_visit', 'week_visited',
+        'onoffperiod_visit_', 'onofftime_visit_', 'onoffperiod_visited_', 'onofftime_visited_',
+        'cats_', '_agenda',
+    )
     list_display_links = _fields + ('email',)
     search_fields = _search  + ('email', 'first_name', 'last_name')
     ordering = ('email',)
 
-    list_filter = ('cats',)
+    list_filter = ('week_visit', 'week_visited', 'cats')
 
     form = UserAdminForm
     add_form = UserCreateAdminForm
 
-    inlines = (LocInline,)
+    inlines = (LocInline, OnOffVisitPeriodUserInline, OnOffVisitedPeriodUserInline, OnOffVisitTimeUserInline, OnOffVisitedTimeUserInline)
 
 _admin(User, UserAdmin)
 
@@ -318,10 +363,18 @@ https://github.com/charettes/django-admin-enhancer/blob/master/admin_enhancer/te
     class LocAdmin(enhanced_admin.EnhancedModelAdminMixin, AbstractAdmin):
 '''
 
+class OnOffVisitedPeriodLocInline(AbstractOnOffVisitedPeriodInline):
+    fk_name = 'visited_loc'
+
+class OnOffVisitedTimeLocInline(AbstractOnOffVisitedTimeInline):
+    fk_name = 'visited_loc'
+
 class LocAdmin(AbstractAdmin):
-    list_display = _fields_name + ('address', 'place', 'user', 'cats_')
-    list_filter = ('cats',)
+    list_display = _fields_name + ('week', 'address', 'place', 'user', 'onoffperiod_visited_', 'onofftime_visited_', 'cats_')
+    list_filter = ('week', 'cats')
     # show_change_link = True
+
+    inlines = (OnOffVisitedPeriodLocInline, OnOffVisitedTimeLocInline)
 
     '''
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -383,10 +436,10 @@ _admin(FormField, FormFieldAdmin)
 
 
 class PeriodAdmin(AbstractAdmin):
-    list_display = _fields_name + ('end', 'cats_')
+    list_display = _fields_name + ('end', 'week', 'cats_')
     date_hierarchy = 'end'
     list_editable = ('end',)
-    list_filter = ('cats',)
+    list_filter = ('week', 'cats')
 
 _admin(Period, PeriodAdmin)
 
@@ -421,19 +474,19 @@ _geos = ('areas', 'cities', 'states', 'countries', 'zips', 'bricks')
 
 class VisitBuilderAdmin(AbstractAdmin):
     list_display = _fields_name + (
-        'node', 'week', 'duration', 'gap',
-        'start', 'end', # 'periods', 'periodcats',
+        'node', 'duration', 'gap', 'forcebricks',
+        # 'periods', 'periodcats',
         'generate', 'generated',
         'qty_slots', 'qty_slots_skips', 'qty_locs', 'qty_locs_skips', 'qty_node_skips', 'qty_visits',
     )
     filter_horizontal = _geos
-    list_filter = ('node', 'week', 'generate')
+    list_filter = ('node', 'generate')
 
     fieldsets = (
-        (None, dict(fields=('syscode', 'name', 'node', 'week', 'duration', 'gap'))),
+        (None, dict(fields=('syscode', 'name', 'node', 'duration', 'gap'))),
         ('Generate', dict(fields=('generate',))), # generated, qty_slots, qty_slots_skips, qty_locs, qty_locs_skips, qty_node_skips, qty_visits.
-        ('Dates', dict(fields=('periodcats', 'periods', 'start', 'end'))),
-        ('Locs / Users', dict(fields=('orderby', 'isand', 'usercats', 'loccats') + _geos))
+        ('Periods', dict(fields=('periodcats', 'periods'))),
+        ('Locs / Users', dict(fields=('orderby', 'forcebricks', 'isand', 'usercats', 'loccats') + _geos))
     )
 
     def get_readonly_fields(self, request, obj=None):
@@ -450,4 +503,31 @@ class VisitBuilderAdmin(AbstractAdmin):
         builder._generate_check()
 
 _admin(VisitBuilder, VisitBuilderAdmin)
+
+
+
+class OnOffPeriodAdmin(AbstractAdmin):
+    list_display = _fields + ('on', 'start', 'end', 'visited_user', 'visited_loc', 'visit_user', 'visit_node')
+    list_display_links = _fields
+    search_fields = _search
+
+_admin(OnOffPeriod, OnOffPeriodAdmin)
+
+
+
+class OnOffTimeAdmin(AbstractAdmin):
+    list_display = _fields + ('on', 'start', 'end', 'date', 'visited_user', 'visited_loc', 'visit_user', 'visit_node')
+    list_display_links = _fields
+    search_fields = _search
+
+_admin(OnOffTime, OnOffTimeAdmin)
+
+
+
+class SysAdmin(AbstractAdmin):
+    list_display = _fields + ('week_user_visit', 'week_user_visited', 'week_period')
+    list_display_links = _fields
+    search_fields = _search
+
+_admin(Sys, SysAdmin)
 
