@@ -470,7 +470,16 @@ _admin(WeekConfig, WeekConfigAdmin)
 
 
 
-_geos = ('areas', 'cities', 'states', 'countries', 'zips', 'bricks')
+class VisitCondAdmin(AbstractAdmin):
+    list_display = _fields_name + ('builder',)  # ('usercats', 'loccats', 'areas', 'cities', 'states', 'countries', 'zips', 'bricks')
+    search_fields = _search_name
+
+_admin(VisitCond, VisitCondAdmin)
+
+
+
+class VisitCondInline(AbstractStackedInline):
+    model = VisitCond
 
 class VisitBuilderAdmin(AbstractAdmin):
     list_display = _fields_name + (
@@ -479,14 +488,15 @@ class VisitBuilderAdmin(AbstractAdmin):
         'generate', 'generated',
         'qty_slots', 'qty_slots_skips', 'qty_locs', 'qty_locs_skips', 'qty_node_skips', 'qty_visits',
     )
-    filter_horizontal = _geos
     list_filter = ('node', 'generate')
+
+    inlines = (VisitCondInline,)
 
     fieldsets = (
         (None, dict(fields=('syscode', 'name', 'node', 'duration', 'gap'))),
         ('Generate', dict(fields=('generate',))), # generated, qty_slots, qty_slots_skips, qty_locs, qty_locs_skips, qty_node_skips, qty_visits.
         ('Periods', dict(fields=('periodcats', 'periods'))),
-        ('Locs / Users', dict(fields=('orderby', 'forcebricks', 'isand', 'usercats', 'loccats') + _geos))
+        ('Locs / Users', dict(fields=('orderby', 'forcebricks', 'isand')))
     )
 
     def get_readonly_fields(self, request, obj=None):

@@ -791,19 +791,7 @@ class VisitBuilder(AbstractModel):
     periodcats = _many_tree(PeriodCat, 'builders')
 
     orderby = _choices(20, [ 'area', 'city', 'state', 'country', 'zip', 'brick' ], default='zip')
-    isand = _boolean(True, help_text='Check to use [AND] among groups; note that [OR] is implicit within each group.')
-
-    usercats = _many_tree(UserCat, 'builders')
-    loccats = _many_tree(LocCat, 'builders')
-    # locs = _many(Loc, 'builders')
-
-    areas = _many(Area, 'builders')
-    cities = _many(City, 'builders')
-    states = _many(State, 'builders')
-    countries = _many(Country, 'builders')
-
-    zips = _many(Zip, 'builders')
-    bricks = _many(Brick, 'builders')
+    isand = _boolean(True, help_text='Check to use [AND] & [OR] levels, otherwise [OR] & [AND]. Note that [OR] is always implicit within each group.')
 
     class Meta:
         ordering = ('name',)
@@ -971,6 +959,24 @@ class VisitBuilder(AbstractModel):
                             dt = utils.datetime_plus(dt, self.duration, self.gap)
             self.qty_visits = len(visits)
             self.save()
+
+
+
+class VisitCond(AbstractModel):
+    name = _char_blank()
+    builder = _one(VisitBuilder, 'conds')
+
+    usercats = _many_tree(UserCat, 'conds')
+    loccats = _many_tree(LocCat, 'conds')
+    # locs = _many(Loc, 'conds')
+
+    areas = _many(Area, 'conds')
+    cities = _many(City, 'conds')
+    states = _many(State, 'conds')
+    countries = _many(Country, 'conds')
+
+    zips = _many(Zip, 'conds')
+    bricks = _many(Brick, 'conds')
 
 
 

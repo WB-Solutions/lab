@@ -138,6 +138,7 @@ class Command(BaseCommand):
 
             builder.periodcats.add(pcat)
 
+            '''
             for fname, model in [
                 ('usercats', UserCat),
                 ('loccats', LocCat),
@@ -149,6 +150,7 @@ class Command(BaseCommand):
                 ('bricks', Brick),
             ]:
                 getattr(builder, fname).add(_first(model), _last(model))
+            '''
 
         err = None
         if User.objects.exists():

@@ -922,17 +922,6 @@ class VisitBuilderSerializer(AbstractSerializer):
     periods_ids = _ids('periods')
     periodcats_ids = _ids('periodcats')
 
-    usercats_ids = _ids('usercats')
-    loccats_ids = _ids('loccats')
-
-    areas_ids = _ids('areas')
-    cities_ids = _ids('cities')
-    states_ids = _ids('states')
-    countries_ids = _ids('countries')
-
-    zips_ids = _ids('zips')
-    bricks_ids = _ids('bricks')
-
     class Meta:
         model = model
         fields = _fields_name + (
@@ -943,18 +932,6 @@ class VisitBuilderSerializer(AbstractSerializer):
 
             'periods', 'periods_ids',
             'periodcats', 'periodcats_ids',
-
-            'usercats', 'usercats_ids',
-            'loccats', 'loccats_ids',
-
-            'areas', 'areas_ids',
-            'cities', 'cities_ids',
-            'states', 'states_ids',
-            'countries', 'countries_ids',
-
-            'zips', 'zips_ids',
-            'bricks', 'bricks_ids',
-
         )
 
 class VisitBuilderFilter(AbstractFilter):
@@ -976,6 +953,56 @@ class VisitBuilderViewSet(AbstractView):
         obj._generate_check()
 
 _api('visitbuilders', VisitBuilderViewSet)
+
+
+
+model = VisitCond
+search = _search(admin.VisitCondAdmin)
+
+class VisitCondSerializer(AbstractSerializer):
+    builder_id = _id('builder')
+
+    usercats_ids = _ids('usercats')
+    loccats_ids = _ids('loccats')
+
+    areas_ids = _ids('areas')
+    cities_ids = _ids('cities')
+    states_ids = _ids('states')
+    countries_ids = _ids('countries')
+
+    zips_ids = _ids('zips')
+    bricks_ids = _ids('bricks')
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
+            'builder', 'builder_id',
+
+            'usercats', 'usercats_ids',
+            'loccats', 'loccats_ids',
+
+            'areas', 'areas_ids',
+            'cities', 'cities_ids',
+            'states', 'states_ids',
+            'countries', 'countries_ids',
+
+            'zips', 'zips_ids',
+            'bricks', 'bricks_ids',
+        )
+
+class VisitCondFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search
+
+class VisitCondViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = VisitCondSerializer
+    search_fields = search
+    filter_class = VisitCondFilter
+
+_api('visitconds', VisitCondViewSet)
 
 
 
