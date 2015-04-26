@@ -332,7 +332,7 @@ class WeekConfig(AbstractModel):
     class Meta:
         ordering = ('name',)
 
-    def clean(self):
+    def delete(self):
         if self.sys_user_visit or self.sys_user_visited or self.sys_period:
             raise ValidationError('Sys - can NOT be deleted.')
 
@@ -756,7 +756,7 @@ class Period(AbstractModel):
         return _str(self, 'Period: %s @ %s', (self.name, self.end))
 
     def prev(self):
-        return Period.objects.order_by('end').filter(end__lt=self.end).first()
+        return Period.objects.order_by('end').filter(end__lt=self.end).last()
 
     def dates(self):
         p0 = self.prev()
@@ -766,6 +766,17 @@ class Period(AbstractModel):
         )
 
 
+
+def _q(_fname, _rels):
+    _rels = list(_rels)
+    # print '_q', _fname, len(_rels)
+    return models.Q(**{_fname: _rels})
+def _qn_and(_qn):
+    # print '_qn_and', len(_qn)
+    return reduce(lambda x, y: x & y, _qn)
+def _qn_or(_qn):
+    # print '_qn_or', len(_qn)
+    return reduce(lambda x, y: x | y, _qn)
 
 def _qty():
     return _int_blank(default=None, editable=False)
@@ -803,9 +814,12 @@ class VisitBuilder(AbstractModel):
         if self.generated:
             raise ValidationError('INVALID delete.')
 
-    def clean(self):
+    def validate_generated(self):
         if self.generated:
             raise ValidationError('NOT allowed to update, already generated.')
+
+    def clean(self):
+        self.validate_generated()
         # utils.validate_xor(self.period, self.start, 'Must select ONE of Period or Start/End.')
         # utils.validate_start_end(self.start, self.end, required=False)
 
@@ -823,53 +837,27 @@ class VisitBuilder(AbstractModel):
 
     # must be executed AFTER save, in order to have access to m2m relationships.
     def _generate(self):
-        print '_generate', self
-        none = True
+        sys = Sys.objects.first()
+        print '_generate', self, sys
 
-        qn = []
-        def _q(_fname, _rels):
-            _rels = list(_rels)
-            print '_q', _fname, len(_rels)
-            return models.Q(**{_fname: _rels})
-        def _qn_and(_qn):
-            print '_qn_and', len(_qn)
-            return reduce(lambda x, y: x & y, _qn)
-        def _qn_or(_qn):
-            print '_qn_or', len(_qn)
-            return reduce(lambda x, y: x | y, _qn)
+        qn = [] # collection of multiple conds.
 
-        # cats.
-        for fname, mrel in [
-            ('cats__in', self.loccats),
-            ('user__cats__in', self.usercats),
-        ]:
-            if mrel.exists():
-                none = False
-                mrel = utils.tree_all_downs(mrel.all())
-                qn.append(_q(fname, mrel))
+        def _qn_and_or(_qn, _isand):
+            return _qn_and(_qn) if _isand else _qn_or(_qn)
 
-        # addresses.
-        tmpl = 'address__%s__in'
-        for suffix, mrel in [
-            ('area', self.areas),
-            ('area__city', self.cities),
-            ('area__city__state', self.states),
-            ('area__city__state__country', self.countries),
-            ('area__zip', self.zips),
-            ('area__zip__brick', self.bricks),
-        ]:
-            if mrel.exists():
-                none = False
-                qn.append(_qn_or([ _q('%saddress__%s__in' % (prefix, suffix), mrel.all()) for prefix in [ '', 'place__' ] ]))
+        for cond in self.conds.all():
+            eqn = cond.qn()
+            if eqn:
+                qn.append(_qn_and_or(eqn, not self.isand))
 
-        if not any ([ getattr(self, e).exists() for e in 'usercats loccats areas cities states countries zips bricks'.split() ]):
+        if not qn: # not any ([ getattr(self, e).exists() for e in 'usercats loccats areas cities states countries zips bricks'.split() ])
             # raise ValidationError('Must select at least one condition for Users / Locs.')
             self.generate = False
             self.save()
-            return # revert generate an ABORT, so we do NOT waste this builder.
+            return # revert generate and ABORT, so we do NOT waste this builder.
 
         if qn:
-            locs = Loc.objects.filter(_qn_and(qn) if self.isand else _qn_or(qn))
+            locs = Loc.objects.filter(_qn_and_or(qn, self.isand))
             # print 'query', locs.query
             locs = list(locs)
         else:
@@ -892,28 +880,53 @@ class VisitBuilder(AbstractModel):
                 if by == 'country': return v
                 error
             val = _val().name
-            print '_sortkey', by, val, eloc
+            # print '_sortkey', by, val, eloc
             return val
 
         locs = sorted(locs, key=_sortkey)
         print 'locs', len(locs), locs
 
         pcats = utils.tree_all_downs(self.periodcats.all())
-        ranges = []
-        for pn in [
-            PeriodCat.els_get(pcats),
-            self.periods.all(),
-        ]:
-            ranges.extend([ ep.dates() for ep in pn ])
-        if self.start:
-            ranges.append((self.start, self.end))
-        dates = set()
-        for d1, d2 in ranges:
-            delta = d2 - d1
-            for i in range(delta.days + 1):
-                dates.add(d1 + datetime.timedelta(days=i))
-        dates = sorted(dates)
-        print 'dates', dates
+        pn1 = list(PeriodCat.els_get(pcats))
+        pn2 = list(self.periods.all())
+        pn = sorted(set(pn1 + pn2), key=lambda e: e.end)
+        print 'pn', pn
+
+        def _day(week, date):
+            return getattr(week, utils.weekdays[date.weekday()])
+
+        def _onoff(dt, week, sources, suffix):
+            day = _day(week, dt)
+            # print '_onoff', dt, week, day
+            ok = False
+            if day:
+                dtdate = dt.date()
+                dttime = dt.time()
+                intime = False
+                for time in day.times.all():
+                    if dttime >= time.start and dttime <= time.end:
+                        intime = True
+                        break
+                if intime:
+                    sources = utils.list_compact(sources) # remove None's.
+                    def _get(prefix, cmp2, checkdate):
+                        xn = utils.list_flatten(sources, lambda e: getattr(e, prefix + suffix).all())
+                        # print '_onoff._get', cmp2, xn
+                        def _filter(e):
+                            return cmp2 >= e.start and cmp2 <= e.end and (not e.date or e.date == dtdate if checkdate else True)
+                        return utils.list_last(sorted(
+                            [ e for e in xn if _filter(e) ],
+                            key = lambda e: e.start,
+                        ))
+                    def _ison(pt):
+                        return not pt or pt.on
+                    operiod = _get('onoffperiod', dtdate, False)
+                    if _ison(operiod):
+                        otime = _get('onofftime', dttime, True)
+                        if _ison(otime):
+                            ok = True
+            # if not ok: print '_onoff - FAILED', dt
+            return ok
 
         with transaction.atomic():
             mgr = ForceVisit.objects
@@ -924,40 +937,78 @@ class VisitBuilder(AbstractModel):
             self.qty_node_skips = 0
             nodeskips = 0
             visits = []
-            for edate in dates:
-                print '_generate > DATE @ VisitBuilder', edate
-                day = getattr(self.week, utils.weekdays[edate.weekday()])
-                if day:
-                    def _datetime(_time): # can't use timedelta with simple times.
-                        return datetime.datetime.combine(edate, _time)
-                    for etime in day.times.all():
-                        dt = _datetime(etime.start)
-                        while dt < _datetime(etime.end):
-                            self.qty_slots += 1
-                            qv = mgr.filter(datetime=dt)
-                            if qv.exists():
-                                self.qty_slots_skips += 1
-                                print '_generate > SKIP slot', dt
-                            elif qv.filter(node=self.node).exists():
-                                self.qty_node_skips += 1
-                                print '_generate > SKIP node', dt, self.node
-                            else:
-                                loc = locs.pop(0) if locs else None
-                                print '_generate > TIME @ VisitBuilder', dt, loc
-                                if loc:
-                                    if mgr.filter(loc=loc, datetime__in=dates):
-                                        self.qty_locs_skips += 1
-                                        print '_generate > SKIP loc', loc
+
+            for ep in pn:
+                start, end = ep.dates()
+                qv = mgr.filter(datetime__range=(start, end)) # query within the current period (start - end).
+                delta = end - start
+                dates = [ start + datetime.timedelta(days=i) for i in range(delta.days + 1) ]
+                week = ep.week or sys.week_period
+                print '_generate > ep', ep, week, start, end # dates
+                for edate in dates:
+                    day = _day(week, edate)
+                    print '_generate > edate', edate, day
+                    if day:
+                        def _datetime(_time): # can't use timedelta with simple times.
+                            return datetime.datetime.combine(edate, _time)
+                        for etime in day.times.all():
+                            dt = _datetime(etime.start)
+                            dt2 = _datetime(etime.end)
+                            while dt < dt2:
+                                self.qty_slots += 1
+                                # print '_generate > slot', dt
+                                user = self.node.user
+                                ison = _onoff(
+                                    dt,
+                                    (user.week_visit if user else None) or sys.week_user_visit,
+                                    [ user ],
+                                    '_visit',
+                                )
+                                if ison:
+                                    if qv.filter(node=self.node, datetime=dt).exists(): # visit already generated for the node in this time slot.
+                                        self.qty_node_skips += 1
+                                        print '_generate > qty_node_skips', dt, self.node
                                     else:
-                                        visits.append(mgr.create(
-                                            builder = self,
-                                            node = self.node,
-                                            loc = loc,
-                                            datetime = dt,
-                                            duration = self.duration,
-                                        ))
-                            dt = utils.datetime_plus(dt, self.duration, self.gap)
+
+                                        # try (potentially multiple) locs for this specific time slot.
+                                        tryloc = True
+                                        locs2 = [] # queue for tried locs, which should be retried in the next time slot.
+                                        while locs and tryloc:
+                                            loc = locs.pop(0) if locs else None
+                                            # print '_tryloc', dt, loc
+                                            if loc:
+                                                if qv.filter(loc=loc): # loc already visited during this period.
+                                                    self.qty_locs_skips += 1
+                                                    print '_generate > qty_locs_skips', dt, loc
+                                                else:
+                                                    ison = _onoff(
+                                                        dt,
+                                                        loc.week or loc.user.week_visited or sys.week_user_visited,
+                                                        [ loc, loc.user ],
+                                                        '_visited',
+                                                    )
+                                                    if ison:
+                                                        visit = mgr.create(
+                                                            builder = self,
+                                                            node = self.node,
+                                                            loc = loc,
+                                                            datetime = dt,
+                                                            duration = self.duration,
+                                                        )
+                                                        print '==> _generate > visit', dt, visit
+                                                        visits.append(visit)
+                                                        tryloc = False
+                                                    else:
+                                                        # print '_generate > SKIP VISITED (locs2 queue)', dt, loc
+                                                        locs2.append(loc)
+                                        locs[0:0] = locs2 # re-insert in order at the beginning, for immediate try during the subsequent time slots.
+
+                                else:
+                                    # print '_generate > SKIP VISIT', dt, user
+                                    pass
+                                dt = utils.datetime_plus(dt, self.duration, self.gap)
             self.qty_visits = len(visits)
+            print 'done > generated visits & remaining locs', self.qty_visits, len(locs)
             self.save()
 
 
@@ -978,6 +1029,42 @@ class VisitCond(AbstractModel):
     zips = _many(Zip, 'conds')
     bricks = _many(Brick, 'conds')
 
+    def __unicode__(self):
+        return _str(self, '%s @ %s', (self.name, self.builder))
+
+    def clean(self):
+        if self.builder:
+            self.builder.validate_generated()
+
+    def qn(self):
+        qn = []
+
+        # cats.
+        for fname, mrel in [
+            ('cats__in', self.loccats),
+            ('user__cats__in', self.usercats),
+        ]:
+            if mrel.exists():
+                mrel = utils.tree_all_downs(mrel.all())
+                qn.append(_q(fname, mrel))
+
+        # addresses.
+        tmpl = 'address__%s__in'
+        for suffix, mrel in [
+            ('area', self.areas),
+            ('area__city', self.cities),
+            ('area__city__state', self.states),
+            ('area__city__state__country', self.countries),
+            ('area__zip', self.zips),
+            ('area__zip__brick', self.bricks),
+        ]:
+            if mrel.exists():
+                qn.append(_qn_or([ _q('%saddress__%s__in' % (prefix, suffix), mrel.all()) for prefix in [ '', 'place__' ] ]))
+
+        # print 'VisitCond', self, qn
+
+        return qn
+
 
 
 class AbstractOnOff(AbstractModel):
@@ -990,7 +1077,7 @@ class AbstractOnOff(AbstractModel):
 
     visited_loc = _one_blank(Loc, '%(class)s_visited', editable=False)
 
-    visit_node = _one_blank(ForceNode, '%(class)s_visit', editable=False)
+    # visit_node = _one_blank(ForceNode, '%(class)s_visit', editable=False)
 
     class Meta:
         abstract = True
@@ -1004,7 +1091,7 @@ class AbstractOnOff(AbstractModel):
     def clean(self):
         utils.validate_start_end(self.start, self.end)
         utils.validate_one(
-            [ self.visit_user, self.visited_user, self.visited_loc, self.visit_node ],
+            [ self.visit_user, self.visited_user, self.visited_loc ],
             'Must select ONE of visit/visited.'
         )
 

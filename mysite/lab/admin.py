@@ -72,7 +72,7 @@ class AbstractInlineFormSet(forms.models.BaseInlineFormSet):
         k = 'syscode' # hard-coded for now.
         for form in self.forms:
             d = form.cleaned_data
-            print 'XXX', d
+            # print 'AbstractInlineFormSet', d
             if form.is_valid() and not d.get('DELETE') and d.get(k) == '':
                 d[k] = None
         v = super(AbstractInlineFormSet, self).clean()
@@ -226,21 +226,15 @@ class ForceVisitInline(AbstractTabularInline):
     model = ForceVisit
     exclude = ('observations', 'rec')
 
-class OnOffVisitPeriodNodeInline(AbstractOnOffVisitPeriodInline):
-    fk_name = 'visit_node'
-
-class OnOffVisitTimeNodeInline(AbstractOnOffVisitTimeInline):
-    fk_name = 'visit_node'
-
 class ForceNodeAdmin(AbstractTreeAdmin):
     def _agenda(self, row):
         return utils._agenda('node', row)
     _agenda.allow_tags = True
 
-    list_display = _fields_name + ('order', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda', 'onoffperiod_visit_', 'onofftime_visit_')
+    list_display = _fields_name + ('order', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
     list_filter = ('itemcats', 'bricks',)
     filter_vertical = ('bricks',)
-    inlines = (ForceVisitInline, OnOffVisitPeriodNodeInline, OnOffVisitTimeNodeInline)
+    inlines = (ForceVisitInline,)
 
 _admin(ForceNode, ForceNodeAdmin)
 
@@ -328,7 +322,7 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
     form = UserAdminForm
     add_form = UserCreateAdminForm
 
-    inlines = (LocInline, OnOffVisitPeriodUserInline, OnOffVisitedPeriodUserInline, OnOffVisitTimeUserInline, OnOffVisitedTimeUserInline)
+    inlines = (LocInline, OnOffVisitPeriodUserInline, OnOffVisitTimeUserInline, OnOffVisitedPeriodUserInline, OnOffVisitedTimeUserInline)
 
 _admin(User, UserAdmin)
 
@@ -517,7 +511,7 @@ _admin(VisitBuilder, VisitBuilderAdmin)
 
 
 class OnOffPeriodAdmin(AbstractAdmin):
-    list_display = _fields + ('on', 'start', 'end', 'visited_user', 'visited_loc', 'visit_user', 'visit_node')
+    list_display = _fields + ('on', 'start', 'end', 'visited_user', 'visited_loc', 'visit_user')
     list_display_links = _fields
     search_fields = _search
 
@@ -526,7 +520,7 @@ _admin(OnOffPeriod, OnOffPeriodAdmin)
 
 
 class OnOffTimeAdmin(AbstractAdmin):
-    list_display = _fields + ('on', 'start', 'end', 'date', 'visited_user', 'visited_loc', 'visit_user', 'visit_node')
+    list_display = _fields + ('on', 'start', 'end', 'date', 'visited_user', 'visited_loc', 'visit_user')
     list_display_links = _fields
     search_fields = _search
 

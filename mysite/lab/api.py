@@ -1010,11 +1010,18 @@ model = OnOffPeriod
 search = _search(admin.OnOffPeriodAdmin)
 
 class OnOffPeriodSerializer(AbstractSerializer):
+    visit_user_id = _id('visit_user')
+    visited_user_id = _id('visited_user')
+    visited_loc_id = _id('visited_loc')
 
     class Meta:
         model = model
         fields = _fields + (
             'on', 'start', 'end',
+
+            'visit_user', 'visit_user_id',
+            'visited_user', 'visited_user_id',
+            'visited_loc', 'visited_loc_id',
         )
 
 class OnOffPeriodFilter(AbstractFilter):
@@ -1039,11 +1046,19 @@ search = _search(admin.OnOffTimeAdmin)
 class OnOffTimeSerializer(AbstractSerializer):
     date_id = _id('date')
 
+    visit_user_id = _id('visit_user')
+    visited_user_id = _id('visited_user')
+    visited_loc_id = _id('visited_loc')
+
     class Meta:
         model = model
         fields = _fields + (
             'on', 'start', 'end',
             'date', 'date_id',
+
+            'visit_user', 'visit_user_id',
+            'visited_user', 'visited_user_id',
+            'visited_loc', 'visited_loc_id',
         )
 
 class OnOffTimeFilter(AbstractFilter):

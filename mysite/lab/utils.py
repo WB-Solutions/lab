@@ -9,6 +9,9 @@ def list_flatten(els, fn):
 def list_compact(els):
     return [ each for each in els if each ]
 
+def list_last(els):
+    return els[-1] if els else None
+
 def str_int(string):
     try: v = int(string)
     except: v = None
