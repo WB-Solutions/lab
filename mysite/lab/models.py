@@ -578,6 +578,22 @@ class ForceVisit(AbstractModel):
 
 
 
+class FormType(AbstractModel):
+    name = _name_unique()
+    description = _form_description()
+
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return _str(self, '%s - %s', (self.name, self.description))
+
+    def forms_(self): return multiple_(self, 'forms')
+
+    def formfields_(self): return multiple_(self, 'formfields')
+
+
+
 class Form(AbstractModel):
     name = _name_unique()
     scope = _choices(20, [ 'visits', 'users' ])
@@ -587,6 +603,7 @@ class Form(AbstractModel):
     expandable = _form_expandable()
     order = _form_order()
     cats = _many_tree(FormCat, 'forms')
+    types = _many(FormType, 'forms')
 
     repitems = _many(Item, 'repforms')
     repitemcats = _many_tree(ItemCat, 'repforms')
@@ -669,6 +686,7 @@ class Form(AbstractModel):
             'users_usercats', 'users_loccats',
             'visits_usercats', 'visits_loccats',
             'visits_itemcats', 'visits_forcenodes', 'visits_bricks',
+            # 'types',
         ]:
             ev = multiple_(self, each)
             if ev:
@@ -691,6 +709,8 @@ class Form(AbstractModel):
 
     def fields_(self): return multiple_(self, 'fields')
 
+    def types_(self): return multiple_(self, 'types')
+
 
 
 class FormField(AbstractModel):
@@ -708,6 +728,7 @@ class FormField(AbstractModel):
     order = _form_order()
     opts1 = _text(help_text=_('Each option in a separate line with format Value:Label'))
     optscat = _one_blank(GenericCat, 'fields')
+    types = _many(FormType, 'formfields')
 
     class Meta:
         unique_together = ('form', 'name')
@@ -740,6 +761,8 @@ class FormField(AbstractModel):
         if opts is not None and not self.required:
             opts.insert(0, ('', '-'))
         return opts
+
+    def types_(self): return multiple_(self, 'types')
 
 
 

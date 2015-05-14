@@ -720,6 +720,37 @@ _api('locs', LocViewSet)
 
 
 
+model = FormType
+search = _search(admin.FormTypeAdmin)
+
+class FormTypeSerializer(AbstractSerializer):
+    forms_ids = _ids('forms')
+    formfields_ids = _ids('formfields')
+
+    class Meta:
+        model = model
+        fields = _fields_name + (
+            'description',
+            'forms', 'forms_ids',
+            'formfields', 'formfields_ids',
+        )
+
+class FormTypeFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search
+
+class FormTypeViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = FormTypeSerializer
+    search_fields = search
+    filter_class = FormTypeFilter
+
+_api('FormTypes', FormTypeViewSet)
+
+
+
 model = Form
 search = _search(admin.FormAdmin)
 
@@ -734,6 +765,7 @@ class FormSerializer(AbstractSerializer):
     visits_itemcats_ids = _ids('visits_itemcats')
     visits_forcenodes_ids = _ids('visits_forcenodes')
     visits_bricks_ids = _ids('visits_bricks')
+    types_ids = _ids('types')
 
     class Meta:
         model = model
@@ -749,6 +781,7 @@ class FormSerializer(AbstractSerializer):
             'visits_itemcats', 'visits_itemcats_ids',
             'visits_forcenodes', 'visits_forcenodes_ids',
             'visits_bricks', 'visits_bricks_ids',
+            'types', 'types_ids',
         )
 
 class FormFilter(AbstractFilter):
@@ -777,6 +810,7 @@ search = _search(admin.FormFieldAdmin)
 class FormFieldSerializer(AbstractSerializer):
     form_id = _id('form')
     optscat_id = _id('optscat')
+    types_ids = _ids('types')
 
     class Meta:
         model = model
@@ -784,6 +818,7 @@ class FormFieldSerializer(AbstractSerializer):
             'description', 'type', 'widget', 'default', 'required', 'order', 'opts1',
             'optscat', 'optscat_id',
             'form', 'form_id',
+            'types', 'types_ids',
         )
 
 class FormFieldFilter(AbstractFilter):

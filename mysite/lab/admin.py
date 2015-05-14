@@ -382,6 +382,14 @@ _admin(Loc, LocAdmin)
 
 
 
+class FormTypeAdmin(AbstractAdmin):
+    list_display = _fields_name + ('description', 'forms_', 'formfields_')
+    search_fields = _search_name + ('description',)
+
+_admin(FormType, FormTypeAdmin)
+
+
+
 class FormFieldInline(AbstractStackedInline):
     model = FormField
     # suit_classes = 'suit-tab suit-tab-fields'
@@ -391,13 +399,14 @@ class FormAdmin(AbstractAdmin):
         return row._h_all()
     _h_all.allow_tags = True
 
-    list_display = _fields_name + ('scope', 'start', 'end', 'expandable', 'order', 'cats_', '_h_all', 'fields_')
+    list_display = _fields_name + ('scope', 'start', 'end', 'expandable', 'order', 'cats_', '_h_all', 'fields_', 'types_')
     filter_vertical = ('repitems', 'visits_bricks',)
     list_filter = (
         'scope', 'cats', 'repitemcats',
         'users_usercats', 'users_loccats',
         'visits_usercats', 'visits_loccats',
         'visits_itemcats', 'visits_forcenodes',
+        'types',
     )
     search_fields = _search_name + ('description',)
     inlines = (FormFieldInline,)
@@ -422,8 +431,9 @@ _admin(Form, FormAdmin)
 
 
 class FormFieldAdmin(AbstractAdmin):
-    list_display = _fields_name + ('form', 'type', 'widget', 'default', 'required', 'order', 'opts1_', 'optscat')
+    list_display = _fields_name + ('form', 'type', 'widget', 'default', 'required', 'order', 'opts1_', 'optscat', 'types_')
     search_fields = _search_name + ('description',)
+    list_filter = ('types',)
 
 _admin(FormField, FormFieldAdmin)
 
