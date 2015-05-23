@@ -99,6 +99,7 @@ def _data(config=None):
         else:
             visits = utils.list_flatten(go_nodes, lambda node: node.visits.all())
             allitems = _all(Item)
+            allformtypes = _all(FormType)
             allforms = Form.objects.order_by('order', 'name').all()
             user_dict = None
             if go_user:
@@ -108,6 +109,10 @@ def _data(config=None):
                     forms = forms_ids,
                     repforms = repforms_ids,
                 )
+            def _types(row):
+                types = row.types.all()
+                # return _dict(types, lambda field: dict())
+                return utils.db_ids(types)
             data = dict(
                 user = user_dict,
                 nodes = _dict(go_nodes, lambda node: dict(
@@ -119,6 +124,11 @@ def _data(config=None):
                     description = item.forms_description,
                     expandable = item.forms_expandable,
                     order = item.forms_order,
+                )),
+                allformtypes = _dict(allformtypes, lambda ftype: dict(
+                    name = ftype.name,
+                    description = ftype.description,
+                    order = ftype.order,
                 )),
                 allforms = _dict(allforms, lambda form: dict(
                     name = form.name,
@@ -134,7 +144,9 @@ def _data(config=None):
                         required = field.required,
                         order = field.order,
                         opts = field.opts(),
+                        types = _types(field),
                     )),
+                    types = _types(form),
                 )),
             )
     # print '_data', config, data
@@ -203,8 +215,9 @@ def ajax(request):
                 observations = _get('observations'),
                 rec = json.dumps(rec),
             )
+            # print 'visit', visit
             # print 'dbvars', dbvars
-            utils.db_update(visit, dbvars)
+            utils.db_update(visit, **dbvars)
     except IntegrityError as e:
         errors.append('Not unique, invalid.')
         # raise(e)

@@ -580,6 +580,7 @@ class ForceVisit(AbstractModel):
 
 class FormType(AbstractModel):
     name = _name_unique()
+    order = _form_order()
     description = _form_description()
 
     class Meta:

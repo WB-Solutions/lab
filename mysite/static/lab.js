@@ -12,21 +12,28 @@ $(function(){
   var w_cal = $('#cal')
   var w_modal = $('#modal')
   var w_form = $('#modal-form')
-  // _log('w_*', w_dt2, w_dt, w_cal, w_modal, w_form)
+  var w_list = $('#modal-list')
+  // _log('w_*', w_dt2, w_dt, w_cal, w_modal, w_form, w_list)
 
   var w_user = $('#go_user')
   var w_visits = $('#go_visits')
   var w_forms = $('#go_forms')
   var w_nodes = $('#go_nodes')
 
-  function modal(z) {
-	_log('modal', z)
+  function modal(z, formtype) {
+	_log('modal', z, formtype)
 	if (!z) { z = {} }
 	var visit = z.visit
 	var userform = z.userform
 
+	w_form.empty()
+	w_list.empty()
+
 	function _ids(source) {
-	  var _v = _(_(source).sortBy('full')).pluck('id')
+	  var _v = _(source).chain()
+	    .sortBy('full')
+	    .pluck('id')
+	    .value()
 	  _log('_ids', _v)
 	  return _v
 	}
@@ -43,9 +50,16 @@ $(function(){
 	}
 	var vjson = {}
 	var refvars = {}
-	var rec, zforms, zreps
+	var rec, zforms, zreps, label
 
-	var err
+	function _forms(ids) {
+	  return _(ids).chain()
+	    .collect(function(each){ return data.allforms[each] })
+	    .compact() // compact to handle not found.
+	    .value()
+	}
+
+	var err, jschema, jitems
 	if (visit) {
 	  if (userform) { err = 'BOTH' }
 	  _(vjson).extend(visit)
@@ -54,19 +68,96 @@ $(function(){
 	  zforms = visit.forms
 	  zreps = visit.repforms
 	  label = 'Visit'
+	  jschema = {
+	    status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] },
+	    datetime: { type: 'string' },
+	    user_name: { type: 'string' },
+	    user_email: { type: 'string' },
+	    user_cats: { type: 'string' },
+	    loc_name: { type: 'string' },
+	    loc_address: { type: 'string' },
+	    accompanied: { type: 'boolean' },
+	  }
+	  jitems = [
+	    { key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
+	    { key: 'datetime', prepend: 'Date/Time', notitle: true, disabled: true },
+	    { key: 'user_name', prepend: 'User', notitle: true, disabled: true },
+	    { key: 'user_email', prepend: 'Email', notitle: true, disabled: true },
+	    { key: 'user_cats', prepend: 'Categories', notitle: true, disabled: true },
+	    { key: 'loc_name', prepend: 'Location', notitle: true, disabled: true },
+	    { key: 'loc_address', prepend: 'Address', notitle: true, disabled: true },
+	    { key: 'accompanied', prepend: 'Accompanied', inlinetitle: 'Accompanied', htmlClass: 'lab-field-boolean' },
+	  ]
 	}
 	else if (userform) {
 	  rec = {}
-	  zforms = [] // [userform]
 	  var formid = userform.id
-	  zreps = _(_(data.user.repforms[formid]).collect(function(e){
-		return [ e, [formid] ]
-	  })).object()
+	  zreps = data.user.repforms[formid]
+	  zforms = zreps && zreps.length ? [] : [formid]
+	  zreps = _(zreps).chain()
+	    .collect(function(e){ return [ e, [formid] ] })
+	    .object()
+	    .value()
 	  label = 'Form'
+	  jschema = {}
+	  jitems = []
 	}
 	else { err = 'NO' }
 	if (err) { return alert(_('Error @ modal : %s visit / userform').sprintf(err)) }
 	// _log('modal', z, vjson)
+	_log('zforms & zreps', zforms, zreps)
+
+	if (!formtype) {
+	  var nforms = _forms(zforms) // do NOT use forms from zreps.
+	  var formtypes = _sorted(_(nforms).chain()
+	    .collect(function(eform){ return eform.types })
+	    .flatten()
+	    .uniq()
+	    .collect(function(eid){ return data.allformtypes[eid] })
+	    .compact() // compact to handle not found.
+	    .value())
+	  // _log('formtypes', nforms, formtypes.length, formtypes)
+
+	  if (formtypes.length > 1) {
+	    var wlist = $('<div class="list-group">')
+	    _(formtypes).each(function(eformtype){
+	      // _log('eformtype', eformtype.name, eformtype.description)
+	      var w1 = $('<a href="#" class="list-group-item">')
+	      w1.click(function(ev){
+		// _log('click @ eformtype', eformtype)
+		ev.preventDefault()
+		setTimeout(function(){
+		  // _log('setTimeout @ eformtype', eformtype)
+		  modal(z, eformtype)
+		}, 100)
+		return false
+	      })
+	      var wname = $('<h4 class="list-group-item-heading">')
+	      wname.append(eformtype.name)
+	      var wdesc = $('<p class="list-group-item-text">')
+	      wdesc.append(eformtype.description)
+	      w1.append(wname, wdesc)
+	      wlist.append(w1)
+	    })
+	    w_list.append(wlist)
+	    w_modal.modal('show')
+	    return
+	  }
+	}
+
+	w_form.toggleClass('form-user', Boolean(userform))
+
+	var _filter_formtype = function(v1) {
+	  var v2 = v1
+	  if (formtype) {
+	    v2 = _(v1).select(function(e){
+	      // those with empty types will apply !
+	      return !e.types || !e.types.length || _(e.types).contains(formtype.id)
+	    })
+	  }
+	  // _log('_filter_formtype', v1, formtype, v2)
+	  return v2
+	}
 
 	var schema2 = {}
 	function _do_fields(fields, pre_id) {
@@ -133,14 +224,14 @@ $(function(){
 	var fieldsets = []
 	function _do_fieldset(forms_ids, item) {
 	  // _log('_do_fieldset', forms_ids, item)
-	  var forms = _(_(forms_ids).collect(function(each){
-		return data.allforms[each]
-	  })).compact() // compact to handle not found.
-	  var fields = _(_(forms).collect(function(form){
-		return _(form.fields).values()
-	  })).flatten()
+	  var forms = _filter_formtype(_forms(forms_ids))
+	  var fields = _(forms).chain()
+	    .collect(function(eform){ return _(eform.fields).values() })
+	    .flatten()
+	    .value()
 	  // _log('_do_fieldset > fields', forms, fields)
 	  if (!fields.length) { return }
+	  fields = _filter_formtype(fields)
 	  var source = item || forms[0]
 	  var f_fields = _do_fields(fields, item ? item.id + '_' : '')
 	  var desc = source.description
@@ -157,9 +248,11 @@ $(function(){
 	  _do_fieldset([form_id])
 	})
 
-	var repitems = _(_sorted(_(_(zreps).keys()).collect(function(item_id){
-	  return data.allitems[item_id]
-	}))).compact() // compact to handle not found.
+	var repitems = _sorted(_(zreps).chain()
+	  .keys()
+	  .collect(function(item_id){ return data.allitems[item_id] })
+	  .compact() // compact to handle not found.
+	  .value())
 	// _log('repitems', repitems)
 	_(repitems).each(function(item){
 	  _do_fieldset(zreps[item.id], item)
@@ -167,37 +260,20 @@ $(function(){
 
 	// _log('modal > vjson', vjson)
 	// _log('modal > schema2 / fieldsets', schema2, fieldsets)
-	w_form.empty().jsonForm({
-	  schema: {
-		datetime: { type: 'string' },
-		user_name: { type: 'string' },
-		user_email: { type: 'string' },
-		user_cats: { type: 'string' },
-		loc_name: { type: 'string' },
-		loc_address: { type: 'string' },
-		status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] },
-		accompanied: { type: 'boolean' },
+	w_form.jsonForm({
+	  schema: _(jschema).extend({
 		observations: { type: 'string' },
 		rec: {
 		  type: 'object',
 		  title: 'Forms',
 		  properties: schema2,
 		},
-	  },
+	  }),
 	  form: [
 		{
 		  type: 'section', // fieldset
 		  title: label,
-		  items: [
-			{ key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
-			{ key: 'datetime', prepend: 'Date/Time', notitle: true, disabled: true },
-			{ key: 'user_name', prepend: 'User', notitle: true, disabled: true },
-			{ key: 'user_email', prepend: 'Email', notitle: true, disabled: true },
-			{ key: 'user_cats', prepend: 'Categories', notitle: true, disabled: true },
-			{ key: 'loc_name', prepend: 'Location', notitle: true, disabled: true },
-			{ key: 'loc_address', prepend: 'Address', notitle: true, disabled: true },
-			{ key: 'accompanied', prepend: 'Accompanied', inlinetitle: 'Accompanied', htmlClass: 'lab-field-boolean' },
-		  ],
+		  items: jitems,
 		},
 	  ].concat(fieldsets).concat([
 		{

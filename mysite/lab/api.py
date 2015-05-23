@@ -730,7 +730,7 @@ class FormTypeSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields_name + (
-            'description',
+            'order', 'description',
             'forms', 'forms_ids',
             'formfields', 'formfields_ids',
         )
@@ -747,7 +747,7 @@ class FormTypeViewSet(AbstractView):
     search_fields = search
     filter_class = FormTypeFilter
 
-_api('FormTypes', FormTypeViewSet)
+_api('formtypes', FormTypeViewSet)
 
 
 

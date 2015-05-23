@@ -38,10 +38,12 @@ def db_get(model, dbid=None, **kwargs):
     return v
 
 def db_update(model, save_kwargs=None, **kwargs):
-    # print 'utils.db_update', model, kwargs
+    # print 'utils.db_update', model, save_kwargs, kwargs
     for dbk, dbv in kwargs.items():
         setattr(model, dbk, dbv)
-    model.save(**save_kwargs or dict())
+    kw = save_kwargs or dict()
+    # print 'utils.db_update', kw
+    model.save(**kw)
 
 def db_names(rel):
     return ', '.join([ each.name for each in rel.all() ])

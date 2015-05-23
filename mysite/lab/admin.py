@@ -383,7 +383,7 @@ _admin(Loc, LocAdmin)
 
 
 class FormTypeAdmin(AbstractAdmin):
-    list_display = _fields_name + ('description', 'forms_', 'formfields_')
+    list_display = _fields_name + ('order', 'description', 'forms_', 'formfields_')
     search_fields = _search_name + ('description',)
 
 _admin(FormType, FormTypeAdmin)
