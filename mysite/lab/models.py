@@ -551,22 +551,13 @@ class ForceNode(AbstractTree):
 
 
 
-class ForceVisit(AbstractModel):
-    node = _one(ForceNode, 'visits')
-    loc = _one(Loc, 'visits')
+class AbstractFormRec(AbstractModel):
     datetime = _datetime_now()
-    duration = _duration()
-    status = _choices(2, [ ('s', 'Scheduled'), ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
-    accompanied = _boolean(False)
     observations = _text()
     rec = _text()
-    builder = _one_blank('VisitBuilder', 'visits') # on_delete=models.SET_NULL
 
     class Meta:
         ordering = ('-datetime',)
-
-    def __unicode__(self):
-        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.node, self.loc))
 
     def clean(self):
         if self.rec:
@@ -575,6 +566,19 @@ class ForceVisit(AbstractModel):
 
     def rec_dict(self):
         return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()
+
+
+
+class ForceVisit(AbstractFormRec):
+    node = _one(ForceNode, 'visits')
+    loc = _one(Loc, 'visits')
+    duration = _duration()
+    status = _choices(2, [ ('s', 'Scheduled'), ('v', 'Visited'), ('n', 'Negative'), ('r', 'Re-scheduled') ])
+    accompanied = _boolean(False)
+    builder = _one_blank('VisitBuilder', 'visits') # on_delete=models.SET_NULL
+
+    def __unicode__(self):
+        return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.node, self.loc))
 
 
 
@@ -764,6 +768,15 @@ class FormField(AbstractModel):
         return opts
 
     def types_(self): return multiple_(self, 'types')
+
+
+
+class UserFormRec(AbstractFormRec):
+    user = _one(User, 'userformrecs')
+    form = _one(Form, 'userformrecs')
+
+    def __unicode__(self):
+        return _str(self, 'User Form Rec: %s > %s @ %s', (self.datetime, self.user, self.form))
 
 
 

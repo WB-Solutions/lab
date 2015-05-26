@@ -105,6 +105,7 @@ def _data(config=None):
             if go_user:
                 forms_ids, repforms_ids = go_user.get_forms_reps()
                 user_dict = dict(
+                    id = go_user.id,
                     name = go_user.fullname(),
                     forms = forms_ids,
                     repforms = repforms_ids,
