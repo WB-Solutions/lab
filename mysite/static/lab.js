@@ -21,317 +21,345 @@ $(function(){
   var w_nodes = $('#go_nodes')
 
   function modal(z, formtype) {
-	_log('modal', z, formtype)
-	if (!z) { z = {} }
-	var visit = z.visit
-	var userform = z.userform
+    _log('modal', z, formtype)
+    if (!z) { z = {} }
+    var visit = z.visit
+    var userform = z.userform
 
-	w_form.empty()
-	w_list.empty()
+    w_form.empty()
+    w_list.empty()
 
-	function _ids(source) {
-	  var _v = _(source).chain()
-	    .sortBy('full')
-	    .pluck('id')
-	    .value()
-	  _log('_ids', _v)
-	  return _v
-	}
-	function _obj(source) {
-	  var _v = {}
-	  _(source).each(function(each, id){ _v[id] = each.full })
-	  _log('_obj', _v)
-	  return _v
-	}
-	function _sorted(_els) {
-	  return _(_els).sortBy(function(each){
-		return [ each.order, each.name ]
+    function _ids(source) {
+      var _v = _(source).chain()
+	.sortBy('full')
+	.pluck('id')
+	.value()
+      _log('_ids', _v)
+      return _v
+    }
+    function _obj(source) {
+      var _v = {}
+      _(source).each(function(each, id){ _v[id] = each.full })
+      _log('_obj', _v)
+      return _v
+    }
+    function _sorted(_els) {
+      return _(_els).sortBy(function(each){
+	return [ each.order, each.name ]
+      })
+    }
+    var vjson = {}
+    var refvars = {}
+    var rec, zforms, zreps, label
+
+    function _forms(ids) {
+      return _(ids).chain()
+	.collect(function(each){ return data.allforms[each] })
+	.compact() // compact to handle not found.
+	.value()
+    }
+
+    var err
+    var jschema = {}
+    var jitems = []
+    var selformtype = false
+    var fieldsets = []
+    var fieldsets2 = []
+
+    if (visit) {
+      if (userform) { err = 'BOTH' }
+      _(vjson).extend(visit)
+      _(refvars).extend({
+	ref_visit: visit.id
+      })
+      rec = visit.rec
+      zforms = visit.forms
+      zreps = visit.repforms
+      label = 'Visit'
+      _(jschema).extend({
+	datetime: { type: 'string' },
+	user_name: { type: 'string' },
+	user_email: { type: 'string' },
+	user_cats: { type: 'string' },
+	loc_name: { type: 'string' },
+	loc_address: { type: 'string' }
+      })
+      jitems.push(
+	{ key: 'datetime', prepend: 'Date/Time', notitle: true, disabled: true },
+	{ key: 'user_name', prepend: 'User', notitle: true, disabled: true },
+	{ key: 'user_email', prepend: 'Email', notitle: true, disabled: true },
+	{ key: 'user_cats', prepend: 'Categories', notitle: true, disabled: true },
+	{ key: 'loc_name', prepend: 'Location', notitle: true, disabled: true },
+	{ key: 'loc_address', prepend: 'Address', notitle: true, disabled: true }
+      )
+    }
+    else if (userform) {
+      _(refvars).extend({
+	ref_user: data.user.id,
+	ref_form: userform.id
+      })
+      rec = {}
+      var formid = userform.id
+      zreps = data.user.repforms[formid]
+      zforms = zreps && zreps.length ? [] : [formid]
+      zreps = _(zreps).chain()
+	.collect(function(e){ return [ e, [formid] ] })
+	.object()
+	.value()
+      label = 'Form'
+    }
+    else { err = 'NO' }
+    if (err) { return alert(_('Error @ modal : %s visit / userform').sprintf(err)) }
+    // _log('modal', z, vjson)
+    _log('zforms & zreps', zforms, zreps)
+
+    if (!formtype) {
+      var nforms = _forms(zforms) // do NOT use forms from zreps.
+      var formtypes = _sorted(_(nforms).chain()
+	.collect(function(eform){ return eform.types })
+	.flatten()
+	.uniq()
+	.collect(function(eid){ return data.allformtypes[eid] })
+	.compact() // compact to handle not found.
+	.value())
+      // _log('formtypes', nforms, formtypes.length, formtypes)
+
+      selformtype = formtypes.length > 1
+
+      if (selformtype) {
+	var wlist = $('<div class="list-group">')
+	_(formtypes).each(function(eformtype){
+	  // _log('eformtype', eformtype.name, eformtype.description)
+	  var w1 = $('<a href="#" class="list-group-item">')
+	  w1.click(function(ev){
+	    // _log('click @ eformtype', eformtype)
+	    ev.preventDefault()
+	    setTimeout(function(){
+	      // _log('setTimeout @ eformtype', eformtype)
+	      modal(z, eformtype)
+	    }, 100)
+	    return false
+	  })
+	  var wname = $('<h4 class="list-group-item-heading">')
+	  wname.append(eformtype.name)
+	  var wdesc = $('<p class="list-group-item-text">')
+	  wdesc.append(eformtype.description)
+	  w1.append(wname, wdesc)
+	  wlist.append(w1)
+	})
+	w_list.append(wlist)
+      }
+    }
+    console.log('selformtype', selformtype, 'visit', visit)
+
+    if (selformtype) {
+    }
+    else {
+      if (visit) {
+	_(jschema).extend({
+	  accompanied: { type: 'boolean' },
+	  status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] }
+	})
+	jitems.push(
+	  { key: 'accompanied', prepend: 'Accompanied', inlinetitle: 'Accompanied', htmlClass: 'lab-field-boolean' },
+	  { key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } }
+	)
+      }
+
+      var _filter_formtype = function(v1) {
+	var v2 = v1
+	if (formtype) {
+	  v2 = _(v1).select(function(e){
+	    // those with empty types will apply !
+	    return !e.types || !e.types.length || _(e.types).contains(formtype.id)
 	  })
 	}
-	var vjson = {}
-	var refvars = {}
-	var rec, zforms, zreps, label
+	// _log('_filter_formtype', v1, formtype, v2)
+	return v2
+      }
 
-	function _forms(ids) {
-	  return _(ids).chain()
-	    .collect(function(each){ return data.allforms[each] })
-	    .compact() // compact to handle not found.
-	    .value()
-	}
+      var schema2 = {}
 
-	var err, jschema, jitems
-	if (visit) {
-	  if (userform) { err = 'BOTH' }
-	  _(vjson).extend(visit)
-	  _(refvars).extend({ ref_visit: visit.id })
-	  rec = visit.rec
-	  zforms = visit.forms
-	  zreps = visit.repforms
-	  label = 'Visit'
-	  jschema = {
-	    status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] },
-	    datetime: { type: 'string' },
-	    user_name: { type: 'string' },
-	    user_email: { type: 'string' },
-	    user_cats: { type: 'string' },
-	    loc_name: { type: 'string' },
-	    loc_address: { type: 'string' },
-	    accompanied: { type: 'boolean' },
+      function _do_fields(fields, pre_id) {
+	// _log('_do_fields', fields)
+	return _(_sorted(fields)).collect(function(field){
+	  var key = pre_id + field.id // _('field_%s').sprintf(k)
+	  if (!(key in rec)) { rec[key] = field.default }
+	  var ftype = field.type
+	  var fwidget = field.widget
+	  var desc = field.description
+	  var req = field.required
+	  var f_schema = {}
+	  var f_form = {}
+	  var isbool = ftype == 'boolean'
+	  var ftype2 = 'string'
+	  var fwidget2 = ''
+	  if (ftype == 'string') {
+	    if (fwidget == 'textarea') {
+	      ftype2 = fwidget
+	      fwidget2 = fwidget
+	    }
 	  }
-	  jitems = [
-	    { key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
-	    { key: 'datetime', prepend: 'Date/Time', notitle: true, disabled: true },
-	    { key: 'user_name', prepend: 'User', notitle: true, disabled: true },
-	    { key: 'user_email', prepend: 'Email', notitle: true, disabled: true },
-	    { key: 'user_cats', prepend: 'Categories', notitle: true, disabled: true },
-	    { key: 'loc_name', prepend: 'Location', notitle: true, disabled: true },
-	    { key: 'loc_address', prepend: 'Address', notitle: true, disabled: true },
-	    { key: 'accompanied', prepend: 'Accompanied', inlinetitle: 'Accompanied', htmlClass: 'lab-field-boolean' },
-	  ]
-	}
-	else if (userform) {
-	  rec = {}
-	  var formid = userform.id
-	  zreps = data.user.repforms[formid]
-	  zforms = zreps && zreps.length ? [] : [formid]
-	  zreps = _(zreps).chain()
-	    .collect(function(e){ return [ e, [formid] ] })
-	    .object()
-	    .value()
-	  label = 'Form'
-	  jschema = {}
-	  jitems = []
-	}
-	else { err = 'NO' }
-	if (err) { return alert(_('Error @ modal : %s visit / userform').sprintf(err)) }
-	// _log('modal', z, vjson)
-	_log('zforms & zreps', zforms, zreps)
-
-	if (!formtype) {
-	  var nforms = _forms(zforms) // do NOT use forms from zreps.
-	  var formtypes = _sorted(_(nforms).chain()
-	    .collect(function(eform){ return eform.types })
-	    .flatten()
-	    .uniq()
-	    .collect(function(eid){ return data.allformtypes[eid] })
-	    .compact() // compact to handle not found.
-	    .value())
-	  // _log('formtypes', nforms, formtypes.length, formtypes)
-
-	  if (formtypes.length > 1) {
-	    var wlist = $('<div class="list-group">')
-	    _(formtypes).each(function(eformtype){
-	      // _log('eformtype', eformtype.name, eformtype.description)
-	      var w1 = $('<a href="#" class="list-group-item">')
-	      w1.click(function(ev){
-		// _log('click @ eformtype', eformtype)
-		ev.preventDefault()
-		setTimeout(function(){
-		  // _log('setTimeout @ eformtype', eformtype)
-		  modal(z, eformtype)
-		}, 100)
-		return false
-	      })
-	      var wname = $('<h4 class="list-group-item-heading">')
-	      wname.append(eformtype.name)
-	      var wdesc = $('<p class="list-group-item-text">')
-	      wdesc.append(eformtype.description)
-	      w1.append(wname, wdesc)
-	      wlist.append(w1)
+	  else if (isbool) {
+	    f_form['inlinetitle'] = desc
+	    ftype2 = ftype
+	  }
+	  else if (_(ftype).startsWith('opts')) {
+	    ftype = 'opts'
+	    var opts = field.opts
+	    if (!opts || !opts.length) { opts = [ ['','x'] ] }
+	    var enums = [] // respect order.
+	    var opts = _(opts).collect(function(opt){
+	      var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
+	      enums.push(opt2[0])
+	      return opt2
 	    })
-	    w_list.append(wlist)
-	    w_modal.modal('show')
-	    return
+	    // _log('modal > each opts', opts)
+	    f_form['titleMap'] = _(opts).object()
+	    f_schema['enum'] = enums
+	    if (fwidget == 'radios') {
+	      f_form['type'] = fwidget
+	      fwidget2 = fwidget
+	    }
 	  }
-	}
-
-	w_form.toggleClass('form-user', Boolean(userform))
-
-	var _filter_formtype = function(v1) {
-	  var v2 = v1
-	  if (formtype) {
-	    v2 = _(v1).select(function(e){
-	      // those with empty types will apply !
-	      return !e.types || !e.types.length || _(e.types).contains(formtype.id)
-	    })
-	  }
-	  // _log('_filter_formtype', v1, formtype, v2)
-	  return v2
-	}
-
-	var schema2 = {}
-	function _do_fields(fields, pre_id) {
-	  // _log('_do_fields', fields)
-	  return _(_sorted(fields)).collect(function(field){
-		var key = pre_id + field.id // _('field_%s').sprintf(k)
-		if (!(key in rec)) { rec[key] = field.default }
-		var ftype = field.type
-		var fwidget = field.widget
-		var desc = field.description
-		var req = field.required
-		var f_schema = {}
-		var f_form = {}
-		var isbool = ftype == 'boolean'
-		var ftype2 = 'string'
-		var fwidget2 = ''
-		if (ftype == 'string') {
-		  if (fwidget == 'textarea') {
-			ftype2 = fwidget
-			fwidget2 = fwidget
-		  }
-		}
-		else if (isbool) {
-		  f_form['inlinetitle'] = desc
-		  ftype2 = ftype
-		}
-		else if (_(ftype).startsWith('opts')) {
-		  ftype = 'opts'
-		  var opts = field.opts
-		  if (!opts || !opts.length) { opts = [ ['','x'] ] }
-		  var enums = [] // respect order.
-		  var opts = _(opts).collect(function(opt){
-			var opt2 = opt.length == 2 ? opt : [ opt[0], opt[0] ]
-			enums.push(opt2[0])
-			return opt2
-		  })
-		  // _log('modal > each opts', opts)
-		  f_form['titleMap'] = _(opts).object()
-		  f_schema['enum'] = enums
-		  if (fwidget == 'radios') {
-			f_form['type'] = fwidget
-			fwidget2 = fwidget
-		  }
-		}
-		_(f_schema).extend({
-		  type: ftype2,
-		  description: isbool ? null : desc,
-		  required: req
-		})
-		_(f_form).extend({
-		  key: _('rec.%s').sprintf(key),
-		  prepend: field.name,
-		  notitle: true,
-		  // https://github.com/joshfire/jsonform/issues/63
-		  // such that empty/blank fields are included in the submit values, otherwise form fields could NOT be emptied.
-		  allowEmpty: !req,
-		  htmlClass: _('lab-field-%s%s%s').sprintf(ftype, fwidget2 ? '-' : '', fwidget2)
-		})
-		schema2[key] = f_schema
-		return f_form
+	  _(f_schema).extend({
+	    type: ftype2,
+	    description: isbool ? null : desc,
+	    required: req
 	  })
-	}
+	  _(f_form).extend({
+	    key: _('rec.%s').sprintf(key),
+	    prepend: field.name,
+	    notitle: true,
+	    // https://github.com/joshfire/jsonform/issues/63
+	    // such that empty/blank fields are included in the submit values, otherwise form fields could NOT be emptied.
+	    allowEmpty: !req,
+	    htmlClass: _('lab-field-%s%s%s').sprintf(ftype, fwidget2 ? '-' : '', fwidget2)
+	  })
+	  schema2[key] = f_schema
+	  return f_form
+	})
+      }
 
-	var fieldsets = []
-	function _do_fieldset(forms_ids, item) {
-	  // _log('_do_fieldset', forms_ids, item)
-	  var forms = _filter_formtype(_forms(forms_ids))
-	  var fields = _(forms).chain()
-	    .collect(function(eform){ return _(eform.fields).values() })
-	    .flatten()
-	    .value()
-	  // _log('_do_fieldset > fields', forms, fields)
-	  if (!fields.length) { return }
-	  fields = _filter_formtype(fields)
-	  var source = item || forms[0]
-	  var f_fields = _do_fields(fields, item ? item.id + '_' : '')
-	  var desc = source.description
-	  if (desc) { f_fields = [ { type: 'help', helpvalue: desc } ].concat(f_fields) }
-	  fset = {
-		type: 'fieldset',
-		title: source.name,
-		expandable: source.expandable,
-		items: f_fields
+      function _do_fieldset(forms_ids, item) {
+	// _log('_do_fieldset', forms_ids, item)
+	var forms = _filter_formtype(_forms(forms_ids))
+	var fields = _(forms).chain()
+	  .collect(function(eform){ return _(eform.fields).values() })
+	  .flatten()
+	  .value()
+	// _log('_do_fieldset > fields', forms, fields)
+	if (!fields.length) { return }
+	fields = _filter_formtype(fields)
+	var source = item || forms[0]
+	var f_fields = _do_fields(fields, item ? item.id + '_' : '')
+	var desc = source.description
+	if (desc) { f_fields = [ { type: 'help', helpvalue: desc } ].concat(f_fields) }
+	fset = {
+	  type: 'fieldset',
+	  title: source.name,
+	  expandable: source.expandable,
+	  items: f_fields
+	}
+	fieldsets.push(fset)
+      }
+      _(zforms).each(function(form_id){
+	_do_fieldset([form_id])
+      })
+
+      var repitems = _sorted(_(zreps).chain()
+	.keys()
+	.collect(function(item_id){ return data.allitems[item_id] })
+	.compact() // compact to handle not found.
+	.value())
+      // _log('repitems', repitems)
+      _(repitems).each(function(item){
+	_do_fieldset(zreps[item.id], item)
+      })
+
+      _(jschema).extend({
+	observations: { type: 'string' },
+	rec: {
+	  type: 'object',
+	  title: 'Forms',
+	  properties: schema2,
+	},
+      })
+      fieldsets2.push(
+	{
+	  type: 'fieldset',
+	  title: 'Observations',
+	  items: [
+	    { key: 'observations', type: 'textarea' },
+	  ],
+	},
+	{ type: 'submit', title: _('Save %s').sprintf(label), htmlClass: 'btn-success center-block' }
+	// isnew ? '' : { type: 'button', title: 'Delete', id: 'X-delete', htmlClass: 'btn-danger btn-xs pull-right' }
+      )
+    }
+
+    w_form.toggleClass('form-user', Boolean(userform && !selformtype))
+
+    console.log('jschema', jschema, 'jitems', jitems, 'fieldsets', fieldsets, 'fieldsets2', fieldsets2)
+    // _log('modal > vjson', vjson)
+
+    w_form.jsonForm({
+      schema: jschema,
+      form: [
+	{
+	  type: 'section', // fieldset
+	  title: label,
+	  items: jitems,
+	},
+      ].concat(fieldsets).concat(fieldsets2),
+      value: vjson,
+      onSubmitValid: function(vals){ // https://github.com/joshfire/jsonform/wiki#wiki-submission-values
+	if (selformtype) { return alert('Save NOT allowed if selformtype !!') }
+	var postvars = _({}).extend(refvars, vals)
+	_log('onSubmitValid', postvars)
+	$.ajax({
+	  url: '/lab/ajax',
+	  data: { data: JSON.stringify(postvars) },
+	  type: 'post',
+	  dataType: 'json',
+	  complete: function(xhr, text_status){
+	    var data2 = xhr.responseJSON
+	    _log('ajax COMPLETE', text_status, data2)
+	    if (data2 && data2.error) { return alert(data2.error) } // regardless of status.
+	    if (xhr.status != 200) {
+	      _log('ajax ERROR', xhr)
+	      return alert('Error communicating to the server, please try again. If the error persists, please contact x@x.com.')
+	    }
+	    if (!data2) { return alert('Ajax success, but NO data returned, please try again.') }
+	    /*
+	    _(data2.data).each(function(each, k){ _(data[k]).extend(each) })
+	    data_set()
+	    */
+	    var visit2 = data2.visit
+	    if (visit2.id != visit.id) { return alert('Error @ id') }
+	    _(visit).extend(visit2)
+	    var calevs = w_cal.fullCalendar('clientEvents', visit.id)
+	    if (calevs.length != 1) { return alert('Error @ calev') }
+	    var calev = calevs[0]
+	    // _log('calev', calev)
+	    var ev2 = _visit_prep(visit2)
+	    _(calev).extend(ev2)
+	    var wtr = $('#' + _visit_row(visit))
+	    // _log('wtr', wtr)
+	    var row = api.row(wtr)
+	    if (row.length) { row.data(visit2) } // replace.
+	    else { row = api.row.add(visit2) } // add.
+	    api.draw()
+	    w_cal.fullCalendar('updateEvent', calev)
+	    w_modal.modal('hide')
 	  }
-	  fieldsets.push(fset)
-	}
-	_(zforms).each(function(form_id){
-	  _do_fieldset([form_id])
 	})
+      },
+    })
 
-	var repitems = _sorted(_(zreps).chain()
-	  .keys()
-	  .collect(function(item_id){ return data.allitems[item_id] })
-	  .compact() // compact to handle not found.
-	  .value())
-	// _log('repitems', repitems)
-	_(repitems).each(function(item){
-	  _do_fieldset(zreps[item.id], item)
-	})
-
-	// _log('modal > vjson', vjson)
-	// _log('modal > schema2 / fieldsets', schema2, fieldsets)
-	w_form.jsonForm({
-	  schema: _(jschema).extend({
-		observations: { type: 'string' },
-		rec: {
-		  type: 'object',
-		  title: 'Forms',
-		  properties: schema2,
-		},
-	  }),
-	  form: [
-		{
-		  type: 'section', // fieldset
-		  title: label,
-		  items: jitems,
-		},
-	  ].concat(fieldsets).concat([
-		{
-		  type: 'fieldset',
-		  title: 'Observations',
-		  items: [
-			{ key: 'observations', type: 'textarea' },
-		  ],
-		},
-		{ type: 'submit', title: _('Save %s').sprintf(label), htmlClass: 'btn-success center-block' },
-		// isnew ? '' : { type: 'button', title: 'Delete', id: 'X-delete', htmlClass: 'btn-danger btn-xs pull-right' }
-	  ]),
-	  value: vjson,
-	  onSubmitValid: function(vals){ // https://github.com/joshfire/jsonform/wiki#wiki-submission-values
-		var postvars = _({}).extend(refvars, vals)
-		_log('onSubmitValid', postvars)
-		$.ajax({
-		  url: '/lab/ajax',
-		  data: { data: JSON.stringify(postvars) },
-		  type: 'post',
-		  dataType: 'json',
-		  complete: function(xhr, text_status){
-			var data2 = xhr.responseJSON
-			_log('ajax COMPLETE', text_status, data2)
-			if (data2 && data2.error) { return alert(data2.error) } // regardless of status.
-			if (xhr.status != 200) {
-			  _log('ajax ERROR', xhr)
-			  return alert('Error communicating to the server, please try again. If the error persists, please contact x@x.com.')
-			}
-			if (!data2) { return alert('Ajax success, but NO data returned, please try again.') }
-			/*
-			_(data2.data).each(function(each, k){ _(data[k]).extend(each) })
-			data_set()
-			*/
-			var visit2 = data2.visit
-			if (visit2.id != visit.id) { return alert('Error @ id') }
-			_(visit).extend(visit2)
-			var calevs = w_cal.fullCalendar('clientEvents', visit.id)
-			if (calevs.length != 1) { return alert('Error @ calev') }
-			var calev = calevs[0]
-			// _log('calev', calev)
-			var ev2 = _visit_prep(visit2)
-			_(calev).extend(ev2)
-			var wtr = $('#' + _visit_row(visit))
-			// _log('wtr', wtr)
-			var row = api.row(wtr)
-			if (row.length) { row.data(visit2) } // replace.
-			else { row = api.row.add(visit2) } // add.
-			api.draw()
-			w_cal.fullCalendar('updateEvent', calev)
-			w_modal.modal('hide')
-		  }
-		})
-	  },
-	})
-	// w_form.find('.tabbable:last').before('<label class="control-label">Forms</label>')
-	// w_modal.find('#modal-label').text('Medical Visit')
-	w_modal.modal('show')
+    // w_form.find('.tabbable:last').before('<label class="control-label">Forms</label>')
+    // w_modal.find('#modal-label').text('Medical Visit')
+    w_modal.modal('show')
   }
 
   function visit_edit(visit_id) {

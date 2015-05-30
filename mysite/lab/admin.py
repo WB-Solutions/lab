@@ -328,6 +328,15 @@ _admin(User, UserAdmin)
 
 
 
+class UserFormRecAdmin(AbstractAdmin):
+    list_display = _fields + ('datetime', 'user', 'form', 'observations')
+    search_fields = _search + ('observations',)
+    list_display_links = _fields
+
+_admin(UserFormRec, UserFormRecAdmin)
+
+
+
 class ItemAdmin(AbstractAdmin):
     list_display = _fields_name + ('cats_', 'visits_usercats_', 'visits_loccats_', 'forms_expandable', 'forms_order')
     list_filter = ('cats', 'visits_usercats', 'visits_loccats')

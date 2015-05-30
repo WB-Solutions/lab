@@ -593,6 +593,37 @@ _api('users', UserViewSet)
 
 
 
+model = UserFormRec
+search = _search(admin.UserFormRecAdmin)
+
+class UserFormRecSerializer(AbstractSerializer):
+    user_id = _id('user')
+    form_id = _id('form')
+
+    class Meta:
+        model = model
+        fields = _fields + (
+            'datetime', 'observations', 'rec',
+            'user', 'user_id',
+            'form', 'form_id',
+        )
+
+class UserFormRecFilter(AbstractFilter):
+
+    class Meta:
+        model = model
+        fields = search # + ('observations', 'rec')
+
+class UserFormRecViewSet(AbstractView):
+    queryset = _all(model)
+    serializer_class = UserFormRecSerializer
+    search_fields = search
+    filter_class = UserFormRecFilter
+
+_api('userformrecs', UserFormRecViewSet)
+
+
+
 model = Item
 search = _search(admin.ItemAdmin)
 

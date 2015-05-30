@@ -73,7 +73,7 @@ def _data(config=None):
                 loccats = loc.cats.all(),
                 **_node_data(visit.node)
             )
-            addr = loc.address or loc.place.address
+            addr = loc.addr()
             dt = visit.datetime
             v = dict(
                 datetime = _datetime(dt),
@@ -200,7 +200,9 @@ def ajax(request):
         except: v = None
         return v
     visit = _ref('ref_visit', ForceVisit)
-    # print 'ajax', visit
+    user = _ref('ref_user', User)
+    form = _ref('ref_form', Form)
+    print 'ajax', visit, user, form
     errors = []
     try:
         with transaction.atomic():

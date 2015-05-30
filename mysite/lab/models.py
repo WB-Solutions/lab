@@ -529,6 +529,9 @@ class Loc(AbstractModel):
     def clean(self):
         utils.validate_xor(self.address, self.place, 'Must select ONE of Address or Place.')
 
+    def addr(self):
+        return self.address or self.place.address
+
 
 
 class ForceNode(AbstractTree):
@@ -672,7 +675,7 @@ class Form(AbstractModel):
                           False
                           or _any(usercats, form.visits_usercats)
                           or _any(loccats, form.visits_loccats)
-                          or visit.loc.zip.brick in form.visits_bricks.all()
+                          or visit.loc.addr().area.zip.brick in form.visits_bricks.all()
                           or _any(upnodes, form.visits_forcenodes, ups=False)
                           or _any(itemcats, form.visits_itemcats)
                       ))
@@ -681,7 +684,7 @@ class Form(AbstractModel):
             forms = utils.db_ids(forms)
             for eitem, erepforms in repforms.items():
                 erepforms[:] = utils.db_ids(erepforms)
-        print 'get_forms_reps', user or visit, forms, repforms
+        # print 'get_forms_reps', user or visit, forms, repforms
         return forms, repforms
 
     def _h_all(self):
@@ -901,7 +904,7 @@ class VisitBuilder(AbstractModel):
             locs = []
 
         def _sortkey(eloc):
-            addr = eloc.address or eloc.place.address
+            addr = eloc.addr()
             by = self.orderby
             def _val():
                 v = addr.area
