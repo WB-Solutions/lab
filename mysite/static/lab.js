@@ -50,7 +50,7 @@ $(function(){
     }
     var vjson = {}
     var refvars = {}
-    var rec, zforms, zreps, label
+    var rec, zforms, zrepitems, zrepusercats, label
 
     function _forms(ids) {
       return _(ids).chain()
@@ -74,7 +74,8 @@ $(function(){
       })
       rec = visit.rec
       zforms = visit.forms
-      zreps = visit.repforms
+      zrepitems = visit.repdict_items
+      zrepusercats = visit.repdict_usercats
       label = 'Visit'
       _(jschema).extend({
 	datetime: { type: 'string' },
@@ -98,23 +99,36 @@ $(function(){
 	ref_user: data.user.id,
 	ref_form: userform.id
       })
-      rec = {}
+      rec = data.user.recs[userform.id] || {}
+      _(vjson).extend({ rec: rec })
       var formid = userform.id
-      zreps = data.user.repforms[formid]
-      zforms = zreps && zreps.length ? [] : [formid]
-      zreps = _(zreps).chain()
-	.collect(function(e){ return [ e, [formid] ] })
-	.object()
-	.value()
+      var _zreps = function(nreps) {
+	nreps = nreps[formid]
+	return _(nreps).chain()
+	  .collect(function(e){ return [ e, [formid] ] })
+	  .object()
+	  .value()
+      }
+      zrepitems = _zreps(data.user.repdict_items)
+      zrepusercats = zrepitems.length ? [] : _zreps(data.user.repdict_usercats)
+      zforms = _(zrepitems).size() || _(zrepusercats).size() ? [] : [formid]
       label = 'Form'
     }
     else { err = 'NO' }
     if (err) { return alert(_('Error @ modal : %s visit / userform').sprintf(err)) }
     // _log('modal', z, vjson)
-    _log('zforms & zreps', zforms, zreps)
+    _log('zforms', zforms, 'zrepitems', zrepitems, 'zrepusercats', zrepusercats)
 
     if (!formtype) {
-      var nforms = _forms(zforms) // do NOT use forms from zreps.
+      var _zids = function(zreps) {
+	return _(zreps).chain()
+	  .values()
+	  .flatten()
+	  .value()
+      }
+      var allformids = zforms.concat(_zids(zrepitems)).concat(_zids(zrepusercats))
+      _log('allformids', allformids)
+      var nforms = _forms(allformids)
       var formtypes = _sorted(_(nforms).chain()
 	.collect(function(eform){ return eform.types })
 	.flatten()
@@ -122,7 +136,7 @@ $(function(){
 	.collect(function(eid){ return data.allformtypes[eid] })
 	.compact() // compact to handle not found.
 	.value())
-      // _log('formtypes', nforms, formtypes.length, formtypes)
+      _log('formtypes', nforms, formtypes.length, formtypes)
 
       selformtype = formtypes.length > 1
 
@@ -150,7 +164,7 @@ $(function(){
 	w_list.append(wlist)
       }
     }
-    console.log('selformtype', selformtype, 'visit', visit)
+    _log('selformtype', selformtype, 'visit', visit)
 
     if (selformtype) {
     }
@@ -183,7 +197,7 @@ $(function(){
       function _do_fields(fields, pre_id) {
 	// _log('_do_fields', fields)
 	return _(_sorted(fields)).collect(function(field){
-	  var key = pre_id + field.id // _('field_%s').sprintf(k)
+	  var key = pre_id + 'field:' + field.id // _('field_%s').sprintf(k)
 	  if (!(key in rec)) { rec[key] = field.default }
 	  var ftype = field.type
 	  var fwidget = field.widget
@@ -241,8 +255,8 @@ $(function(){
 	})
       }
 
-      function _do_fieldset(forms_ids, item) {
-	// _log('_do_fieldset', forms_ids, item)
+      function _do_fieldset(forms_ids, erep, erepid) {
+	// _log('_do_fieldset', forms_ids, erep, erepid)
 	var forms = _filter_formtype(_forms(forms_ids))
 	var fields = _(forms).chain()
 	  .collect(function(eform){ return _(eform.fields).values() })
@@ -251,8 +265,8 @@ $(function(){
 	// _log('_do_fieldset > fields', forms, fields)
 	if (!fields.length) { return }
 	fields = _filter_formtype(fields)
-	var source = item || forms[0]
-	var f_fields = _do_fields(fields, item ? item.id + '_' : '')
+	var source = erep || forms[0]
+	var f_fields = _do_fields(fields, erepid ? erepid + erep.id + '_' : '')
 	var desc = source.description
 	if (desc) { f_fields = [ { type: 'help', helpvalue: desc } ].concat(f_fields) }
 	fset = {
@@ -267,14 +281,18 @@ $(function(){
 	_do_fieldset([form_id])
       })
 
-      var repitems = _sorted(_(zreps).chain()
-	.keys()
-	.collect(function(item_id){ return data.allitems[item_id] })
-	.compact() // compact to handle not found.
-	.value())
-      // _log('repitems', repitems)
-      _(repitems).each(function(item){
-	_do_fieldset(zreps[item.id], item)
+      _([
+	{ zreps: zrepitems, alls: data.allitems, zid: 'item:' },
+	{ zreps: zrepusercats, alls: data.allusercats, zid: 'usercat:' }
+      ]).each(function(ez){
+	var nreps = _sorted(_(ez.zreps).chain()
+	  .keys()
+	  .collect(function(item_id){ return ez.alls[item_id] })
+	  .compact() // compact to handle not found.
+	  .value())
+	_(nreps).each(function(erep){
+	  _do_fieldset(ez.zreps[erep.id], erep, ez.zid)
+	})
       })
 
       _(jschema).extend({
@@ -300,7 +318,7 @@ $(function(){
 
     w_form.toggleClass('form-user', Boolean(userform && !selformtype))
 
-    console.log('jschema', jschema, 'jitems', jitems, 'fieldsets', fieldsets, 'fieldsets2', fieldsets2)
+    _log('jschema', jschema, 'jitems', jitems, 'fieldsets', fieldsets, 'fieldsets2', fieldsets2)
     // _log('modal > vjson', vjson)
 
     w_form.jsonForm({
@@ -318,7 +336,7 @@ $(function(){
 	var postvars = _({}).extend(refvars, vals)
 	_log('onSubmitValid', postvars)
 	$.ajax({
-	  url: '/lab/ajax',
+	  url: '/lab/ajax' + location.search, // "private" param.
 	  data: { data: JSON.stringify(postvars) },
 	  type: 'post',
 	  dataType: 'json',
@@ -336,21 +354,27 @@ $(function(){
 	    data_set()
 	    */
 	    var visit2 = data2.visit
-	    if (visit2.id != visit.id) { return alert('Error @ id') }
-	    _(visit).extend(visit2)
-	    var calevs = w_cal.fullCalendar('clientEvents', visit.id)
-	    if (calevs.length != 1) { return alert('Error @ calev') }
-	    var calev = calevs[0]
-	    // _log('calev', calev)
-	    var ev2 = _visit_prep(visit2)
-	    _(calev).extend(ev2)
-	    var wtr = $('#' + _visit_row(visit))
-	    // _log('wtr', wtr)
-	    var row = api.row(wtr)
-	    if (row.length) { row.data(visit2) } // replace.
-	    else { row = api.row.add(visit2) } // add.
-	    api.draw()
-	    w_cal.fullCalendar('updateEvent', calev)
+	    if (visit) {
+	      if (visit2.id != visit.id) { return alert('Error @ visit, invalid id.') }
+	      _(visit).extend(visit2)
+	      var calevs = w_cal.fullCalendar('clientEvents', visit.id)
+	      if (calevs.length != 1) { return alert('Error @ visit, calev not found.') }
+	      var calev = calevs[0]
+	      // _log('calev', calev)
+	      var ev2 = _visit_prep(visit2)
+	      _(calev).extend(ev2)
+	      var wtr = $('#' + _visit_row(visit))
+	      // _log('wtr', wtr)
+	      var row = api.row(wtr)
+	      if (row.length) { row.data(visit2) } // replace.
+	      else { row = api.row.add(visit2) } // add.
+	      api.draw()
+	      w_cal.fullCalendar('updateEvent', calev)
+	    }
+	    else { // userform.
+	      if (visit2) { return alert('Error @ userform, unexpected visit2.') }
+	      data.user.recs[userform.id] = vals.rec // direct update instead of from server (like visit)?.
+	    }
 	    w_modal.modal('hide')
 	  }
 	})
@@ -487,11 +511,12 @@ $(function(){
 	var userforms = []
 
 	if (user) {
-	  function _form(formid, repitems) {
+	  function _form(formid, reps, alls) {
+		var form = data.allforms[formid]
 		return {
-		  name: 'name here',
-		  items: _('<ul> %s </ul>').sprintf(_(repitems).collect(function(itemid){
-			return _('<li> %s </li>').sprintf(data.allitems[itemid].name)
+		  name: _('%s <br> <i> %s </i>').sprintf(form.name, form.description),
+		  items: _('<ul> %s </ul>').sprintf(_(reps).collect(function(repid){
+			return _('<li> %s </li>').sprintf(alls[repid].name)
 		  }).join('')),
 		  acts: _button(formid, 'primary', 'userform-edit', 'Form'),
 		}
@@ -499,8 +524,11 @@ $(function(){
 	  _(user.forms).each(function(formid){
 		userforms.push(_form(formid))
 	  })
-	  _(user.repforms).each(function(repitems, formid){
-		userforms.push(_form(formid, repitems))
+	  _(user.repdict_items).each(function(repitems, formid){
+		userforms.push(_form(formid, repitems, data.allitems))
+	  })
+	  _(user.repdict_usercats).each(function(repusercats, formid){
+		userforms.push(_form(formid, repusercats, data.allusercats))
 	  })
 	  // _log('userforms', userforms)
 	}

@@ -19,7 +19,7 @@ def setup(request):
     import setup_db
     return HttpResponse(setup_db.setup())
 
-def _data(config=None):
+def _data(request, config=None):
     # print '_data', config
     def _all(model):
         return model.objects.all()
@@ -33,6 +33,8 @@ def _data(config=None):
     def _dict(dbn, fn):
         return dict([ (each.id, _ext(each, fn(each)))
             for each in dbn ])
+    private = bool(utils.str_int(request.GET.get('private')))
+    # print '_data.private', private
     data = None
     go_nodes = None
     go_user = config.get('user')
@@ -67,7 +69,9 @@ def _data(config=None):
         def _visit(visit, ext=False):
             loc = visit.loc
             user = loc.user
-            forms_ids, repforms_ids = Form.get_forms_reps(
+            forms_ids, repdict_items_ids, repdict_usercats_ids = Form.get_forms_reps(
+                baseuser = user,
+                private = private,
                 visit = visit,
                 usercats = user.cats.all(),
                 loccats = loc.cats.all(),
@@ -87,7 +91,8 @@ def _data(config=None):
                 loc_name = loc.name,
                 loc_address = '%s # %s, %s' % (addr.street, addr.unit, addr.area),
                 forms = forms_ids,
-                repforms = repforms_ids,
+                repdict_items = repdict_items_ids,
+                repdict_usercats = repdict_usercats_ids,
                 rec = visit.rec_dict(),
             )
             if ext:
@@ -99,33 +104,41 @@ def _data(config=None):
         else:
             visits = utils.list_flatten(go_nodes, lambda node: node.visits.all())
             allitems = _all(Item)
+            allusercats = _all(UserCat)
             allformtypes = _all(FormType)
             allforms = Form.objects.order_by('order', 'name').all()
             user_dict = None
             if go_user:
-                forms_ids, repforms_ids = go_user.get_forms_reps()
+                forms_ids, repdict_items_ids, repdict_usercats_ids = go_user.get_forms_reps(private=private)
+                formids = forms_ids + repdict_items_ids.keys() + repdict_usercats_ids.keys()
+                recs = UserFormRec.objects.filter(form__in=formids)
                 user_dict = dict(
                     id = go_user.id,
                     name = go_user.fullname(),
                     forms = forms_ids,
-                    repforms = repforms_ids,
+                    repdict_items = repdict_items_ids,
+                    repdict_usercats = repdict_usercats_ids,
+                    recs = dict([ (rec.form.id, rec.rec_dict()) for rec in recs ])
                 )
             def _types(row):
                 types = row.types.all()
                 # return _dict(types, lambda field: dict())
                 return utils.db_ids(types)
+            def _reps(reps):
+                return _dict(reps, lambda erep: dict(
+                    name = erep.name,
+                    description = erep.forms_description,
+                    expandable = erep.forms_expandable,
+                    order = erep.forms_order,
+                ))
             data = dict(
                 user = user_dict,
                 nodes = _dict(go_nodes, lambda node: dict(
                     name = node.name,
                 )),
                 visits = _dict(visits, _visit),
-                allitems = _dict(allitems, lambda item: dict(
-                    name = item.name,
-                    description = item.forms_description,
-                    expandable = item.forms_expandable,
-                    order = item.forms_order,
-                )),
+                allitems = _reps(allitems),
+                allusercats = _reps(allusercats),
                 allformtypes = _dict(allformtypes, lambda ftype: dict(
                     name = ftype.name,
                     description = ftype.description,
@@ -169,7 +182,7 @@ def agenda(request):
             row = utils.db_get(model, scope)
             if row:
                 # print 'agenda > scope', scope, model, row
-                data = _data({name:row})
+                data = _data(request, {name:row})
             break
     return render(request, 'lab/agenda.html', dict(agenda=True, data=json.dumps(data) or 'null'))
 
@@ -180,11 +193,9 @@ def ajax(request):
         pv = pvars.get(key)
         # print '_get', key, pv
         return pv or ('' if default is None else default)
-    def _dbget(model, dbid):
-        return utils.db_get(model, dbid)
     def _ref(key, model):
         pv = _get(key)
-        pv = _dbget(model, pv) if pv else None
+        pv = utils.db_get(model, pv) if pv else None
         # print 'ajax > _ref', key, model, pv.id if pv else None, pv
         return pv
     def _get_datetime(key):
@@ -206,21 +217,36 @@ def ajax(request):
     errors = []
     try:
         with transaction.atomic():
-            rec = visit.rec_dict()
+            if visit:
+                base = visit
+                rec = visit.rec_dict()
+            else:
+                if not (user and form):
+                    raise ValidationError('User and Form are required.')
+                dbgetvars = dict(user=user, form=form)
+                base = utils.db_get(UserFormRec, **dbgetvars)
+                rec = dict()
             rec2 = pvars.get('rec')
             if rec2: # could be None.
                 # print 'recs', rec, rec2
                 rec.update(rec2)
             dbvars = dict(
-                # sched = _get_datetime('sched'),
-                status = _get('status'),
-                accompanied = _get('accompanied'),
                 observations = _get('observations'),
                 rec = json.dumps(rec),
             )
-            # print 'visit', visit
-            # print 'dbvars', dbvars
-            utils.db_update(visit, **dbvars)
+            if visit:
+                dbvars.update(
+                    # sched = _get_datetime('sched'),
+                    status = _get('status'),
+                    accompanied = _get('accompanied'),
+                )
+            elif not base:
+                dbvars.update(dbgetvars)
+            print 'dbvars', dbvars
+            if base:
+                utils.db_update(base, **dbvars)
+            else:
+                base = _new(UserFormRec, **dbvars)
     except IntegrityError as e:
         errors.append('Not unique, invalid.')
         # raise(e)
@@ -230,7 +256,7 @@ def ajax(request):
         # raise(e)
     data = dict(
         error = ', '.join(errors),
-        visit = None if errors else _data(dict(visit=visit)),
+        visit = None if errors else _data(request, dict(visit=visit)),
     )
     # print 'ajax > data', data
     return HttpResponse(json.dumps(data))

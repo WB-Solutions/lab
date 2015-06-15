@@ -275,6 +275,10 @@ class UserCat(AbstractTree):
     els_model = 'User'
     els_field = 'email'
 
+    forms_description = _form_description()
+    forms_expandable = _form_expandable()
+    forms_order = _form_order()
+
 
 
 class ItemCat(AbstractTree):
@@ -440,13 +444,15 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
     # def has_perm(self, perm, obj=None): return True # does the user have a specific permission?.
     # def has_module_perms(self, app_label): return True # does the user have permissions to view the app "app_label"?.
 
-    def get_forms_reps(self):
+    def get_forms_reps(self, **kwargs):
         locs = self.locs.all()
         loccats = utils.list_flatten(locs, lambda loc: loc.cats.all())
         return Form.get_forms_reps(
+            baseuser = self,
             user = self,
             loccats = loccats,
             usercats = utils.tree_all_downs(self.cats.all()),
+            **kwargs
         )
 
 
@@ -454,8 +460,10 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
 class Item(AbstractModel):
     name = _name_unique()
     cats = _many_tree(ItemCat, 'items')
+
     visits_usercats = _many_tree(UserCat, 'visits_items')
     visits_loccats = _many_tree(LocCat, 'visits_items')
+
     forms_description = _form_description()
     forms_expandable = _form_expandable()
     forms_order = _form_order()
@@ -560,6 +568,7 @@ class AbstractFormRec(AbstractModel):
     rec = _text()
 
     class Meta:
+        abstract = True
         ordering = ('-datetime',)
 
     def clean(self):
@@ -569,6 +578,9 @@ class AbstractFormRec(AbstractModel):
 
     def rec_dict(self):
         return json.loads(self.rec, parse_float=Decimal) if self.rec else dict()
+
+    def __unicode__(self):
+        return _str(self, 'AbstractFormRec > %s', (self.datetime,))
 
 
 
@@ -605,6 +617,7 @@ class FormType(AbstractModel):
 class Form(AbstractModel):
     name = _name_unique()
     scope = _choices(20, [ 'visits', 'users' ])
+    private = _boolean(False)
     start = _datetime_blank()
     end = _datetime_blank()
     description = _form_description()
@@ -615,6 +628,7 @@ class Form(AbstractModel):
 
     repitems = _many(Item, 'repforms')
     repitemcats = _many_tree(ItemCat, 'repforms')
+    repusercats = _many_tree(UserCat, 'repforms')
 
     users_usercats = _many_tree(UserCat, 'users_forms')
     users_loccats = _many_tree(LocCat, 'users_forms')
@@ -631,66 +645,92 @@ class Form(AbstractModel):
     @classmethod
     def get_forms_reps(
         cls,
-        ids=True,
-        user=None, visit=None, # user or visit.
-        usercats=None, loccats=None, # common.
-        upnodes=None, itemcats=None, items=None, # @ visit.
+        baseuser = None, # mandatory.
+        private = False,
+        ids = True,
+        user = None, visit = None, # user or visit.
+        usercats = None, loccats = None, # common.
+        upnodes = None, itemcats = None, items = None, # visit.
     ):
-        # print 'get_forms_reps', user or visit, usercats, loccats
+        print 'get_forms_reps', private, user or visit
+        if not baseuser: error
         if visit if user else not visit: error
-        repforms = dict()
+        repdict_items = dict()
+        repdict_usercats = dict()
         _any = utils.tree_any
         def _doreps(form):
-            reps1 = form.repitems.all()
-            repcats = utils.tree_all_downs(form.repitemcats.all())
-            reps2 = ItemCat.els_get(repcats)
-            reps = (reps1 | reps2).distinct()
-            # print '_doreps > reps', reps
-            # user will get ALL items (reps) without any filtering, as opposed to visit.
-            if reps.exists(): # must check, even if empty after the below filter.
-                reps = reps if user else reps.filter(id__in=items).all()
-                for item in reps:
-                    if user or _any(usercats, item.visits_usercats) or _any(loccats, item.visits_loccats):
-                        '''
-                        repforms:
-                          @ user = dict[form] = items
-                          @ visit = dict[item] = forms
-                        '''
-                        k = form.id if user else item.id
-                        rforms = repforms.get(k) or []
-                        repforms[k] = rforms
-                        rforms.append(item if user else form)
+            def _reps(isitems, repdict, reps):
+                print '_doreps > reps', reps
+                if reps.exists(): # must check, even if empty after the below filter.
+                    # user will get ALL reps (items / usercats) without any filtering, as opposed to visit.
+                    isvisititems = isitems and not user
+                    if isvisititems:
+                        reps = reps.filter(id__in=items).all()
+                    for erep in reps:
+                        if _any(usercats, erep.visits_usercats) or _any(loccats, erep.visits_loccats) if isvisititems else True:
+                            '''
+                            repdict:
+                              @ visit = dict[erep] = forms
+                              @ user = dict[form] = reps (items / usercats)
+                            '''
+                            k = form.id if user else erep.id
+                            rforms = repdict.get(k) or []
+                            repdict[k] = rforms
+                            rforms.append(erep if user else form)
+                    return True
                 return False
-            return True
+            def _reps_items():
+                reps1 = form.repitems.all()
+                repcats = utils.tree_all_downs(form.repitemcats.all())
+                reps2 = ItemCat.els_get(repcats)
+                nreps = (reps1 | reps2).distinct()
+                return _reps(True, repdict_items, nreps)
+            def _reps_usercats():
+                nreps = form.repusercats.all()
+                return _reps(False, repdict_usercats, nreps)
+            return not (_reps_items() or _reps_usercats())
         forms = Form.objects.filter(scope='users' if user else 'visits')
         forms = [ form for form in forms
                   if (
-                      False
-                      or (user and (
+                      form.private is private and (
                           False
-                          or _any(usercats, form.users_usercats)
-                          or _any(loccats, form.users_loccats)
-                      ))
-                      or (visit and (
-                          False
-                          or _any(usercats, form.visits_usercats)
-                          or _any(loccats, form.visits_loccats)
-                          or visit.loc.addr().area.zip.brick in form.visits_bricks.all()
-                          or _any(upnodes, form.visits_forcenodes, ups=False)
-                          or _any(itemcats, form.visits_itemcats)
-                      ))
+                          or (user and (
+                              False
+                              or _any(usercats, form.users_usercats)
+                              or _any(loccats, form.users_loccats)
+                          ))
+                          or (visit and (
+                              False
+                              or _any(usercats, form.visits_usercats)
+                              or _any(loccats, form.visits_loccats)
+                              or visit.loc.addr().area.zip.brick in form.visits_bricks.all()
+                              or _any(upnodes, form.visits_forcenodes, ups=False)
+                              or _any(itemcats, form.visits_itemcats)
+                          ))
+                      )
                   ) and _doreps(form) ]
         if ids:
             forms = utils.db_ids(forms)
-            for eitem, erepforms in repforms.items():
-                erepforms[:] = utils.db_ids(erepforms)
-        # print 'get_forms_reps', user or visit, forms, repforms
-        return forms, repforms
+            for repdict in [ repdict_items, repdict_usercats ]:
+                for erep, erepforms in repdict.items():
+                    erepforms[:] = utils.db_ids(erepforms)
+        print 'get_forms_reps', private, user or visit, forms, repdict_items, repdict_usercats
+        return forms, repdict_items, repdict_usercats
+
+    '''
+    # can't access multiple vals during validation?, it incorrectly returns previous values instead.
+    def clean(self, *args, **kwargs):
+        utils.validate_xor(
+            utils.list_flatten([ self.repitems, self.repitemcats ], lambda each: each.all()),
+            self.repusercats.all(),
+            'Must select ONE type of reps, either items (repitems / repitemcats) or usercats.'
+        )
+    '''
 
     def _h_all(self):
         rels = []
         for each in [
-            'repitems', 'repitemcats',
+            'repitems', 'repitemcats', 'repusercats',
             'users_usercats', 'users_loccats',
             'visits_usercats', 'visits_loccats',
             'visits_itemcats', 'visits_forcenodes', 'visits_bricks',
@@ -777,6 +817,9 @@ class FormField(AbstractModel):
 class UserFormRec(AbstractFormRec):
     user = _one(User, 'userformrecs')
     form = _one(Form, 'userformrecs')
+
+    class Meta:
+        unique_together = ('user', 'form')
 
     def __unicode__(self):
         return _str(self, 'User Form Rec: %s > %s @ %s', (self.datetime, self.user, self.form))

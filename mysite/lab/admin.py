@@ -194,7 +194,8 @@ _admin(PeriodCat, PeriodCatAdmin)
 
 
 class UserCatAdmin(AbstractTreeAdmin):
-    pass
+    list_display = _fields_name + ('order', 'forms_expandable', 'forms_order')
+    search_fields = _search_name + ('forms_description',)
 
 _admin(UserCat, UserCatAdmin)
 
@@ -227,11 +228,16 @@ class ForceVisitInline(AbstractTabularInline):
     exclude = ('observations', 'rec')
 
 class ForceNodeAdmin(AbstractTreeAdmin):
+
     def _agenda(self, row):
         return utils._agenda('node', row)
     _agenda.allow_tags = True
 
-    list_display = _fields_name + ('order', 'user', 'itemcats_', 'bricks_', 'locs_', '_agenda')
+    def _private(self, row):
+        return utils._agenda('node', row, private=True)
+    _private.allow_tags = True
+
+    list_display = _fields_name + ('order', 'user', 'itemcats_', 'bricks_', 'locs_', '_private', '_agenda')
     list_filter = ('itemcats', 'bricks',)
     filter_vertical = ('bricks',)
     inlines = (ForceVisitInline,)
@@ -242,7 +248,7 @@ _admin(ForceNode, ForceNodeAdmin)
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = _fields + ('datetime', 'duration', 'status', 'accompanied', 'node', 'loc', 'builder') # 'observations', 'rec'
+    list_display = _fields + ('datetime', 'duration', 'status', 'accompanied', 'node', 'loc', 'builder', 'rec') # 'observations', 'rec'
     list_display_links = _fields + ('datetime',)
     date_hierarchy = 'datetime'
     list_editable = ('status',)
@@ -291,6 +297,10 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
         return utils._agenda('user', row)
     _agenda.allow_tags = True
 
+    def _private(self, row):
+        return utils._agenda('user', row, private=True)
+    _agenda.allow_tags = True
+
     fieldsets = (
         (None, dict(fields=('email', 'first_name', 'last_name', 'week_visit', 'week_visited', 'syscode'))),
         # (_('Personal info'), dict(fields=('first_name', 'last_name', 'display_name'))),
@@ -311,7 +321,7 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
         'email', 'first_name', 'last_name', 'last_login', 'date_joined',
         'week_visit', 'week_visited',
         'onoffperiod_visit_', 'onofftime_visit_', 'onoffperiod_visited_', 'onofftime_visited_',
-        'cats_', '_agenda',
+        'cats_', '_private', '_agenda',
     )
     list_display_links = _fields + ('email',)
     search_fields = _search  + ('email', 'first_name', 'last_name')
@@ -329,9 +339,10 @@ _admin(User, UserAdmin)
 
 
 class UserFormRecAdmin(AbstractAdmin):
-    list_display = _fields + ('datetime', 'user', 'form', 'observations')
-    search_fields = _search + ('observations',)
+    list_display = _fields + ('datetime', 'user', 'form', 'observations', 'rec')
     list_display_links = _fields
+    list_filter = ('form',)
+    search_fields = _search + ('observations',)
 
 _admin(UserFormRec, UserFormRecAdmin)
 
@@ -408,10 +419,11 @@ class FormAdmin(AbstractAdmin):
         return row._h_all()
     _h_all.allow_tags = True
 
-    list_display = _fields_name + ('scope', 'start', 'end', 'expandable', 'order', 'cats_', '_h_all', 'fields_', 'types_')
+    list_display = _fields_name + ('scope', 'start', 'end', 'expandable', 'order', 'private', 'cats_', '_h_all', 'fields_', 'types_')
     filter_vertical = ('repitems', 'visits_bricks',)
     list_filter = (
-        'scope', 'cats', 'repitemcats',
+        'scope', 'cats',
+        'repitemcats', 'repusercats',
         'users_usercats', 'users_loccats',
         'visits_usercats', 'visits_loccats',
         'visits_itemcats', 'visits_forcenodes',

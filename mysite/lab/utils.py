@@ -51,9 +51,14 @@ def db_names(rel):
 def db_ids(rows):
     return [ row.id for row in rows ]
 
-def _agenda(scope, row):
+def _agenda(scope, row, private=False):
     from django.utils.html import format_html
-    return format_html('<a href="/lab/agenda?%s=%s" target="_blank"> Agenda </a>' % (scope, row.id))
+    return format_html('<a href="/lab/agenda?%s=%s&private=%s" target="_blank"> %s </a>' % (
+        scope,
+        row.id,
+        int(private),
+        'Private' if private else 'Agenda'
+    ))
 
 def validate_X(data):
     isvalid = False

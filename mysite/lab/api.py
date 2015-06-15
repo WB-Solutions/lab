@@ -390,13 +390,15 @@ class UserCatSerializer(AbstractTreeSerializer):
 
     class Meta:
         model = model
-        fields = _fields_cat
+        fields = _fields_cat + (
+            'forms_description', 'forms_expandable', 'forms_order',
+        )
 
 class UserCatFilter(AbstractTreeFilter):
 
     class Meta:
         model = model
-        fields = search + _filters_cat + ()
+        fields = search + _filters_cat + ('forms_expandable', 'forms_order')
 
 class UserCatViewSet(AbstractTreeView):
     queryset = _all(model)
@@ -787,8 +789,11 @@ search = _search(admin.FormAdmin)
 
 class FormSerializer(AbstractSerializer):
     cats_ids = _ids('cats')
+
     repitems_ids = _ids('repitems')
     repitemcats_ids = _ids('repitemcats')
+    repusercats_ids = _ids('repusercats')
+
     users_usercats_ids = _ids('users_usercats')
     users_loccats_ids = _ids('users_loccats')
     visits_usercats_ids = _ids('visits_usercats')
@@ -801,10 +806,13 @@ class FormSerializer(AbstractSerializer):
     class Meta:
         model = model
         fields = _fields_name + (
-            'scope', 'start', 'end', 'description', 'expandable', 'order',
+            'scope', 'start', 'end', 'description', 'expandable', 'order', 'private',
             'cats', 'cats_ids',
+
             'repitems', 'repitems_ids',
             'repitemcats', 'repitemcats_ids',
+            'repusercats', 'repusercats_ids',
+
             'users_usercats', 'users_usercats_ids',
             'users_loccats', 'users_loccats_ids',
             'visits_usercats', 'visits_usercats_ids',
@@ -823,7 +831,7 @@ class FormFilter(AbstractFilter):
 
     class Meta:
         model = model
-        fields = search + ('scope', 'start_starts', 'start_ends', 'end_starts', 'end_ends', 'expandable', 'order')
+        fields = search + ('scope', 'start_starts', 'start_ends', 'end_starts', 'end_ends', 'expandable', 'order', 'private')
 
 class FormViewSet(AbstractView):
     queryset = _all(model)
