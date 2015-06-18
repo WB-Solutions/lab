@@ -99,8 +99,12 @@ $(function(){
 	ref_user: data.user.id,
 	ref_form: userform.id
       })
-      rec = data.user.recs[userform.id] || {}
-      _(vjson).extend({ rec: rec })
+      zrec = data.user.recs[userform.id]
+      rec = zrec ? zrec.rec : {}
+      _(vjson).extend({
+	rec: rec,
+	observations: zrec ? zrec.observations : ''
+      })
       var formid = userform.id
       var _zreps = function(nreps) {
 	nreps = nreps[formid]
@@ -354,7 +358,9 @@ $(function(){
 	    data_set()
 	    */
 	    var visit2 = data2.visit
+	    var rec2 = data2.rec
 	    if (visit) {
+	      if (rec2) { return alert('Error @ visit, unexpected rec2.') }
 	      if (visit2.id != visit.id) { return alert('Error @ visit, invalid id.') }
 	      _(visit).extend(visit2)
 	      var calevs = w_cal.fullCalendar('clientEvents', visit.id)
@@ -373,7 +379,7 @@ $(function(){
 	    }
 	    else { // userform.
 	      if (visit2) { return alert('Error @ userform, unexpected visit2.') }
-	      data.user.recs[userform.id] = vals.rec // direct update instead of from server (like visit)?.
+	      data.user.recs[userform.id] = rec2
 	    }
 	    w_modal.modal('hide')
 	  }
@@ -414,7 +420,8 @@ $(function(){
     columns: [
 	  { title: 'Form', data: 'acts' },
 	  { title: 'Name', data: 'name' },
-	  { title: 'Items', data: 'items' },
+	  { title: 'Items', data: 'repitems' },
+	  { title: 'Cats', data: 'repusercats' }
 	],
 	data: [],
   })
@@ -437,9 +444,9 @@ $(function(){
 
   w_cal.fullCalendar({
 	header: {
-		left: 'prev,next today', // prevYear,X,nextYear
-		center: 'title',
-		right: 'month,agendaWeek,agendaDay', // ,basicWeek,basicDay
+	    left: 'prev,next today', // prevYear,X,nextYear
+	    center: 'title',
+	    right: 'month,agendaWeek,agendaDay', // ,basicWeek,basicDay
 	},
 	selectable: false,
 	selectHelper: false,
@@ -511,24 +518,27 @@ $(function(){
 	var userforms = []
 
 	if (user) {
-	  function _form(formid, reps, alls) {
-		var form = data.allforms[formid]
-		return {
-		  name: _('%s <br> <i> %s </i>').sprintf(form.name, form.description),
-		  items: _('<ul> %s </ul>').sprintf(_(reps).collect(function(repid){
-			return _('<li> %s </li>').sprintf(alls[repid].name)
-		  }).join('')),
-		  acts: _button(formid, 'primary', 'userform-edit', 'Form'),
-		}
+	  function _form(formid, repkey, reps, alls) {
+	    var form = data.allforms[formid]
+	    var repobj = {
+	      name: _('%s <br> <i> %s </i>').sprintf(form.name, form.description),
+	      acts: _button(formid, 'primary', 'userform-edit', 'Form'),
+	      repitems: '',
+	      repusercats: ''
+	    }
+	    repobj[repkey] = _('<ul> %s </ul>').sprintf(_(reps).collect(function(repid){
+	      return _('<li> %s </li>').sprintf(alls[repid].name)
+	    }).join(''))
+	    return repobj
 	  }
 	  _(user.forms).each(function(formid){
-		userforms.push(_form(formid))
+	    userforms.push(_form(formid))
 	  })
 	  _(user.repdict_items).each(function(repitems, formid){
-		userforms.push(_form(formid, repitems, data.allitems))
+	    userforms.push(_form(formid, 'repitems', repitems, data.allitems))
 	  })
 	  _(user.repdict_usercats).each(function(repusercats, formid){
-		userforms.push(_form(formid, repusercats, data.allusercats))
+	    userforms.push(_form(formid, 'repusercats', repusercats, data.allusercats))
 	  })
 	  // _log('userforms', userforms)
 	}

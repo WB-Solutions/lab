@@ -460,6 +460,31 @@ _api('loccats', LocCatViewSet)
 
 
 
+model = PlaceCat
+search = _search(admin.PlaceCatAdmin)
+
+class PlaceCatSerializer(AbstractTreeSerializer):
+
+    class Meta:
+        model = model
+        fields = _fields_cat
+
+class PlaceCatFilter(AbstractTreeFilter):
+
+    class Meta:
+        model = model
+        fields = search + _filters_cat + ()
+
+class PlaceCatViewSet(AbstractTreeView):
+    queryset = _all(model)
+    serializer_class = PlaceCatSerializer
+    search_fields = search
+    filter_class = PlaceCatFilter
+
+_api('placecats', PlaceCatViewSet)
+
+
+
 model = FormCat
 search = _search(admin.FormCatAdmin)
 
@@ -695,11 +720,13 @@ search = _search(admin.PlaceAdmin)
 
 class PlaceSerializer(AbstractTreeSerializer):
     address_id = _id('address')
+    cats_ids = _ids('cats')
 
     class Meta:
         model = model
         fields = _fields_cat + (
             'address', 'address_id',
+            'cats', 'cats_ids',
         )
 
 class PlaceFilter(AbstractTreeFilter):
@@ -1038,6 +1065,7 @@ class VisitCondSerializer(AbstractSerializer):
 
     usercats_ids = _ids('usercats')
     loccats_ids = _ids('loccats')
+    placecats_ids = _ids('placecats')
 
     areas_ids = _ids('areas')
     cities_ids = _ids('cities')
@@ -1054,6 +1082,7 @@ class VisitCondSerializer(AbstractSerializer):
 
             'usercats', 'usercats_ids',
             'loccats', 'loccats_ids',
+            'placecats', 'placecats_ids',
 
             'areas', 'areas_ids',
             'cities', 'cities_ids',

@@ -215,6 +215,13 @@ _admin(LocCat, LocCatAdmin)
 
 
 
+class PlaceCatAdmin(AbstractTreeAdmin):
+    pass
+
+_admin(PlaceCat, PlaceCatAdmin)
+
+
+
 class FormCatAdmin(AbstractTreeAdmin):
     pass
 
@@ -365,7 +372,8 @@ class AddressAdmin(AbstractAdmin):
 _admin(Address, AddressAdmin)
 
 class PlaceAdmin(AbstractTreeAdmin):
-    list_display = _fields_name + ('order', 'address')
+    list_display = _fields_name + ('order', 'address', 'cats_')
+    list_filter = ('cats',)
 
 _admin(Place, PlaceAdmin)
 

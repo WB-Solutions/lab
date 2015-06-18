@@ -112,13 +112,14 @@ def _data(request, config=None):
                 forms_ids, repdict_items_ids, repdict_usercats_ids = go_user.get_forms_reps(private=private)
                 formids = forms_ids + repdict_items_ids.keys() + repdict_usercats_ids.keys()
                 recs = UserFormRec.objects.filter(form__in=formids)
+                recdict = dict([ (rec.form.id, rec.jsrec()) for rec in recs ])
                 user_dict = dict(
                     id = go_user.id,
                     name = go_user.fullname(),
                     forms = forms_ids,
                     repdict_items = repdict_items_ids,
                     repdict_usercats = repdict_usercats_ids,
-                    recs = dict([ (rec.form.id, rec.rec_dict()) for rec in recs ])
+                    recs = recdict,
                 )
             def _types(row):
                 types = row.types.all()
@@ -256,7 +257,8 @@ def ajax(request):
         # raise(e)
     data = dict(
         error = ', '.join(errors),
-        visit = None if errors else _data(request, dict(visit=visit)),
+        visit = None if errors or not visit else _data(request, dict(visit=visit)),
+        rec = None if errors or not user else base.jsrec(),
     )
     # print 'ajax > data', data
     return HttpResponse(json.dumps(data))

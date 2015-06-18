@@ -73,6 +73,7 @@ class Command(BaseCommand):
             usercats = _new_cats(UserCat, 'User')
             itemcats = _new_cats(ItemCat, 'Item')
             loccats = _new_cats(LocCat, 'Loc')
+            placecats = _new_cats(PlaceCat, 'Place')
             formcats = _new_cats(FormCat, 'Form')
             periodcats = _new_cats(PeriodCat, 'Period')
 
@@ -129,6 +130,15 @@ class Command(BaseCommand):
             _period('Jan', (2015, 01, 31))
             _period('Feb', (2015, 02, 28))
             _period('Mar', (2015, 03, 31))
+            _period('Apr', (2015, 03, 30))
+            _period('May', (2015, 03, 31))
+            _period('Jun', (2015, 03, 30))
+            _period('Jul', (2015, 03, 31))
+            _period('Aug', (2015, 03, 31))
+            _period('Sep', (2015, 03, 30))
+            _period('Oct', (2015, 03, 31))
+            _period('Nov', (2015, 03, 30))
+            _period('Dec', (2015, 03, 31))
 
             builder = _new(
                 VisitBuilder,

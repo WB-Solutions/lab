@@ -242,7 +242,7 @@ SUIT_CONFIG = dict(
         dict(label='Geos', icon='icon-cog', app='lab', models=('country', 'state', 'city', 'area', 'brick', 'zip')),
         dict(label='OnOff', icon='icon-cog', app='lab', models=('onoffperiod', 'onofftime')),
         dict(label='Catalogs', icon='icon-cog', app='lab', models=('sys', 'visitbuilder', 'visitcond', 'period', 'weekconfig', 'dayconfig', 'timeconfig')),
-        dict(label='Cats', icon='icon-cog', app='lab', models=('usercat', 'itemcat', 'loccat', 'formcat', 'periodcat', 'genericcat', 'formtype')),
+        dict(label='Cats', icon='icon-cog', app='lab', models=('usercat', 'itemcat', 'loccat', 'placecat', 'formcat', 'periodcat', 'genericcat', 'formtype')),
         dict(label='Lab', icon='icon-cog', app='lab', models=('user', 'userformrec', 'forcenode', 'forcevisit', 'item', 'loc', 'address', 'place', 'form', 'formfield')),
         # dict(label='ALL', icon='icon-cog', app='lab'),
     ),

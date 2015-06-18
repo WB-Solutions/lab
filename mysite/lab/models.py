@@ -291,6 +291,11 @@ class LocCat(AbstractTree):
 
 
 
+class PlaceCat(AbstractTree):
+    els_model = 'Place'
+
+
+
 class FormCat(AbstractTree):
     els_model = 'Form'
 
@@ -444,6 +449,9 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
     # def has_perm(self, perm, obj=None): return True # does the user have a specific permission?.
     # def has_module_perms(self, app_label): return True # does the user have permissions to view the app "app_label"?.
 
+    def allcats(self):
+        return utils.tree_all_downs(self.cats.all())
+
     def get_forms_reps(self, **kwargs):
         locs = self.locs.all()
         loccats = utils.list_flatten(locs, lambda loc: loc.cats.all())
@@ -451,7 +459,7 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
             baseuser = self,
             user = self,
             loccats = loccats,
-            usercats = utils.tree_all_downs(self.cats.all()),
+            usercats = self.allcats(),
             **kwargs
         )
 
@@ -501,6 +509,7 @@ class Address(AbstractModel):
 class Place(AbstractTree):
     address = _one_blank(Address, 'places') # must be blank & null to be able to set & validate in clean below.
     # canloc = _boolean(True)
+    cats = _many_tree(PlaceCat, 'places')
 
     def clean(self):
         if self.address:
@@ -652,7 +661,7 @@ class Form(AbstractModel):
         usercats = None, loccats = None, # common.
         upnodes = None, itemcats = None, items = None, # visit.
     ):
-        print 'get_forms_reps', private, user or visit
+        # print 'get_forms_reps', private, user or visit
         if not baseuser: error
         if visit if user else not visit: error
         repdict_items = dict()
@@ -660,8 +669,8 @@ class Form(AbstractModel):
         _any = utils.tree_any
         def _doreps(form):
             def _reps(isitems, repdict, reps):
-                print '_doreps > reps', reps
-                if reps.exists(): # must check, even if empty after the below filter.
+                # print '_doreps > reps', reps
+                if len(reps): # must check, even if empty after the below filter.
                     # user will get ALL reps (items / usercats) without any filtering, as opposed to visit.
                     isvisititems = isitems and not user
                     if isvisititems:
@@ -686,8 +695,12 @@ class Form(AbstractModel):
                 nreps = (reps1 | reps2).distinct()
                 return _reps(True, repdict_items, nreps)
             def _reps_usercats():
-                nreps = form.repusercats.all()
+                ucats = utils.tree_all_downs(form.repusercats.all())
+                ucats2 = baseuser.allcats()
+                nreps = ucats & ucats2
+                # print '_reps_usercats', baseuser, len(ucats), len(ucats2), len(nreps)
                 return _reps(False, repdict_usercats, nreps)
+            # priority to repitems, then (if none) repusercats.
             return not (_reps_items() or _reps_usercats())
         forms = Form.objects.filter(scope='users' if user else 'visits')
         forms = [ form for form in forms
@@ -714,7 +727,7 @@ class Form(AbstractModel):
             for repdict in [ repdict_items, repdict_usercats ]:
                 for erep, erepforms in repdict.items():
                     erepforms[:] = utils.db_ids(erepforms)
-        print 'get_forms_reps', private, user or visit, forms, repdict_items, repdict_usercats
+        # print 'get_forms_reps', private, user or visit, forms, repdict_items, repdict_usercats
         return forms, repdict_items, repdict_usercats
 
     '''
@@ -823,6 +836,12 @@ class UserFormRec(AbstractFormRec):
 
     def __unicode__(self):
         return _str(self, 'User Form Rec: %s > %s @ %s', (self.datetime, self.user, self.form))
+
+    def jsrec(self):
+        return dict(
+            observations = self.observations,
+            rec = self.rec_dict(),
+        )
 
 
 
@@ -1102,6 +1121,7 @@ class VisitCond(AbstractModel):
 
     usercats = _many_tree(UserCat, 'conds')
     loccats = _many_tree(LocCat, 'conds')
+    placecats = _many_tree(PlaceCat, 'conds')
     # locs = _many(Loc, 'conds')
 
     areas = _many(Area, 'conds')
@@ -1126,6 +1146,7 @@ class VisitCond(AbstractModel):
         for fname, mrel in [
             ('cats__in', self.loccats),
             ('user__cats__in', self.usercats),
+            ('place__cats__in', self.placecats),
         ]:
             if mrel.exists():
                 mrel = utils.tree_all_downs(mrel.all())
