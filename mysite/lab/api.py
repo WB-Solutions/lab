@@ -555,14 +555,20 @@ class ForceVisitSerializer(AbstractSerializer):
     loc_id = _id('loc')
     builder_id = _id('builder')
 
+    get_prep_public = serializers.Field(source='get_prep_public')
+    get_prep_private = serializers.Field(source='get_prep_private')
+
     class Meta:
         model = model
-        fields = _fields + (
+        fields = _fields_name + (
             'datetime', 'duration', 'status', 'accompanied',
             'node', 'node_id',
             'loc', 'loc_id',
             'builder', 'builder_id',
             'observations', 'rec',
+
+            'f_contact', 'f_goal', 'f_option',
+            'get_prep_public', 'get_prep_private',
         )
 
 class ForceVisitFilter(AbstractFilter):

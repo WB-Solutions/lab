@@ -176,11 +176,21 @@ $(function(){
       if (visit) {
 	_(jschema).extend({
 	  accompanied: { type: 'boolean' },
-	  status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] }
+	  name: { type: 'string' },
+	  status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] },
+
+	  f_contact: { type: 'string', enum: [ 'Presencial', 'Telefonica', 'Web' ] },
+	  f_goal: { type: 'string', enum: [ 'Presentacion Inicial', 'Promocion', 'Pedido', 'Negociar' ] },
+	  f_option: { type: 'string', enum: [ 'Planeada', 'Re-agendada', 'Asignada' ] }
 	})
 	jitems.push(
 	  { key: 'accompanied', prepend: 'Accompanied', inlinetitle: 'Accompanied', htmlClass: 'lab-field-boolean' },
-	  { key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } }
+	  { key: 'name', prepend: 'Name', notitle: true },
+	  { key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
+
+	  { key: 'f_contact', prepend: 'Contact', notitle: true },
+	  { key: 'f_goal', prepend: 'Goal', notitle: true },
+	  { key: 'f_option', prepend: 'Option', notitle: true }
 	)
       }
 
@@ -217,6 +227,9 @@ $(function(){
 	      ftype2 = fwidget
 	      fwidget2 = fwidget
 	    }
+	  }
+	  else if (ftype == 'date') {
+	    ftype2 = ftype
 	  }
 	  else if (isbool) {
 	    f_form['inlinetitle'] = desc

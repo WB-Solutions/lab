@@ -594,6 +594,7 @@ class AbstractFormRec(AbstractModel):
 
 
 class ForceVisit(AbstractFormRec):
+    name = _char_blank()
     node = _one(ForceNode, 'visits')
     loc = _one(Loc, 'visits')
     duration = _duration()
@@ -601,8 +602,80 @@ class ForceVisit(AbstractFormRec):
     accompanied = _boolean(False)
     builder = _one_blank('VisitBuilder', 'visits') # on_delete=models.SET_NULL
 
+    f_contact = _choices(30, [ 'Presencial', 'Telefonica', 'Web' ])
+    f_goal = _choices(30, [ 'Presentacion Inicial', 'Promocion', 'Pedido', 'Negociar' ])
+    f_option = _choices(30, [ 'Planeada', 'Re-agendada', 'Asignada' ])
+
     def __unicode__(self):
         return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.node, self.loc))
+
+    def prep(self, private):
+        print 'prep', self.id, private
+        cached = dict()
+        def _node_data(_node):
+            d = cached.get(_node)
+            iscached = d is not None
+            if not iscached:
+                _upnodes = utils.tree_ups(_node)
+                _itemcats = utils.tree_all_downs(utils.list_flatten(_upnodes, lambda enode: enode.itemcats.all()))
+                d = dict(
+                    upnodes = _upnodes,
+                    itemcats = _itemcats,
+                    items = ItemCat.els_get(_itemcats),
+                )
+                cached[_node] = d
+            # print '_node_data cached', iscached, _node, d
+            return d
+
+        loc = self.loc
+        user = loc.user
+        forms_ids, repdict_items_ids, repdict_usercats_ids = Form.get_forms_reps(
+            baseuser = user,
+            private = private,
+            visit = self,
+            usercats = user.cats.all(),
+            loccats = loc.cats.all(),
+            **_node_data(self.node)
+        )
+        addr = loc.addr()
+        def _dt(datetime):
+            return str(datetime) if datetime else ''
+        dt = self.datetime
+        v = dict(
+            name = self.name,
+            datetime = _dt(dt),
+            end = _dt(utils.datetime_plus(dt, self.duration)),
+            status = self.status,
+            accompanied = self.accompanied,
+
+            f_contact = self.f_contact,
+            f_goal = self.f_goal,
+            f_option = self.f_option,
+
+            observations = self.observations,
+            user_name = user.fullname(),
+            user_email = user.email,
+            user_cats = utils.db_names(user.cats),
+            loc_name = loc.name,
+            loc_address = '%s # %s, %s' % (addr.street, addr.unit, addr.area),
+            forms = forms_ids,
+            repdict_items = repdict_items_ids,
+            repdict_usercats = repdict_usercats_ids,
+            rec = self.rec_dict(),
+        )
+        # print 'prep', self, v
+        return v
+
+    def _get_prep(self, private):
+        import json
+        v = self.prep(private)
+        return json.dumps(v)
+
+    def get_prep_public(self):
+        return self._get_prep(False)
+
+    def get_prep_private(self):
+        return self._get_prep(True)
 
 
 
@@ -781,6 +854,7 @@ class FormField(AbstractModel):
     type = _choices(20, [
         'string',
         'boolean',
+        'date',
         'opts', 'optscat', 'optscat-all', # must start with 'opts', used in lab.js.
     ])
     widget = _choices(20, [ 'def', 'radios', 'textarea' ])

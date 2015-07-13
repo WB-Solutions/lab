@@ -255,12 +255,12 @@ _admin(ForceNode, ForceNodeAdmin)
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/
 class ForceVisitAdmin(AbstractAdmin):
-    list_display = _fields + ('datetime', 'duration', 'status', 'accompanied', 'node', 'loc', 'builder', 'rec') # 'observations', 'rec'
-    list_display_links = _fields + ('datetime',)
+    list_display = _fields_name + ('datetime', 'duration', 'status', 'accompanied', 'f_contact', 'f_goal', 'f_option', 'node', 'loc', 'builder', 'rec') # 'observations', 'rec'
+    list_display_links = _fields_name + ('datetime',)
     date_hierarchy = 'datetime'
     list_editable = ('status',)
     list_filter = ('datetime', 'status', 'accompanied', 'builder')
-    search_fields = _search  + ('observations',) # 'rec'
+    search_fields = _search_name  + ('observations',) # 'rec'
     # radio_fields = dict(status=admin.VERTICAL)
     # raw_id_fields = ('node',)
     # readonly_fields = ('datetime',)

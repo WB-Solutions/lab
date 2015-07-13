@@ -25,10 +25,11 @@ def _data(request, config=None):
         return model.objects.all()
     def _list(model):
         return [ config.get(model) ] if config else _all(model)
-    def _datetime(datetime):
-        return str(datetime) if datetime else ''
     def _ext(db1, d2):
-        d2.update(id=db1.id, full=str(db1))
+        d2.update(
+            id = db1.id,
+            full = repr(db1), # NO str, otherwise DjangoUnicodeDecodeError if special chars (e.g. accents).
+        )
         return d2
     def _dict(dbn, fn):
         return dict([ (each.id, _ext(each, fn(each)))
@@ -49,52 +50,13 @@ def _data(request, config=None):
     if visit:
         if go_nodes is not None: error
         go_nodes = [visit.node]
-    if go_nodes:
-        cached = dict()
-        def _node_data(_node):
-            d = cached.get(_node)
-            iscached = d is not None
-            if not iscached:
-                _upnodes = utils.tree_ups(_node)
-                _itemcats = utils.tree_all_downs(utils.list_flatten(_upnodes, lambda enode: enode.itemcats.all()))
-                d = dict(
-                    upnodes = _upnodes,
-                    itemcats = _itemcats,
-                    items = ItemCat.els_get(_itemcats),
-                )
-                cached[_node] = d
-            # print '_node_data cached', iscached, _node, d
-            return d
+    if go_nodes is None:
+        go_nodes = []
+    # print '_data > *', visit, go_user, go_nodes
+    if True: # previous [ if go_nodes: ] REMOVED in order for user forms (without nodes) @ agenda to work properly.
 
         def _visit(visit, ext=False):
-            loc = visit.loc
-            user = loc.user
-            forms_ids, repdict_items_ids, repdict_usercats_ids = Form.get_forms_reps(
-                baseuser = user,
-                private = private,
-                visit = visit,
-                usercats = user.cats.all(),
-                loccats = loc.cats.all(),
-                **_node_data(visit.node)
-            )
-            addr = loc.addr()
-            dt = visit.datetime
-            v = dict(
-                datetime = _datetime(dt),
-                end = _datetime(utils.datetime_plus(dt, visit.duration)),
-                status = visit.status,
-                accompanied = visit.accompanied,
-                observations = visit.observations,
-                user_name = user.fullname(),
-                user_email = user.email,
-                user_cats = utils.db_names(user.cats),
-                loc_name = loc.name,
-                loc_address = '%s # %s, %s' % (addr.street, addr.unit, addr.area),
-                forms = forms_ids,
-                repdict_items = repdict_items_ids,
-                repdict_usercats = repdict_usercats_ids,
-                rec = visit.rec_dict(),
-            )
+            v = visit.prep(private)
             if ext:
                 _ext(visit, v)
             return v
@@ -121,6 +83,7 @@ def _data(request, config=None):
                     repdict_usercats = repdict_usercats_ids,
                     recs = recdict,
                 )
+                # print 'user_dict', user_dict
             def _types(row):
                 types = row.types.all()
                 # return _dict(types, lambda field: dict())
@@ -214,7 +177,7 @@ def ajax(request):
     visit = _ref('ref_visit', ForceVisit)
     user = _ref('ref_user', User)
     form = _ref('ref_form', Form)
-    print 'ajax', visit, user, form
+    # print 'ajax', visit, user, form
     errors = []
     try:
         with transaction.atomic():
@@ -238,8 +201,13 @@ def ajax(request):
             if visit:
                 dbvars.update(
                     # sched = _get_datetime('sched'),
+                    name = _get('name'),
                     status = _get('status'),
                     accompanied = _get('accompanied'),
+
+                    f_contact = _get('f_contact'),
+                    f_goal = _get('f_goal'),
+                    f_option = _get('f_option'),
                 )
             elif not base:
                 dbvars.update(dbgetvars)
