@@ -20,6 +20,8 @@ $(function(){
   var w_forms = $('#go_forms')
   var w_nodes = $('#go_nodes')
 
+  var w_visit1 = $('#go_visit1')
+
   function modal(z, formtype) {
     _log('modal', z, formtype)
     if (!z) { z = {} }
@@ -389,6 +391,7 @@ $(function(){
 	      else { row = api.row.add(visit2) } // add.
 	      api.draw()
 	      w_cal.fullCalendar('updateEvent', calev)
+	      visit_edit(visit2.id)
 	    }
 	    else { // userform.
 	      if (visit2) { return alert('Error @ userform, unexpected visit2.') }
@@ -406,24 +409,43 @@ $(function(){
   }
 
   function visit_edit(visit_id) {
-	var visit = data.visits[visit_id]
-	// _log('visit_edit', visit_id, visit)
-	modal({ visit: visit })
+    var visit = data.visits[visit_id]
+    // _log('visit_edit', visit_id, visit)
+    var _p = function(label, value) {
+      return _('<p> <mark>%s:</mark> %s </p>').sprintf(label, value)
+    }
+    var hn = [
+      _p('Name', visit.name),
+      _p('Status', visit.status),
+      _p('User', visit.h_user),
+      _p('Cats', visit.h_cats),
+      _p('Loc', visit.h_loc),
+      _p('Contact', visit.f_contact),
+      _p('Goal', visit.f_goal),
+      _p('Option', visit.f_option),
+      _p('Observations', visit.observations),
+    ]
+    var h = hn.join('')
+    var wbutton = $('<p><button class="btn btn-info">Visit</button></p>')
+    wbutton.click(function(){
+      modal({ visit: visit })
+    })
+    w_visit1.empty().append(h, wbutton)
   }
 
   function userform_edit(form_id) {
-	var form = data.allforms[form_id]
-	// _log('userform_edit', form_id, form)
-	modal({ userform: form })
+    var form = data.allforms[form_id]
+    // _log('userform_edit', form_id, form)
+    modal({ userform: form })
   }
 
   function _onclick(sel, fn) {
-	w_doc.on('click', sel, function(){
-	  var w_act = $(this)
-	  var xid = w_act.data('ref')
-	  // _log('click', sel, w_act, xid)
-	  fn(xid)
-	})
+    w_doc.on('click', sel, function(){
+      var w_act = $(this)
+      var xid = w_act.data('ref')
+      // _log('click', sel, w_act, xid)
+      fn(xid)
+    })
   }
 
   _onclick('.visit-edit', visit_edit)
@@ -499,9 +521,9 @@ $(function(){
 	}
 	_(visit).extend({
 	  DT_RowId: _visit_row(visit), // http://next.datatables.net/examples/server_side/ids.html
-	  acts: _button(visit.id, _stat('primary', 'success', 'warning', 'danger'), 'visit-edit', 'Visit'),
+	  acts: _h2(visit.name, _button(visit.id, _stat('primary', 'success', 'warning', 'danger'), 'visit-edit', 'Visit')),
 	  h_user: _h2(visit.user_name, _('<a href="mailto:%(email)s"> %(email)s </a>').sprintf({ email: visit.user_email })),
-	  h_cats: _h2(visit.user_cats),
+	  h_cats: visit.user_cats || '-',
 	  h_loc: _h2(visit.loc_name, visit.loc_address),
 	})
 	var ev = {

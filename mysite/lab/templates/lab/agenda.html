@@ -6,81 +6,92 @@
 
 {% block content %}
 
-  <div class="panel-group" id="accordion"> <!-- include @ panel-title for accordion behavior: data-parent="#accordion"  -->
+  <div class="row" style="margin-top:10px;">
+    <div class="col-xs-9">
 
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h4 class="panel-title"> <a data-toggle="collapse" href="#toggle_context"> Context </a> </h4>
+      <div class="panel-group" id="accordion"> <!-- include @ panel-title for accordion behavior: data-parent="#accordion"  -->
+
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title"> <a data-toggle="collapse" href="#toggle_context"> Context </a> </h4>
+          </div>
+          <div id="toggle_context" class="panel-collapse collapse">
+            <div class="panel-body">
+              <ul>
+                <li> User : <span id="go_user"></span> </li>
+                <li> Forms : <span id="go_forms"></span> </li>
+                <li> Visits : <span id="go_visits"></span> </li>
+                <li id="go_nodes"> Nodes : </li>
+              </ul>
+              <i> Modal windows will open to edit Forms & Visits from Tables & Calendar. </i>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title"> <a data-toggle="collapse" href="#toggle_forms"> User Forms </a> </h4>
+          </div>
+          <div id="toggle_forms" class="panel-collapse collapse">
+            <div class="panel-body">
+              <table class="table table-striped" id="dt2"></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title"> <a data-toggle="collapse" href="#toggle_visits_table"> Visits @ Table </a> </h4>
+          </div>
+          <div id="toggle_visits_table" class="panel-collapse collapse">
+            <div class="panel-body">
+              <table class="table table-striped" id="dt"></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title"> <a data-toggle="collapse" href="#toggle_visits_calendar"> Visits @ Calendar </a> </h4>
+          </div>
+          <div id="toggle_visits_calendar" class="panel-collapse collapse in">
+            <div class="panel-body">
+              <div id="cal"></div>
+            </div>
+          </div>
+        </div>
+
       </div>
-      <div id="toggle_context" class="panel-collapse collapse in">
-        <div class="panel-body">
-          <ul>
-            <li> User : <span id="go_user"></span> </li>
-            <li> Forms : <span id="go_forms"></span> </li>
-            <li> Visits : <span id="go_visits"></span> </li>
-            <li id="go_nodes"> Nodes : </li>
-          </ul>
-          <i> Modal windows will open to edit Forms & Visits from Tables & Calendar. </i>
+
+      <p class="pull-right"> Medical Visits DEMO </p>
+
+      <div class="modal fade" data-backdrop="static" id="modal" role="dialog" tabindex="-1">
+        <div class="modal-dialog modal-wide">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button class="close" data-dismiss="modal" type="button">&times;</button>
+              <h4 class="modal-title" id="bs-images-modal-title">
+                Medical Visit
+                &nbsp; &nbsp; <span id="modal-label" class="small"></span>
+              </h4>
+            </div>
+            <div class="modal-body">
+              <form id="modal-form"></form>
+              <div id="modal-list"></div>
+            </div>
+            <div class="modal-footer">
+              <div><a class="btn btn-default" data-dismiss="modal" role="button">Close</a></div>
+            </div>
+          </div>
         </div>
       </div>
+
     </div>
 
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h4 class="panel-title"> <a data-toggle="collapse" href="#toggle_forms"> User Forms </a> </h4>
-      </div>
-      <div id="toggle_forms" class="panel-collapse collapse in">
-        <div class="panel-body">
-          <table class="table table-striped" id="dt2"></table>
-        </div>
-      </div>
+    <div class="col-xs-3">
+      <small><div id="go_visit1"></div><small>
     </div>
 
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h4 class="panel-title"> <a data-toggle="collapse" href="#toggle_visits_table"> Visits @ Table </a> </h4>
-      </div>
-      <div id="toggle_visits_table" class="panel-collapse collapse in">
-        <div class="panel-body">
-          <table class="table table-striped" id="dt"></table>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h4 class="panel-title"> <a data-toggle="collapse" href="#toggle_visits_calendar"> Visits @ Calendar </a> </h4>
-      </div>
-      <div id="toggle_visits_calendar" class="panel-collapse collapse in">
-        <div class="panel-body">
-          <div id="cal"></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <p class="pull-right"> Medical Visits DEMO </p>
-
-  <div class="modal fade" data-backdrop="static" id="modal" role="dialog" tabindex="-1">
-    <div class="modal-dialog modal-wide">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button class="close" data-dismiss="modal" type="button">&times;</button>
-          <h4 class="modal-title" id="bs-images-modal-title">
-            Medical Visit
-            &nbsp; &nbsp; <span id="modal-label" class="small"></span>
-          </h4>
-        </div>
-        <div class="modal-body">
-          <form id="modal-form"></form>
-          <div id="modal-list"></div>
-        </div>
-        <div class="modal-footer">
-          <div><a class="btn btn-default" data-dismiss="modal" role="button">Close</a></div>
-        </div>
-      </div>
-    </div>
   </div>
 
 {% endblock %}

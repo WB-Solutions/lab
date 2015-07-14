@@ -610,7 +610,7 @@ class ForceVisit(AbstractFormRec):
         return _str(self, 'Force Visit: %s > %s @ %s', (self.datetime, self.node, self.loc))
 
     def prep(self, private):
-        print 'prep', self.id, private
+        # print 'prep', self.id, private
         cached = dict()
         def _node_data(_node):
             d = cached.get(_node)

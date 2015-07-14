@@ -30,3 +30,5 @@ fieldset:first-of-type { margin-top: 30px !important; }
 fieldset.expandable { cursor: pointer; }
 
 .form-user { margin-top: -25px; }
+
+.fc-event { cursor: pointer; }

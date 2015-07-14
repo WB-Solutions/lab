@@ -116,7 +116,7 @@ class AbstractView(viewsets.ModelViewSet):
                             cats = utils.list_compact([ utils.db_get(target, cat) for cat in cats ])
                             cats = utils.tree_all_downs(cats)
                         qset = qset.filter(cats__in=cats)
-                        print 'get_queryset', self, type(qset), model, cats
+                        # print 'get_queryset', self, type(qset), model, cats
         return qset
 
 class AbstractTreeView(AbstractView):
