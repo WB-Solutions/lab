@@ -142,6 +142,7 @@ _admin(State, StateAdmin)
 # Shared.
 class AreaInline(AbstractTabularInline):
     model = Area
+    raw_id_fields = ('zip',)
 
 
 
@@ -167,6 +168,7 @@ _admin(Brick, BrickAdmin)
 class ZipAdmin(AbstractAdmin):
     list_display = _fields_name + ('brick',)
     inlines = (AreaInline,)
+    raw_id_fields = ('brick',)
 
 _admin(Zip, ZipAdmin)
 
@@ -174,6 +176,7 @@ _admin(Zip, ZipAdmin)
 
 class AreaAdmin(AbstractAdmin):
     list_display = _fields_name + ('city', 'zip')
+    raw_id_fields = ('zip',)
 
 _admin(Area, AreaAdmin)
 
@@ -261,8 +264,10 @@ class ForceVisitAdmin(AbstractAdmin):
     list_editable = ('status',)
     list_filter = ('datetime', 'status', 'accompanied', 'builder')
     search_fields = _search_name  + ('observations',) # 'rec'
+    
+    raw_id_fields = ('node', 'loc')
+    
     # radio_fields = dict(status=admin.VERTICAL)
-    # raw_id_fields = ('node',)
     # readonly_fields = ('datetime',)
     # def has_add_permission(self, request): return False
     # def get_queryset(self, request): ... FILTER by current user and such?.
@@ -505,7 +510,9 @@ _admin(WeekConfig, WeekConfigAdmin)
 
 class VisitCondAdmin(AbstractAdmin):
     list_display = _fields_name + ('builder',)  # ('usercats', 'loccats', 'areas', 'cities', 'states', 'countries', 'zips', 'bricks')
+    list_filter = ('cities', 'states', 'countries')
     search_fields = _search_name
+    raw_id_fields = ('areas', 'zips', 'bricks')
 
 _admin(VisitCond, VisitCondAdmin)
 
@@ -513,6 +520,7 @@ _admin(VisitCond, VisitCondAdmin)
 
 class VisitCondInline(AbstractStackedInline):
     model = VisitCond
+    raw_id_fields = ('areas', 'zips', 'bricks')
 
 class VisitBuilderAdmin(AbstractAdmin):
     list_display = _fields_name + (
@@ -524,6 +532,8 @@ class VisitBuilderAdmin(AbstractAdmin):
     list_filter = ('node', 'generate')
 
     inlines = (VisitCondInline,)
+    
+    raw_id_fields = ('node',)
 
     fieldsets = (
         (None, dict(fields=('syscode', 'name', 'node', 'duration', 'gap'))),
