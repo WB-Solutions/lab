@@ -122,7 +122,7 @@ TEMPLATE_DIRS = (
 )
 
 REST_FRAMEWORK = {
-    # 'PAGINATE_BY': 3,
+    'PAGINATE_BY': 50,
 
     # http://www.django-rest-framework.org/api-guide/authentication
     'DEFAULT_AUTHENTICATION_CLASSES': (

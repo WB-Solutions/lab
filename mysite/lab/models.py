@@ -20,6 +20,7 @@ def _time_choice(h, m):
 time_choices = reduce(lambda x, y: x + [ _time_choice(y, e) for e in [ 0, 15, 30, 45 ] ], range(24), [])
 
 class GoTreeM2MField(models.ManyToManyField):
+
     pass
 
 def _kw_merge(kwmain, **kwdef):
@@ -141,6 +142,7 @@ def _syscode(**kwargs):
 
 
 class AbstractModel(models.Model):
+
     syscode = _syscode()
 
     class Meta:
@@ -163,6 +165,7 @@ class AbstractModel(models.Model):
 
 # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
 class AbstractTree(MPTTModel, AbstractModel):
+
     name = _name()
     parent = TreeForeignKey('self', blank=True, null=True, related_name='children')
     order = _form_order()
@@ -194,6 +197,7 @@ class AbstractTree(MPTTModel, AbstractModel):
 
 
 class Country(AbstractModel):
+
     name = _name_unique()
 
     class Meta:
@@ -202,6 +206,7 @@ class Country(AbstractModel):
 
 
 class State(AbstractModel):
+
     name = _name()
     country = _one(Country, 'states')
 
@@ -215,6 +220,7 @@ class State(AbstractModel):
 
 
 class City(AbstractModel):
+
     name = _name()
     state = _one(State, 'cities')
 
@@ -228,6 +234,7 @@ class City(AbstractModel):
 
 
 class Brick(AbstractModel):
+
     name = _name_unique()
 
     class Meta:
@@ -236,6 +243,7 @@ class Brick(AbstractModel):
 
 
 class Zip(AbstractModel):
+
     name = _name_unique()
     brick = _one(Brick, 'zips')
 
@@ -248,6 +256,7 @@ class Zip(AbstractModel):
 
 
 class Area(AbstractModel):
+
     name = _name()
     city = _one(City, 'areas')
     zip = _one(Zip, 'areas')
@@ -262,16 +271,19 @@ class Area(AbstractModel):
 
 
 class GenericCat(AbstractTree):
+
     pass
 
 
 
 class PeriodCat(AbstractTree):
+
     els_model = 'Period'
 
 
 
 class UserCat(AbstractTree):
+
     els_model = 'User'
     els_field = 'email'
 
@@ -282,26 +294,31 @@ class UserCat(AbstractTree):
 
 
 class ItemCat(AbstractTree):
+
     els_model = 'Item'
 
 
 
 class LocCat(AbstractTree):
+
     els_model = 'Loc'
 
 
 
 class PlaceCat(AbstractTree):
+
     els_model = 'Place'
 
 
 
 class FormCat(AbstractTree):
+
     els_model = 'Form'
 
 
 
 class DayConfig(AbstractModel):
+
     name = _char()
 
     class Meta:
@@ -310,6 +327,7 @@ class DayConfig(AbstractModel):
 
 
 class TimeConfig(AbstractModel):
+
     name = _char_blank()
     day = _one(DayConfig, 'times')
     start = _time(choices=time_choices)
@@ -327,6 +345,7 @@ class TimeConfig(AbstractModel):
 
 
 class WeekConfig(AbstractModel):
+
     name = _char()
 
     # @ utils.weekdays.
@@ -372,6 +391,7 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, True, True, **extra_fields)
 
 class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
+
     email = models.EmailField(_('email address'), blank=False, unique=True)
     first_name = _char_blank()
     last_name = _char_blank()
@@ -424,6 +444,9 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
         "Returns the short name for the user."
         return self.first_name
 
+    def _pwd(self):
+        return '@' if self.password else ''
+
     def guess_display_name(self):
         """Set a display name, if one isn't already set."""
         if self.display_name:
@@ -466,6 +489,7 @@ class User(AbstractBaseUser, PermissionsMixin, AbstractModel):
 
 
 class Item(AbstractModel):
+
     name = _name_unique()
     cats = _many_tree(ItemCat, 'items')
 
@@ -488,6 +512,7 @@ class Item(AbstractModel):
 
 
 class Address(AbstractModel):
+
     # name = _char_blank()
     street = _char()
     unit = _char_blank()
@@ -507,6 +532,7 @@ class Address(AbstractModel):
         return _str(self, '%s # %s, %s', (self.street, self.unit, self.area))
 
 class Place(AbstractTree):
+
     address = _one_blank(Address, 'places') # must be blank & null to be able to set & validate in clean below.
     # canloc = _boolean(True)
     cats = _many_tree(PlaceCat, 'places')
@@ -522,6 +548,7 @@ class Place(AbstractTree):
             raise ValidationError(dict(address='Address is required for root elements.'))
 
 class Loc(AbstractModel):
+
     name = _char_blank()
     user = _one(User, 'locs')
     week = _one_blank(WeekConfig, 'locs')
@@ -552,6 +579,7 @@ class Loc(AbstractModel):
 
 
 class ForceNode(AbstractTree):
+
     user = _one_blank(User, 'nodes')
     itemcats = _many_tree(ItemCat, 'nodes')
     bricks = _many(Brick, 'nodes')
@@ -572,6 +600,7 @@ class ForceNode(AbstractTree):
 
 
 class AbstractFormRec(AbstractModel):
+
     datetime = _datetime_now()
     observations = _text()
     rec = _text()
@@ -594,6 +623,7 @@ class AbstractFormRec(AbstractModel):
 
 
 class ForceVisit(AbstractFormRec):
+
     name = _char_blank()
     node = _one(ForceNode, 'visits')
     loc = _one(Loc, 'visits')
@@ -680,6 +710,7 @@ class ForceVisit(AbstractFormRec):
 
 
 class FormType(AbstractModel):
+
     name = _name_unique()
     order = _form_order()
     description = _form_description()
@@ -697,6 +728,7 @@ class FormType(AbstractModel):
 
 
 class Form(AbstractModel):
+
     name = _name_unique()
     scope = _choices(20, [ 'visits', 'users' ])
     private = _boolean(False)
@@ -848,6 +880,7 @@ class Form(AbstractModel):
 
 
 class FormField(AbstractModel):
+
     name = _name()
     description = _form_description()
     form = _one(Form, 'fields')
@@ -902,6 +935,7 @@ class FormField(AbstractModel):
 
 
 class UserFormRec(AbstractFormRec):
+
     user = _one(User, 'userformrecs')
     form = _one(Form, 'userformrecs')
 
@@ -920,6 +954,7 @@ class UserFormRec(AbstractFormRec):
 
 
 class Period(AbstractModel):
+
     name = _name_unique()
     end = _date()
     week = _one_blank(WeekConfig, 'periods')
@@ -958,6 +993,7 @@ def _qty():
     return _int_blank(default=None, editable=False)
 
 class VisitBuilder(AbstractModel):
+
     qty_slots = _qty()
     qty_slots_skips = _qty()
     qty_locs = _qty()
@@ -1190,6 +1226,7 @@ class VisitBuilder(AbstractModel):
 
 
 class VisitCond(AbstractModel):
+
     name = _char_blank()
     builder = _one(VisitBuilder, 'conds')
 
@@ -1246,6 +1283,7 @@ class VisitCond(AbstractModel):
 
 
 class AbstractOnOff(AbstractModel):
+
     on = _boolean(False)
 
     # https://docs.djangoproject.com/en/1.7/topics/db/models/#model-inheritance
@@ -1275,11 +1313,13 @@ class AbstractOnOff(AbstractModel):
 
 
 class OnOffPeriod(AbstractOnOff):
+
     start = _date()
     end = _date()
 
 
 class OnOffTime(AbstractOnOff):
+
     start = _time(choices=time_choices)
     end = _time(choices=time_choices)
     date = _date_blank()
@@ -1290,6 +1330,7 @@ class OnOffTime(AbstractOnOff):
 
 
 class Sys(AbstractModel):
+
     week_user_visit = _one(WeekConfig, 'sys_user_visit')
     week_user_visited = _one(WeekConfig, 'sys_user_visited')
     week_period = _one(WeekConfig, 'sys_period')

@@ -40,6 +40,7 @@ _search = ('syscode',)
 _search_name = _search  + ('name',)
 
 class AbstractAdmin(admin.ModelAdmin):
+
     list_display = _fields_name
     list_display_links = _fields_name
     search_fields = _search_name
@@ -79,16 +80,20 @@ class AbstractInlineFormSet(forms.models.BaseInlineFormSet):
         return v
 
 class AbstractInline(admin.options.InlineModelAdmin):
+
     extra = 0
     formset = AbstractInlineFormSet
 
 class AbstractTabularInline(AbstractInline, admin.TabularInline):
+
     pass
 
 class AbstractStackedInline(AbstractInline, admin.StackedInline):
+
     pass
 
 class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin): # SortableModelAdmin
+
     # sortable = 'order' # http://django-suit.readthedocs.org/en/latest/sortables.html#django-mptt-tree-sortable
     list_display = _fields_name + ('order',)
     mptt_indent_field  = 'name'
@@ -96,21 +101,25 @@ class AbstractTreeAdmin(AbstractAdmin, MPTTModelAdmin): # SortableModelAdmin
 
 
 class AbstractOnOffVisitPeriodInline(AbstractStackedInline):
+
     model = OnOffPeriod
     verbose_name_plural = 'On/Off Periods @ Visit'
     verbose_name = 'On/Off Period @ Visit'
 
 class AbstractOnOffVisitTimeInline(AbstractStackedInline):
+
     model = OnOffTime
     verbose_name_plural = 'On/Off Times @ Visit'
     verbose_name = 'On/Off Time @ Visit'
 
 class AbstractOnOffVisitedPeriodInline(AbstractStackedInline):
+
     model = OnOffPeriod
     verbose_name_plural = 'On/Off Periods @ Visited'
     verbose_name = 'On/Off Period @ Visited'
 
 class AbstractOnOffVisitedTimeInline(AbstractStackedInline):
+
     model = OnOffTime
     verbose_name_plural = 'On/Off Times @ Visited'
     verbose_name = 'On/Off Time @ Visited'
@@ -118,9 +127,11 @@ class AbstractOnOffVisitedTimeInline(AbstractStackedInline):
 
 
 class StateInline(AbstractTabularInline):
+
     model = State
 
 class CountryAdmin(AbstractAdmin):
+
     inlines = (StateInline,)
 
 _admin(Country, CountryAdmin)
@@ -128,9 +139,11 @@ _admin(Country, CountryAdmin)
 
 
 class CityInline(AbstractTabularInline):
+
     model = City
 
 class StateAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('country',)
     list_filter = ('country',)
     inlines = (CityInline,)
@@ -141,12 +154,14 @@ _admin(State, StateAdmin)
 
 # Shared.
 class AreaInline(AbstractTabularInline):
+
     model = Area
     raw_id_fields = ('zip',)
 
 
 
 class CityAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('state',)
     list_filter = ('state', 'state__country')
     inlines = (AreaInline,)
@@ -156,9 +171,11 @@ _admin(City, CityAdmin)
 
 
 class ZipInline(AbstractTabularInline):
+
     model = Zip
 
 class BrickAdmin(AbstractAdmin):
+
     inlines = (ZipInline,)
 
 _admin(Brick, BrickAdmin)
@@ -166,6 +183,7 @@ _admin(Brick, BrickAdmin)
 
 
 class ZipAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('brick',)
     inlines = (AreaInline,)
     raw_id_fields = ('brick',)
@@ -175,6 +193,7 @@ _admin(Zip, ZipAdmin)
 
 
 class AreaAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('city', 'zip')
     raw_id_fields = ('zip',)
 
@@ -183,6 +202,7 @@ _admin(Area, AreaAdmin)
 
 
 class GenericCatAdmin(AbstractTreeAdmin):
+
     pass
 
 _admin(GenericCat, GenericCatAdmin)
@@ -190,6 +210,7 @@ _admin(GenericCat, GenericCatAdmin)
 
 
 class PeriodCatAdmin(AbstractTreeAdmin):
+
     pass
 
 _admin(PeriodCat, PeriodCatAdmin)
@@ -197,6 +218,7 @@ _admin(PeriodCat, PeriodCatAdmin)
 
 
 class UserCatAdmin(AbstractTreeAdmin):
+
     list_display = _fields_name + ('order', 'forms_expandable', 'forms_order')
     search_fields = _search_name + ('forms_description',)
 
@@ -205,6 +227,7 @@ _admin(UserCat, UserCatAdmin)
 
 
 class ItemCatAdmin(AbstractTreeAdmin):
+
     pass
 
 _admin(ItemCat, ItemCatAdmin)
@@ -212,6 +235,7 @@ _admin(ItemCat, ItemCatAdmin)
 
 
 class LocCatAdmin(AbstractTreeAdmin):
+
     pass
 
 _admin(LocCat, LocCatAdmin)
@@ -219,6 +243,7 @@ _admin(LocCat, LocCatAdmin)
 
 
 class PlaceCatAdmin(AbstractTreeAdmin):
+
     pass
 
 _admin(PlaceCat, PlaceCatAdmin)
@@ -226,6 +251,7 @@ _admin(PlaceCat, PlaceCatAdmin)
 
 
 class FormCatAdmin(AbstractTreeAdmin):
+
     pass
 
 _admin(FormCat, FormCatAdmin)
@@ -233,9 +259,11 @@ _admin(FormCat, FormCatAdmin)
 
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/#working-with-many-to-many-intermediary-models
-class ForceVisitInline(AbstractTabularInline):
+class ForceVisitInline(AbstractStackedInline):
+
     model = ForceVisit
     exclude = ('observations', 'rec')
+    raw_id_fields = ('loc',)
 
 class ForceNodeAdmin(AbstractTreeAdmin):
 
@@ -248,9 +276,10 @@ class ForceNodeAdmin(AbstractTreeAdmin):
     _private.allow_tags = True
 
     list_display = _fields_name + ('order', 'user', 'itemcats_', 'bricks_', 'locs_', '_private', '_agenda')
-    list_filter = ('itemcats', 'bricks',)
+    list_filter = ('itemcats',) # 'bricks'
     filter_vertical = ('bricks',)
     inlines = (ForceVisitInline,)
+    raw_id_fields = ('user', 'bricks')
 
 _admin(ForceNode, ForceNodeAdmin)
 
@@ -258,15 +287,16 @@ _admin(ForceNode, ForceNodeAdmin)
 
 # https://docs.djangoproject.com/en/1.6/ref/contrib/admin/
 class ForceVisitAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('datetime', 'duration', 'status', 'accompanied', 'f_contact', 'f_goal', 'f_option', 'node', 'loc', 'builder', 'rec') # 'observations', 'rec'
     list_display_links = _fields_name + ('datetime',)
     date_hierarchy = 'datetime'
     list_editable = ('status',)
     list_filter = ('datetime', 'status', 'accompanied', 'builder')
     search_fields = _search_name  + ('observations',) # 'rec'
-    
+
     raw_id_fields = ('node', 'loc')
-    
+
     # radio_fields = dict(status=admin.VERTICAL)
     # readonly_fields = ('datetime',)
     # def has_add_permission(self, request): return False
@@ -283,21 +313,28 @@ _admin(ForceVisit, ForceVisitAdmin)
 from django.contrib.auth.admin import UserAdmin as _UserAdmin
 
 class LocInline(AbstractStackedInline):
+
     model = Loc
+    raw_id_fields = ('address', 'place')
 
 class OnOffVisitPeriodUserInline(AbstractOnOffVisitPeriodInline):
+
     fk_name = 'visit_user'
 
 class OnOffVisitTimeUserInline(AbstractOnOffVisitTimeInline):
+
     fk_name = 'visit_user'
 
 class OnOffVisitedPeriodUserInline(AbstractOnOffVisitedPeriodInline):
+
     fk_name = 'visited_user'
 
 class OnOffVisitedTimeUserInline(AbstractOnOffVisitedTimeInline):
+
     fk_name = 'visited_user'
 
 class UserAdmin(_UserAdmin, AbstractAdmin):
+
     #readonly_fields = ('private_uuid', 'public_id')
 
     '''
@@ -330,7 +367,7 @@ class UserAdmin(_UserAdmin, AbstractAdmin):
     )
 
     list_display = _fields + (
-        'email', 'first_name', 'last_name', 'last_login', 'date_joined',
+        'email', 'first_name', 'last_name', '_pwd', 'last_login', 'date_joined',
         'week_visit', 'week_visited',
         'onoffperiod_visit_', 'onofftime_visit_', 'onoffperiod_visited_', 'onofftime_visited_',
         'cats_', '_private', '_agenda',
@@ -351,16 +388,19 @@ _admin(User, UserAdmin)
 
 
 class UserFormRecAdmin(AbstractAdmin):
+
     list_display = _fields + ('datetime', 'user', 'form', 'observations', 'rec')
     list_display_links = _fields
     list_filter = ('form',)
     search_fields = _search + ('observations',)
+    raw_id_fields = ('user',)
 
 _admin(UserFormRec, UserFormRecAdmin)
 
 
 
 class ItemAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('cats_', 'visits_usercats_', 'visits_loccats_', 'forms_expandable', 'forms_order')
     list_filter = ('cats', 'visits_usercats', 'visits_loccats')
     search_fields = _search_name + ('forms_description',)
@@ -370,15 +410,19 @@ _admin(Item, ItemAdmin)
 
 
 class AddressAdmin(AbstractAdmin):
+
     list_display = _fields + ('street', 'unit', 'phone', 'phone2', 'fax', 'area')
     list_display_links = _fields + ('street',)
     search_fields = _search + ('street', 'unit')
+    raw_id_fields = ('area',)
 
 _admin(Address, AddressAdmin)
 
 class PlaceAdmin(AbstractTreeAdmin):
+
     list_display = _fields_name + ('order', 'address', 'cats_')
     list_filter = ('cats',)
+    raw_id_fields = ('address',)
 
 _admin(Place, PlaceAdmin)
 
@@ -391,17 +435,22 @@ https://github.com/charettes/django-admin-enhancer/blob/master/admin_enhancer/te
 '''
 
 class OnOffVisitedPeriodLocInline(AbstractOnOffVisitedPeriodInline):
+
     fk_name = 'visited_loc'
 
 class OnOffVisitedTimeLocInline(AbstractOnOffVisitedTimeInline):
+
     fk_name = 'visited_loc'
 
 class LocAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('week', 'address', 'place', 'user', 'onoffperiod_visited_', 'onofftime_visited_', 'cats_')
     list_filter = ('week', 'cats')
     # show_change_link = True
 
     inlines = (OnOffVisitedPeriodLocInline, OnOffVisitedTimeLocInline)
+
+    raw_id_fields = ('user', 'address', 'place')
 
     '''
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -416,6 +465,7 @@ _admin(Loc, LocAdmin)
 
 
 class FormTypeAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('order', 'description', 'forms_', 'formfields_')
     search_fields = _search_name + ('description',)
 
@@ -424,10 +474,12 @@ _admin(FormType, FormTypeAdmin)
 
 
 class FormFieldInline(AbstractStackedInline):
+
     model = FormField
     # suit_classes = 'suit-tab suit-tab-fields'
 
 class FormAdmin(AbstractAdmin):
+
     def _h_all(self, row):
         return row._h_all()
     _h_all.allow_tags = True
@@ -439,11 +491,14 @@ class FormAdmin(AbstractAdmin):
         'repitemcats', 'repusercats',
         'users_usercats', 'users_loccats',
         'visits_usercats', 'visits_loccats',
-        'visits_itemcats', 'visits_forcenodes',
+        'visits_itemcats',
+        # 'visits_forcenodes',
         'types',
     )
     search_fields = _search_name + ('description',)
     inlines = (FormFieldInline,)
+
+    raw_id_fields = ('repitems', 'visits_forcenodes', 'visits_bricks')
 
     '''
     # pending also to use suit_classes @ inline(s).
@@ -465,6 +520,7 @@ _admin(Form, FormAdmin)
 
 
 class FormFieldAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('form', 'type', 'widget', 'default', 'required', 'order', 'opts1_', 'optscat', 'types_')
     search_fields = _search_name + ('description',)
     list_filter = ('types',)
@@ -474,6 +530,7 @@ _admin(FormField, FormFieldAdmin)
 
 
 class PeriodAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('end', 'week', 'cats_')
     date_hierarchy = 'end'
     list_editable = ('end',)
@@ -484,6 +541,7 @@ _admin(Period, PeriodAdmin)
 
 
 class TimeConfigAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('start', 'end', 'day')
     list_filter = ('day',)
 
@@ -492,9 +550,11 @@ _admin(TimeConfig, TimeConfigAdmin)
 
 
 class TimeInline(AbstractStackedInline):
+
     model = TimeConfig
 
 class DayConfigAdmin(AbstractAdmin):
+
     inlines = (TimeInline,)
 
 _admin(DayConfig, DayConfigAdmin)
@@ -502,6 +562,7 @@ _admin(DayConfig, DayConfigAdmin)
 
 
 class WeekConfigAdmin(AbstractAdmin):
+
     list_display = _fields_name + utils.weekdays
 
 _admin(WeekConfig, WeekConfigAdmin)
@@ -509,8 +570,9 @@ _admin(WeekConfig, WeekConfigAdmin)
 
 
 class VisitCondAdmin(AbstractAdmin):
+
     list_display = _fields_name + ('builder',)  # ('usercats', 'loccats', 'areas', 'cities', 'states', 'countries', 'zips', 'bricks')
-    list_filter = ('cities', 'states', 'countries')
+    # list_filter = ('cities', 'states', 'countries')
     search_fields = _search_name
     raw_id_fields = ('areas', 'zips', 'bricks')
 
@@ -519,20 +581,22 @@ _admin(VisitCond, VisitCondAdmin)
 
 
 class VisitCondInline(AbstractStackedInline):
+
     model = VisitCond
     raw_id_fields = ('areas', 'zips', 'bricks')
 
 class VisitBuilderAdmin(AbstractAdmin):
+
     list_display = _fields_name + (
         'node', 'duration', 'gap', 'forcebricks',
         # 'periods', 'periodcats',
         'generate', 'generated',
         'qty_slots', 'qty_slots_skips', 'qty_locs', 'qty_locs_skips', 'qty_node_skips', 'qty_visits',
     )
-    list_filter = ('node', 'generate')
+    list_filter = ('generate',)
 
     inlines = (VisitCondInline,)
-    
+
     raw_id_fields = ('node',)
 
     fieldsets = (
@@ -560,6 +624,7 @@ _admin(VisitBuilder, VisitBuilderAdmin)
 
 
 class OnOffPeriodAdmin(AbstractAdmin):
+
     list_display = _fields + ('on', 'start', 'end', 'visited_user', 'visited_loc', 'visit_user')
     list_display_links = _fields
     search_fields = _search
@@ -569,6 +634,7 @@ _admin(OnOffPeriod, OnOffPeriodAdmin)
 
 
 class OnOffTimeAdmin(AbstractAdmin):
+
     list_display = _fields + ('on', 'start', 'end', 'date', 'visited_user', 'visited_loc', 'visit_user')
     list_display_links = _fields
     search_fields = _search
@@ -578,6 +644,7 @@ _admin(OnOffTime, OnOffTimeAdmin)
 
 
 class SysAdmin(AbstractAdmin):
+
     list_display = _fields + ('week_user_visit', 'week_user_visited', 'week_period')
     list_display_links = _fields
     search_fields = _search
