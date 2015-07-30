@@ -659,7 +659,7 @@ class ForceVisit(AbstractFormRec):
 
         loc = self.loc
         user = loc.user
-        forms_ids, repdict_items_ids, repdict_usercats_ids = Form.get_forms_reps(
+        formtypes, forms_ids, repdict_items_ids, repdict_usercats_ids = Form.get_forms_reps(
             baseuser = user,
             private = private,
             visit = self,
@@ -688,6 +688,7 @@ class ForceVisit(AbstractFormRec):
             user_cats = utils.db_names(user.cats),
             loc_name = loc.name,
             loc_address = '%s # %s, %s' % (addr.street, addr.unit, addr.area),
+            formtypes = formtypes,
             forms = forms_ids,
             repdict_items = repdict_items_ids,
             repdict_usercats = repdict_usercats_ids,
@@ -771,6 +772,7 @@ class Form(AbstractModel):
         if visit if user else not visit: error
         repdict_items = dict()
         repdict_usercats = dict()
+        types = []
         _any = utils.tree_any
         def _doreps(form):
             def _reps(isitems, repdict, reps):
@@ -806,6 +808,7 @@ class Form(AbstractModel):
                 # print '_reps_usercats', baseuser, len(ucats), len(ucats2), len(nreps)
                 return _reps(False, repdict_usercats, nreps)
             # priority to repitems, then (if none) repusercats.
+            types.extend(form.types.all())
             return not (_reps_items() or _reps_usercats())
         forms = Form.objects.filter(scope='users' if user else 'visits')
         forms = [ form for form in forms
@@ -832,8 +835,9 @@ class Form(AbstractModel):
             for repdict in [ repdict_items, repdict_usercats ]:
                 for erep, erepforms in repdict.items():
                     erepforms[:] = utils.db_ids(erepforms)
-        # print 'get_forms_reps', private, user or visit, forms, repdict_items, repdict_usercats
-        return forms, repdict_items, repdict_usercats
+        types = [ dict(id=form.id, name=form.name) for form in sorted(set(types), key=lambda form: (form.order, form.name)) ]
+        # print 'get_forms_reps', private, user or visit, types, forms, repdict_items, repdict_usercats
+        return types, forms, repdict_items, repdict_usercats
 
     '''
     # can't access multiple vals during validation?, it incorrectly returns previous values instead.

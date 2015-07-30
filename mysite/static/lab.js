@@ -11,8 +11,8 @@ $(function(){
   var w_dt2 = $('#dt2')
   var w_cal = $('#cal')
   var w_modal = $('#modal')
-  var w_form = $('#modal-form')
-  var w_list = $('#modal-list')
+  var w_form = $('#go-form')
+  var w_list = $('#go-list')
   // _log('w_*', w_dt2, w_dt, w_cal, w_modal, w_form, w_list)
 
   var w_user = $('#go_user')
@@ -22,11 +22,32 @@ $(function(){
 
   var w_visit1 = $('#go_visit1')
 
-  function modal(z, formtype) {
-    _log('modal', z, formtype)
+  var w_loading = $('#go-loading')
+  var w_sources = $('#go-sources')
+  var w_target = $('#go-target')
+
+  var gotop = function() {
+    $('body').scrollTop(0)
+  }
+
+  // w_doc.on('click', '#go-cancel', function(){ console.log('go-cancel') })
+
+  var goclose = function() {
+    console.log('goclose')
+    w_form.empty()
+    gotop()
+  }
+
+  function modal(z) {
+    _log('modal', z)
+    var _get = function(k, kn) {
+      var kv = z[k]
+      return kv ? kn[kv] : undefined
+    }
     if (!z) { z = {} }
-    var visit = z.visit
-    var userform = z.userform
+    var formtype = _get('formtype_id', data.allformtypes)
+    var visit = _get('visit_id', data.visits)
+    var userform = _get('userform_id', data.allforms)
 
     w_form.empty()
     w_list.empty()
@@ -156,8 +177,8 @@ $(function(){
 	    ev.preventDefault()
 	    setTimeout(function(){
 	      // _log('setTimeout @ eformtype', eformtype)
-	      modal(z, eformtype)
-	    }, 100)
+	      modal(_({}).extend(z, { formtype_id: eformtype.id }))
+	    }, 10)
 	    return false
 	  })
 	  var wname = $('<h4 class="list-group-item-heading">')
@@ -172,30 +193,33 @@ $(function(){
     }
     _log('selformtype', selformtype, 'visit', visit)
 
+
+    if (visit) {
+      _(jschema).extend({
+	accompanied: { type: 'boolean' },
+	name: { type: 'string' },
+	status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] },
+
+	f_contact: { type: 'string', enum: [ 'Presencial', 'Telefonica', 'Web' ] },
+	f_goal: { type: 'string', enum: [ 'Presentacion Inicial', 'Promocion', 'Pedido', 'Negociar' ] },
+	f_option: { type: 'string', enum: [ 'Planeada', 'Re-agendada', 'Asignada' ] }
+      })
+      var readonly = selformtype
+      jitems.push(
+	{ key: 'accompanied', prepend: 'Accompanied', inlinetitle: 'Accompanied', htmlClass: 'lab-field-boolean', disabled: readonly },
+	{ key: 'name', prepend: 'Name', notitle: true, disabled: readonly },
+	{ key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' }, disabled: readonly },
+
+	{ key: 'f_contact', prepend: 'Contact', notitle: true, disabled: readonly },
+	{ key: 'f_goal', prepend: 'Goal', notitle: true, disabled: readonly },
+	{ key: 'f_option', prepend: 'Option', notitle: true, disabled: readonly }
+      )
+    }
+
+
     if (selformtype) {
     }
     else {
-      if (visit) {
-	_(jschema).extend({
-	  accompanied: { type: 'boolean' },
-	  name: { type: 'string' },
-	  status: { type: 'string', enum: [ 's', 'v', 'n', 'r' ] },
-
-	  f_contact: { type: 'string', enum: [ 'Presencial', 'Telefonica', 'Web' ] },
-	  f_goal: { type: 'string', enum: [ 'Presentacion Inicial', 'Promocion', 'Pedido', 'Negociar' ] },
-	  f_option: { type: 'string', enum: [ 'Planeada', 'Re-agendada', 'Asignada' ] }
-	})
-	jitems.push(
-	  { key: 'accompanied', prepend: 'Accompanied', inlinetitle: 'Accompanied', htmlClass: 'lab-field-boolean' },
-	  { key: 'name', prepend: 'Name', notitle: true },
-	  { key: 'status', prepend: 'Status', notitle: true, titleMap: { "s": 'Scheduled', "v": 'Visited', "n": 'Negative', "r": 'Re-scheduled' } },
-
-	  { key: 'f_contact', prepend: 'Contact', notitle: true },
-	  { key: 'f_goal', prepend: 'Goal', notitle: true },
-	  { key: 'f_option', prepend: 'Option', notitle: true }
-	)
-      }
-
       var _filter_formtype = function(v1) {
 	var v2 = v1
 	if (formtype) {
@@ -330,7 +354,14 @@ $(function(){
 	    { key: 'observations', type: 'textarea' },
 	  ],
 	},
-	{ type: 'submit', title: _('Save %s').sprintf(label), htmlClass: 'btn-success center-block' }
+	{ type: 'submit', title: _('Save %s').sprintf(label), id: 'go-save', htmlClass: 'btn-success X-center-block' },
+	{
+	  type: 'button', title: 'Cancel', id: 'go-cancel', htmlClass: 'btn-default btn-sm X-pull-right',
+	  onClick: function(ev) {
+	    ev.preventDefault()
+	    goclose()
+	  }
+        }
 	// isnew ? '' : { type: 'button', title: 'Delete', id: 'X-delete', htmlClass: 'btn-danger btn-xs pull-right' }
       )
     }
@@ -391,13 +422,14 @@ $(function(){
 	      else { row = api.row.add(visit2) } // add.
 	      api.draw()
 	      w_cal.fullCalendar('updateEvent', calev)
-	      visit_edit(visit2.id)
+	      // visit_edit(visit2.id)
 	    }
 	    else { // userform.
 	      if (visit2) { return alert('Error @ userform, unexpected visit2.') }
 	      data.user.recs[userform.id] = rec2
 	    }
-	    w_modal.modal('hide')
+	    // w_modal.modal('hide')
+	    goclose()
 	  }
 	})
       },
@@ -405,14 +437,25 @@ $(function(){
 
     // w_form.find('.tabbable:last').before('<label class="control-label">Forms</label>')
     // w_modal.find('#modal-label').text('Medical Visit')
-    w_modal.modal('show')
+
+    // w_modal.modal('show')
+    gotop()
   }
 
   function visit_edit(visit_id) {
-    var visit = data.visits[visit_id]
-    // _log('visit_edit', visit_id, visit)
-    var _p = function(label, value) {
+    modal({ visit_id: visit_id })
+/*
+    var _p = function(label, value, wel) {
       return _('<p> <mark>%s:</mark> %s </p>').sprintf(label, value)
+    }
+    var ftypes = visit.formtypes
+    var hsel
+    if (ftypes.length) {
+      _(ftypes).each(function(e){
+	var hopt = _('<option value="%s"> %s </option>').sprintf(e.id, e.name)
+	hsel += hopt
+      })
+      hsel = '<select id="formtype"><option/>' + hsel + '</select>'
     }
     var hn = [
       _p('Name', visit.name),
@@ -424,19 +467,20 @@ $(function(){
       _p('Goal', visit.f_goal),
       _p('Option', visit.f_option),
       _p('Observations', visit.observations),
+      hsel ? _p('Type', hsel) : '',
     ]
     var h = hn.join('')
     var wbutton = $('<p><button class="btn btn-info">Visit</button></p>')
     wbutton.click(function(){
-      modal({ visit: visit })
+      var ftype = $('#formtype').val()
+      modal({ visit: visit, formtype_id: ftype })
     })
     w_visit1.empty().append(h, wbutton)
+*/
   }
 
   function userform_edit(form_id) {
-    var form = data.allforms[form_id]
-    // _log('userform_edit', form_id, form)
-    modal({ userform: form })
+    modal({ userform_id: form_id })
   }
 
   function _onclick(sel, fn) {
@@ -453,12 +497,12 @@ $(function(){
 
   w_dt2.dataTable({
     columns: [
-	  { title: 'Form', data: 'acts' },
-	  { title: 'Name', data: 'name' },
-	  { title: 'Items', data: 'repitems' },
-	  { title: 'Cats', data: 'repusercats' }
-	],
-	data: [],
+      { title: 'Form', data: 'acts' },
+      { title: 'Name', data: 'name' },
+      { title: 'Items', data: 'repitems' },
+      { title: 'Cats', data: 'repusercats' }
+    ],
+    data: [],
   })
   var api2 = w_dt2.api()
 
@@ -467,144 +511,160 @@ $(function(){
     // filter: false,
     // info: false,
     columns: [
-	  { title: 'Visit', data: 'acts' },
-	  { title: 'Date/Time', data: 'datetime' },
-	  { title: 'User', data: 'h_user' },
-	  { title: 'Categories', data: 'h_cats' },
-	  { title: 'Address', data: 'h_loc' },
-	],
-	data: [],
+      { title: 'Visit', data: 'acts' },
+      { title: 'Date/Time', data: 'datetime' },
+      { title: 'User', data: 'h_user' },
+      { title: 'Categories', data: 'h_cats' },
+      { title: 'Address', data: 'h_loc' },
+    ],
+    data: [],
   })
   var api = w_dt.api()
 
   w_cal.fullCalendar({
-	header: {
-	    left: 'prev,next today', // prevYear,X,nextYear
-	    center: 'title',
-	    right: 'month,agendaWeek,agendaDay', // ,basicWeek,basicDay
-	},
-	selectable: false,
-	selectHelper: false,
-	/*
-	select: function(start, end, allDay, ev, view) {
-	  _log('cal.select')
-	  modal({ sched: start })
-	},
-	dayClick: null, // otherwise it will trigger "select" again.
-	editable: true, // draggable & resizable events.
-	eventDrop: function(calev, dayDelta, minuteDelta, allDay, revertFunc, ev, ui, view) { _log('cal.eventDrop') },
-	eventResize: function(calev, dayDelta, minuteDelta, revertFunc, ev, ui, view) { _log('cal.eventResize') },
-	*/
-	eventClick: function(calev, ev, view) {
-	  // _log('cal.eventClick', calev)
-	  visit_edit(calev.id)
-	},
-	events: [],
+    header: {
+      left: 'prev,next today', // prevYear,X,nextYear
+      center: 'title',
+      right: 'month,agendaWeek,agendaDay', // ,basicWeek,basicDay
+    },
+    selectable: false,
+    selectHelper: false,
+    /*
+    select: function(start, end, allDay, ev, view) {
+      _log('cal.select')
+      modal({ sched: start })
+    },
+    dayClick: null, // otherwise it will trigger "select" again.
+    editable: true, // draggable & resizable events.
+    eventDrop: function(calev, dayDelta, minuteDelta, allDay, revertFunc, ev, ui, view) { _log('cal.eventDrop') },
+    eventResize: function(calev, dayDelta, minuteDelta, revertFunc, ev, ui, view) { _log('cal.eventResize') },
+    */
+    eventClick: function(calev, ev, view) {
+      // _log('cal.eventClick', calev)
+      visit_edit(calev.id)
+    },
+    events: [],
   })
 
   function _button(ref, cls_button, cls_service, label) {
-	return _('<p><button class="btn btn-%s btn-sm %s" data-ref="%s">%s</button></p>').sprintf(cls_button, cls_service, ref, label)
+    return _('<p><button class="btn btn-%s btn-sm %s" data-ref="%s">%s</button></p>').sprintf(cls_button, cls_service, ref, label)
   }
 
   function _visit_row(visit) {
-	return _('visit_%s').sprintf(visit.id)
+    return _('visit_%s').sprintf(visit.id)
   }
 
   function _visit_prep(visit) {
-	// _log('_visit_prep', visit)
-	function _h2(h1, h2) {
-	  return _('%s <br> %s').sprintf(h1 || '-', h2 || '-')
-	}
-	var s = visit.status
-	function _stat(v_def, v_v, v_r, v_n) {
-	  return s == 'v' ? v_v : (s == 'r' ? v_r : (s == 'n' ? v_n : v_def))
-	}
-	_(visit).extend({
-	  DT_RowId: _visit_row(visit), // http://next.datatables.net/examples/server_side/ids.html
-	  acts: _h2(visit.name, _button(visit.id, _stat('primary', 'success', 'warning', 'danger'), 'visit-edit', 'Visit')),
-	  h_user: _h2(visit.user_name, _('<a href="mailto:%(email)s"> %(email)s </a>').sprintf({ email: visit.user_email })),
-	  h_cats: visit.user_cats || '-',
-	  h_loc: _h2(visit.loc_name, visit.loc_address),
-	})
-	var ev = {
-	  id: visit.id,
-	  allDay: false,
-	  start: visit.datetime,
-	  end: visit.end,
-	  title: visit.user_name,
-	  color: _stat('#357ebd', '#4cae4c', '#eea236', '#d43f3a'),
-	}
-	// _log('ev @ _visit_prep', visit, ev)
-	return ev
+    // _log('_visit_prep', visit)
+    function _h2(h1, h2) {
+      return _('%s <br> %s').sprintf(h1 || '-', h2 || '-')
+    }
+    var s = visit.status
+    function _stat(v_def, v_v, v_r, v_n) {
+      return s == 'v' ? v_v : (s == 'r' ? v_r : (s == 'n' ? v_n : v_def))
+    }
+    _(visit).extend({
+      DT_RowId: _visit_row(visit), // http://next.datatables.net/examples/server_side/ids.html
+      acts: _h2(visit.name, _button(visit.id, _stat('primary', 'success', 'warning', 'danger'), 'visit-edit', 'Visit')),
+      h_user: _h2(visit.user_name, _('<a href="mailto:%(email)s"> %(email)s </a>').sprintf({ email: visit.user_email })),
+      h_cats: visit.user_cats || '-',
+      h_loc: _h2(visit.loc_name, visit.loc_address),
+    })
+    var ev = {
+      id: visit.id,
+      allDay: false,
+      start: visit.datetime,
+      end: visit.end,
+      title: visit.user_name,
+      color: _stat('#357ebd', '#4cae4c', '#eea236', '#d43f3a'),
+    }
+    // _log('ev @ _visit_prep', visit, ev)
+    return ev
   }
 
   function _count(coll) {
-	return _(coll).keys().length
+    return _(coll).keys().length
   }
 
   function w_count(w, total) {
-	w.html(_('%s').sprintf(total))
+    w.html(_('%s').sprintf(total))
   }
 
   function data_set() {
-	_log('data_set', data)
+    _log('data_set', data)
 
-	var user = data.user
-	var userforms = []
+    var user = data.user
+    var userforms = []
 
-	if (user) {
-	  function _form(formid, repkey, reps, alls) {
-	    var form = data.allforms[formid]
-	    var repobj = {
-	      name: _('%s <br> <i> %s </i>').sprintf(form.name, form.description),
-	      acts: _button(formid, 'primary', 'userform-edit', 'Form'),
-	      repitems: '',
-	      repusercats: ''
-	    }
-	    repobj[repkey] = _('<ul> %s </ul>').sprintf(_(reps).collect(function(repid){
-	      return _('<li> %s </li>').sprintf(alls[repid].name)
-	    }).join(''))
-	    return repobj
-	  }
-	  _(user.forms).each(function(formid){
-	    userforms.push(_form(formid))
-	  })
-	  _(user.repdict_items).each(function(repitems, formid){
-	    userforms.push(_form(formid, 'repitems', repitems, data.allitems))
-	  })
-	  _(user.repdict_usercats).each(function(repusercats, formid){
-	    userforms.push(_form(formid, 'repusercats', repusercats, data.allusercats))
-	  })
-	  // _log('userforms', userforms)
+    if (user) {
+      function _form(formid, repkey, reps, alls) {
+	var form = data.allforms[formid]
+	var repobj = {
+	  name: _('%s <br> <i> %s </i>').sprintf(form.name, form.description),
+	  acts: _button(formid, 'primary', 'userform-edit', 'Form'),
+	  repitems: '',
+	  repusercats: ''
 	}
+	repobj[repkey] = _('<ul> %s </ul>').sprintf(_(reps).collect(function(repid){
+	  return _('<li> %s </li>').sprintf(alls[repid].name)
+	}).join(''))
+	return repobj
+      }
+      _(user.forms).each(function(formid){
+	userforms.push(_form(formid))
+      })
+      _(user.repdict_items).each(function(repitems, formid){
+	userforms.push(_form(formid, 'repitems', repitems, data.allitems))
+      })
+      _(user.repdict_usercats).each(function(repusercats, formid){
+	userforms.push(_form(formid, 'repusercats', repusercats, data.allusercats))
+      })
+      // _log('userforms', userforms)
+    }
 
-	w_count(w_forms, userforms.length)
+    w_count(w_forms, userforms.length)
 
-	api2.clear()
-	api2.rows.add(userforms)
-	api2.draw()
+    api2.clear()
+    api2.rows.add(userforms)
+    api2.draw()
 
-	var visits = _(data.visits).values()
-	var events = _(visits).collect(function(visit){
-	  return _visit_prep(visit)
-	})
+    var visits = _(data.visits).values()
+    var events = _(visits).collect(function(visit){
+      return _visit_prep(visit)
+    })
 
-	api.clear()
-	api.rows.add(visits)
-	api.draw()
+    api.clear()
+    api.rows.add(visits)
+    api.draw()
 
-	w_cal
-	  .fullCalendar('removeEvents')
-	  .fullCalendar('addEventSource', events)
-	  .fullCalendar('refetchEvents')
+    w_cal
+      .fullCalendar('removeEvents')
+      .fullCalendar('addEventSource', events)
+      .fullCalendar('refetchEvents')
 
-	w_user.html(user ? user.name : 'X')
-	w_count(w_visits, _count(data.visits))
-	var wn = $('<ul></ul>')
-	_(data.nodes).each(function(node){
-	  wn.append(_('<li> %s </li>').sprintf(node.name))
-	})
-	w_nodes.append(wn)
+    w_user.html(user ? user.name : 'X')
+    w_count(w_visits, _count(data.visits))
+    var wn = $('<ul></ul>')
+    _(data.nodes).each(function(node){
+      wn.append(_('<li> %s </li>').sprintf(node.name))
+    })
+    w_nodes.append(wn)
+
+    w_loading.hide()
+
+    var params = _(location.search.split("?")[1].split("&")).chain()
+      .collect(function(e){ return e.split('=') })
+      .object()
+      .value()
+
+    if (params.visit) {
+      $('#go-target').attr('class', 'col-xs-12')
+      modal({ visit_id: params.visit, formtype_id: params.formtype })
+    }
+    else {
+      w_sources.show()
+      $('#cal').fullCalendar('render')
+    }
   }
 
   if (data) { data_set() }

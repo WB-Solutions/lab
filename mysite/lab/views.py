@@ -71,13 +71,14 @@ def _data(request, config=None):
             allforms = Form.objects.order_by('order', 'name').all()
             user_dict = None
             if go_user:
-                forms_ids, repdict_items_ids, repdict_usercats_ids = go_user.get_forms_reps(private=private)
+                formtypes, forms_ids, repdict_items_ids, repdict_usercats_ids = go_user.get_forms_reps(private=private)
                 formids = forms_ids + repdict_items_ids.keys() + repdict_usercats_ids.keys()
                 recs = UserFormRec.objects.filter(form__in=formids)
                 recdict = dict([ (rec.form.id, rec.jsrec()) for rec in recs ])
                 user_dict = dict(
                     id = go_user.id,
                     name = go_user.fullname(),
+                    formtypes = formtypes,
                     forms = forms_ids,
                     repdict_items = repdict_items_ids,
                     repdict_usercats = repdict_usercats_ids,

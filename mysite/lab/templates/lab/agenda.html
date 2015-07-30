@@ -6,8 +6,18 @@
 
 {% block content %}
 
-  <div class="row" style="margin-top:10px;">
-    <div class="col-xs-9">
+  <style>
+    .container { width: 100%; }
+    .fc-header-title h2 { font-size: 20px; } /* Calendar title. */
+    #go-save { margin: 0 40px; }
+    #go-sources { display: none; }
+  </style>
+
+  <div class="row" style="margin-top:10px;padding-bottom:20px;">
+
+    <div class="col-xs-12" id="go-loading"> Loading ... </div>
+
+    <div class="col-sm-7" id="go-sources">
 
       <div class="panel-group" id="accordion"> <!-- include @ panel-title for accordion behavior: data-parent="#accordion"  -->
 
@@ -23,7 +33,7 @@
                 <li> Visits : <span id="go_visits"></span> </li>
                 <li id="go_nodes"> Nodes : </li>
               </ul>
-              <i> Modal windows will open to edit Forms & Visits from Tables & Calendar. </i>
+              <i> Forms & Visits to open from Tables & Calendar. </i>
             </div>
           </div>
         </div>
@@ -88,8 +98,12 @@
 
     </div>
 
-    <div class="col-xs-3">
-      <small><div id="go_visit1"></div><small>
+    <div class="col-sm-5" id="go-target">
+      <!-- <small><div id="go_visit1"></div></small> -->
+      <div>
+        <form id="go-form"></form>
+        <div id="go-list"></div>
+      </div>
     </div>
 
   </div>
