@@ -112,10 +112,20 @@ def multiple_(row, prop):
     return ', '.join(sorted([ str(each) for each in getattr(row, prop).all() ]))
 
 def _str(row, tmpl, values):
-    v = (tmpl % values) if tmpl else values
+    def _val(val):
+        return unicode(val)
+    ismany = isinstance(values, (list, tuple))
+    if tmpl:
+        if not ismany: error
+        vals = tuple(map(_val, values))
+        # print 'vals', vals
+        v = tmpl % vals
+    else:
+        if ismany: error
+        v = _val(values)
     # v = '(%s. %s)' % (row.id, v) # parenthesis to separate nested row ids in values, e.g. items: ids for item / cat / subcat.
-    # print '_str', v
-    return unicode(v)
+    # print '_str', v, len(values), values
+    return _val(v)
 
 def _form_expandable():
     return _boolean(False)

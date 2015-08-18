@@ -8,6 +8,8 @@ urlpatterns = patterns('',
     url(r'^agenda$', views.agenda, name='agenda'),
     url(r'^ajax$', views.ajax, name='ajax'),
 
+    url(r'^goauth$', views.goauth, name='goauth'),
+
     url(r'^api/', include(api.router.urls)),
 )
 # print 'urlpatterns', urlpatterns

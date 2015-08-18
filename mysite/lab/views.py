@@ -254,6 +254,27 @@ def member_action(request):
     return render_to_response("member/member-action.html", RequestContext(request))
 
 
+from rest_framework_jwt.views import ObtainJSONWebToken
+
+class GoAuth(ObtainJSONWebToken):
+
+    def post(self, request):
+        resp = super(GoAuth, self).post(request)
+        tok = resp.data.get('token')
+        if tok:
+            from rest_framework_jwt.utils import jwt_decode_handler
+            tok = jwt_decode_handler(tok)
+            userid = tok.get('user_id')
+            if userid:
+                user = User.objects.get(pk=userid)
+                if user:
+                    from .api import UserSerializer
+                    resp.data['user'] = UserSerializer(user, context=dict(request=request)).data
+        return resp
+
+goauth = GoAuth.as_view()
+
+
 class UserEditView(UpdateView):
     """Allow view and update of basic user data.
 

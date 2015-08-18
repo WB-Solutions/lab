@@ -96,7 +96,7 @@ def validate_xor(v1, v2, msg, reverse=False):
     # print 'validate_xor', v1, v2, msg, reverse
     def _val(v): # pending to support v as list.
         _v = bool(v)
-        print 'validate_xor._val', v, _v
+        # print 'validate_xor._val', v, _v
         return _v
     xor = _val(v1) ^ _val(v2)
     if xor if reverse else not xor:
